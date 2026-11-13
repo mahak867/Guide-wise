@@ -1,22 +1,148 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import { z } from "zod";
 import type { Intent, Rule } from "../types";
 
-// Provider adapter: every AI call in the product goes through this file.
-const MODEL = process.env.GUIDEWISE_MODEL || "claude-opus-5-5";
+/*
+ * Provider adapter: every AI call in the product goes through this file.
+ * Guidewise can run on Claude, Groq or Gemini. Whichever keys are set are tried in that order,
+ * and a failed or rate-limited call falls through to the next provider. With no key at all,
+ * the product runs in rules-only mode. Every provider returns JSON that must pass the same
+ * Zod schema, and everything it returns is then checked by code (see verify.ts).
+ */
+
+interface Task<T> { name: string; system: string; user: string; schema: z.ZodType<T>; maxTokens: number }
+interface Provider { id: string; label: string; run<T>(t: Task<T>): Promise<T> }
+
+/** JSON Schema for a Zod schema, without the $schema header some providers reject. */
+function jsonSchema(schema: z.ZodType): Record<string, unknown> {
+  const { $schema: _drop, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
+  void _drop;
+  return rest;
+}
+
+function parseJson<T>(raw: string | null | undefined, schema: z.ZodType<T>): T {
+  if (!raw) throw new Error("The AI service returned an empty answer.");
+  const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "");
+  return schema.parse(JSON.parse(text));
+}
+
+function claude(): Provider | null {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  const model = process.env.GUIDEWISE_MODEL || "claude-opus-5-5";
+  let client: Anthropic | null = null;
+  return {
+    id: "claude", label: `Claude (${model})`,
+    async run<T>(t: Task<T>): Promise<T> {
+      client ??= new Anthropic({ timeout: 45_000, maxRetries: 1 });
+      const res = await client.messages.parse({
+        model,
+        max_tokens: t.maxTokens,
+        output_config: { effort: "low", format: zodOutputFormat(t.schema as z.ZodType<T> & z.ZodObject) },
+        system: [{ type: "text", text: t.system, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: t.user }],
+      });
+      if (res.stop_reason === "refusal") throw new Error("The AI service declined this request.");
+      if (res.parsed_output == null) throw new Error("The AI service returned no structured answer.");
+      return res.parsed_output as T;
+    },
+  };
+}
+
+function groq(): Provider | null {
+  if (!process.env.GROQ_API_KEY) return null;
+  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+  let client: Groq | null = null;
+  return {
+    id: "groq", label: `Groq (${model})`,
+    async run<T>(t: Task<T>): Promise<T> {
+      client ??= new Groq({ timeout: 45_000, maxRetries: 1 });
+      const res = await client.chat.completions.create({
+        model,
+        max_completion_tokens: t.maxTokens,
+        reasoning_effort: "low",
+        response_format: { type: "json_schema", json_schema: { name: t.name, schema: jsonSchema(t.schema), strict: true } },
+        messages: [{ role: "system", content: t.system }, { role: "user", content: t.user }],
+      });
+      return parseJson(res.choices[0]?.message?.content, t.schema);
+    },
+  };
+}
+
+function gemini(): Provider | null {
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key) return null;
+  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  let client: GoogleGenAI | null = null;
+  return {
+    id: "gemini", label: `Gemini (${model})`,
+    async run<T>(t: Task<T>): Promise<T> {
+      client ??= new GoogleGenAI({ apiKey: key });
+      const res = await client.models.generateContent({
+        model,
+        contents: t.user,
+        config: { systemInstruction: t.system, responseMimeType: "application/json", responseJsonSchema: jsonSchema(t.schema), maxOutputTokens: t.maxTokens },
+      });
+      return parseJson(res.text, t.schema);
+    },
+  };
+}
+
+let providers: Provider[] | null = null;
+function chain(): Provider[] {
+  providers ??= [claude(), groq(), gemini()].filter((p): p is Provider => p !== null);
+  return providers;
+}
 
 export function aiAvailable(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY;
+  return chain().length > 0;
 }
 export function aiModel(): string {
-  return MODEL;
+  const c = chain();
+  if (!c.length) return "none";
+  return c.map((p) => p.label).join(", then ");
 }
 
-let client: Anthropic | null = null;
-function getClient(): Anthropic {
-  if (!client) client = new Anthropic({ timeout: 45_000, maxRetries: 1 });
-  return client;
+// Free tiers limit requests per minute, so calls are queued a few at a time.
+const MAX_PARALLEL = Number(process.env.GUIDEWISE_AI_PARALLEL || 3);
+let running = 0;
+const waiting: (() => void)[] = [];
+async function slot<T>(fn: () => Promise<T>): Promise<T> {
+  if (running >= MAX_PARALLEL) await new Promise<void>((r) => waiting.push(r));
+  running++;
+  try {
+    return await fn();
+  } finally {
+    running--;
+    waiting.shift()?.();
+  }
+}
+
+const isRateLimit = (e: unknown) => {
+  const s = (e as { status?: number })?.status;
+  return s === 429 || /rate|quota|429|exhausted/i.test(String((e as Error)?.message ?? ""));
+};
+
+/** Run one structured task on the first provider that answers; rate limits get one short retry. */
+async function structured<T>(t: Task<T>): Promise<T> {
+  const c = chain();
+  if (!c.length) throw new Error("No AI service is configured.");
+  let last: unknown;
+  for (const p of c) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await slot(() => p.run(t));
+      } catch (e) {
+        last = e;
+        if (attempt === 0 && isRateLimit(e)) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+        break;
+      }
+    }
+  }
+  const msg = last instanceof Error ? last.message : String(last);
+  throw new Error(`The AI service did not answer (${msg.slice(0, 140)})`);
 }
 
 const SYSTEM = `You are one check inside Guidewise, a brand-governance tool. A marketing team's draft is reviewed against that team's own approved rules before it is published.
@@ -52,15 +178,11 @@ export async function judgeRule(rule: Rule, text: string, intent: Intent | null)
   const intentLine = (intent && (intent.goal || intent.audience || intent.cta)
     ? `Writer's intent - goal: ${intent.goal || "not given"}; audience: ${intent.audience || "not given"}; call to action: ${intent.cta || "not given"}`
     : "Writer's intent: not given") + (intent?.locked?.length ? `\nLocked phrases the fix must keep word for word: ${intent.locked.map((l) => `"${l}"`).join(", ")}` : "");
-  const res = await getClient().messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "low", format: zodOutputFormat(JudgeSchema) },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `${ruleBlock(rule)}\n\n${intentLine}\n\nDraft:\n"""\n${text}\n"""` }],
+  const out = await structured({
+    name: "rule_check", system: SYSTEM, schema: JudgeSchema, maxTokens: 3000,
+    user: `${ruleBlock(rule)}\n\n${intentLine}\n\nDraft:\n"""\n${text}\n"""`,
   });
-  if (res.stop_reason === "refusal") throw new Error("The AI service declined this request.");
-  return res.parsed_output?.findings ?? [];
+  return out.findings;
 }
 
 const ClaimSchema = z.object({
@@ -76,10 +198,8 @@ export type ExtractedClaim = z.infer<typeof ClaimSchema>["claims"][number];
 
 /** The AI only extracts number claims into typed fields. Code compares them with the Facts Register. */
 export async function extractClaims(text: string): Promise<ExtractedClaim[]> {
-  const res = await getClient().messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "low", format: zodOutputFormat(ClaimSchema) },
+  const out = await structured({
+    name: "number_claims", schema: ClaimSchema, maxTokens: 3000,
     system: `You extract number claims from marketing drafts for a later check done by code. Do not judge them.
 
 A number claim is a figure the reader is asked to believe about the organisation: counts of students or selections, pass rates, prices and fees, discounts, years of experience, rankings stated as numbers. Dates, times, phone numbers, student ranks such as "AIR 112", and batch names are not number claims.
@@ -90,10 +210,9 @@ For each claim return:
 - subject: in a few words, what the figure counts or measures, using the draft's own words.
 
 Return an empty list if there are none.`,
-    messages: [{ role: "user", content: `Draft:\n"""\n${text}\n"""` }],
+    user: `Draft:\n"""\n${text}\n"""`,
   });
-  if (res.stop_reason === "refusal") throw new Error("The AI service declined this request.");
-  return res.parsed_output?.claims ?? [];
+  return out.claims;
 }
 
 const CompileSchema = z.object({
@@ -117,10 +236,8 @@ export type CompiledKit = z.infer<typeof CompileSchema>;
 
 /** Brand Kit compiler: guide text in, proposed rules with test sentences out. A person confirms each one. */
 export async function compileGuide(guide: string): Promise<CompiledKit> {
-  const res = await getClient().messages.parse({
-    model: MODEL,
-    max_tokens: 12000,
-    output_config: { effort: "low", format: zodOutputFormat(CompileSchema) },
+  return structured({
+    name: "brand_kit", schema: CompileSchema, maxTokens: 12000,
     system: `You turn a brand guide into proposed rules for Guidewise, a tool that checks marketing drafts before publication. A brand manager reviews every rule you propose, so propose only what the guide actually says.
 
 For each distinct instruction in the guide, return one rule:
@@ -131,8 +248,6 @@ For each distinct instruction in the guide, return one rule:
 - source_passage: the words from the guide the rule comes from, copied exactly.
 
 Also return warnings for passages that are too vague to check (for example "be engaging") or that contradict another passage. Quote the passage and say what is unclear. Do not turn a vague passage into a rule.`,
-    messages: [{ role: "user", content: `Brand guide:\n"""\n${guide}\n"""` }],
+    user: `Brand guide:\n"""\n${guide}\n"""`,
   });
-  if (res.stop_reason === "refusal") throw new Error("The AI service declined this request.");
-  return res.parsed_output ?? { rules: [], warnings: [] };
 }

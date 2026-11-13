@@ -1,6 +1,6 @@
 // Runs the planted-error evaluation. Usage:
 //   npx tsx scripts/eval.ts          code checks only, prints the numbers
-//   npx tsx scripts/eval.ts --ai     with the AI checks (needs ANTHROPIC_API_KEY), run twice for
+//   npx tsx scripts/eval.ts --ai     with the AI checks (needs GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY), run twice for
 //                                    repeat-run agreement, and saves src/lib/eval/ai-results.json
 import { writeFileSync } from "node:fs";
 import { aiAvailable, aiModel } from "../src/lib/engine/ai";
@@ -11,7 +11,7 @@ const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
 async function main() {
   const useAI = process.argv.includes("--ai");
-  if (useAI && !aiAvailable()) throw new Error("Set ANTHROPIC_API_KEY to run with the AI checks.");
+  if (useAI && !aiAvailable()) throw new Error("Set GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY to run with the AI checks.");
   const a = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test" });
   console.log(`${a.mode}: precision ${pct(a.precision)} [${a.precisionCI.map(pct).join(", ")}], recall ${pct(a.recall)} [${a.recallCI.map(pct).join(", ")}], critical recall ${pct(a.criticalRecall)}, hard ${a.hardCaught}/${a.hardPlanted}, ${a.ms} ms`);
   if (!useAI) return;

@@ -31,7 +31,7 @@ Use **Reset demo** to start again.
 
 ## Stack
 
-Next.js 16 (TypeScript, App Router), Tailwind CSS 4, Supabase Postgres, Claude API (`@anthropic-ai/sdk`, structured outputs via Zod), mammoth (DOCX text), Vercel.
+Next.js 16 (TypeScript, App Router), Tailwind CSS 4, Supabase Postgres, AI through one adapter that supports Groq, Gemini and Claude with automatic fallback (structured outputs validated with Zod), mammoth (DOCX text), Vercel.
 
 ## Run locally
 
@@ -46,7 +46,8 @@ Apply `supabase/migrations/001_init.sql` to a Supabase project first. The app se
 | Variable | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` | Supabase project URL and publishable key |
-| `ANTHROPIC_API_KEY` | Optional. Without it Guidewise runs in rules-only mode |
+| `GROQ_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Optional; set any. Keys present are tried Claude, then Groq, then Gemini, falling through on errors or rate limits. With none, Guidewise runs in rules-only mode |
+| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL` | Optional model overrides (defaults: `openai/gpt-oss-120b`, `gemini-flash-latest`, `claude-opus-5-5`) |
 | `GUIDEWISE_MODEL` | Optional. Defaults to `claude-opus-5-5` |
 
 ## Limits, stated plainly

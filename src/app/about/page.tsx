@@ -36,7 +36,7 @@ export default function About() {
         <Card className="p-4 text-sm">
           <h2>Services and data</h2>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
-            <li><b>AI:</b> Claude API (Anthropic), model <code className="rounded bg-mist px-1">{state?.ai.model ?? "…"}</code>. Status now: {state ? (state.ai.available ? "on" : "off (rules-only mode: code checks and the whole workflow still run, nothing is sent outside)") : "…"}.</li>
+            <li><b>AI:</b> one adapter that supports Groq, Gemini and Claude and falls through to the next on errors or rate limits. In use: <code className="rounded bg-mist px-1">{state?.ai.model ?? "…"}</code>. Status now: {state ? (state.ai.available ? "on" : "off (rules-only mode: code checks and the whole workflow still run, nothing is sent outside)") : "…"}.</li>
             <li><b>Database:</b> Supabase Postgres. <b>Hosting:</b> Vercel.</li>
             <li><b>Open source:</b> Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth (DOCX text).</li>
             <li><b>Demo data:</b> PrepPath Academy, its rules, facts and students are fictional and were written by the team.</li>

@@ -60,7 +60,7 @@ https://github.com/mahak867/Guide-wise
 - **Review pipeline** (`src/lib/engine/`):
   1. **Redact** emails and phone numbers before any AI call (`redact.ts`).
   2. **Code checks** (`code.ts`): numbers are extracted into typed values (lakh and crore are understood) and compared with the Facts Register by subject first, value second. The AI never decides whether two numbers match.
-  3. **AI checks** (`ai.ts`, Claude API with structured outputs): one rule per call. A rule that returns a finding is run a second time, and disagreement downgrades the finding to a suggestion. Every AI call goes through one adapter file.
+  3. **AI checks** (`ai.ts`, one adapter for Groq, Gemini and Claude with automatic fallback; every answer must pass a Zod schema): one rule per call. A rule that returns a finding is run a second time, and disagreement downgrades the finding to a suggestion. Every AI call goes through one adapter file.
   4. **Verifier** (`verify.ts`): plain code checks grounding — quote, rule and fact for text findings; colour, OCR text or alt text for image findings.
   5. **Fix re-test** (`review.ts`).
   6. **Visual checks** (`visual.ts`): sRGB to CIELAB, colour difference against the palette, WCAG contrast, alt text, and every text rule applied to the OCR text.
@@ -69,7 +69,7 @@ https://github.com/mahak867/Guide-wise
 - **Evaluation** (`src/lib/eval/`, `scripts/eval.ts`): a seeded generator makes the same 60 drafts on every machine (the fingerprint is shown on the page). `--ai` measures the AI checks and repeat-run agreement.
 - **Testing:** Vitest (`tests/engine.test.ts`, and `tests/fake-ai.test.ts`, which swaps in a deliberately wrong AI) and GitHub Actions (`.github/workflows/ci.yml`).
 - **Open source used:** Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth, unpdf, tesseract.js. Licences are in their packages.
-- **AI disclosure:** Claude (Anthropic) was used to help write code during the build window. The product uses the Claude API for its AI checks and guide compiler.
+- **AI disclosure:** Claude (Anthropic) was used to help write code during the build window. The product calls an LLM through a provider adapter (Groq, Gemini or Claude, whichever keys are configured) for its AI checks and guide compiler.
 
 ## Changes from the Round 1 plan
 
