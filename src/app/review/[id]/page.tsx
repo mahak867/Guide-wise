@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { DemoGuide } from "@/components/DemoGuide";
 import { ImagePicker } from "@/components/ImagePicker";
 import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
 import type { ImageInput } from "@/lib/image";
@@ -155,6 +156,15 @@ export default function ReviewPage() {
         <Badge>v{draft.version}</Badge>
         <Badge tone={draft.mode === "ai" ? "green" : "grey"}>{draft.mode === "ai" ? "Code and AI checks" : "Code checks only"}</Badge>
       </div>
+
+      <DemoGuide s={{
+        hasImages: events.some((e) => e.action === "images_updated") || (draft.images?.length ?? 0) > 0,
+        accepted: findings.filter((f) => f.state === "accepted").length,
+        imagesUpdated: events.some((e) => e.action === "images_updated"),
+        submitted: events.some((e) => e.action === "submitted"),
+        approved: draft.status === "approved",
+        routedTo: inReview ? draft.status : null,
+      }} />
 
       {/* What happens next, and who does it */}
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-3.5 text-sm">
