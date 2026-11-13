@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Guidewise
 
-## Getting Started
+**Brand rules that run.** Guidewise checks marketing content against a team's approved brand rules and dated facts before it is published. Every finding quotes the rule it breaks and the exact words, every suggested fix is re-tested, risky content goes to the right reviewer, and a person makes the final approval.
 
-First, run the development server:
+Built by team **Guide Wise** for CodeNova India 2026, Round 2. All product code was written inside the official build window, which opened on 13 November 2026 at 10:00 IST (see commit history).
+
+## Try it
+
+Open the deployed link. There is no sign-in.
+
+1. Click **Review the sample caption**. It is an Instagram caption from PrepPath Academy, a fictional coaching brand, with eight problems in it.
+2. Read the findings. Each one cites its rule, quotes the words, and shows a re-tested fix. Regulation findings show a real penalty order as precedent.
+3. Accept the fixes. The student-result finding has no automatic fix, because the student has no consent on record.
+4. Submit. Outcome claims route the draft to the compliance reviewer.
+5. Switch **Acting as** to Kavya (compliance). Dismiss the remaining finding with a reason and approve.
+6. Read the approval receipt: SHA-256 fingerprint of the approved text, Brand Kit version, findings resolved, approver.
+
+Use **Reset demo** to start again.
+
+## What runs
+
+| Area | What it does |
+| --- | --- |
+| Review engine | Personal data removed, then code checks (terms, phrases, approved contacts, student records, every figure against the Facts Register), then AI checks one rule per call, then a verifier, then fix re-testing |
+| Verifier | Plain code drops any finding whose quote is not in the draft, whose rule doesn't exist, or whose fact doesn't exist ("no source, no flag") |
+| Facts Register | Facts with evidence, owner, valid-from, valid-until and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated |
+| Brand Kit | Rules with test sentences. A rule starts advisory and can only be enforced when its own check passes its tests. Every change creates a new Brand Kit version |
+| Guide compiler | Paste brand-guide text, get proposed rules with tests and warnings about vague passages. Each rule is confirmed by the manager |
+| Workflow | Four roles, accept or dismiss with a reason, comments, version history, audit log, a fixed rule table that routes to brand or compliance, approval receipts |
+| Rules-only mode | If the AI service is unavailable, the code checks and the whole workflow still run, and the app says so |
+
+## Stack
+
+Next.js 16 (TypeScript, App Router), Tailwind CSS 4, Supabase Postgres, Claude API (`@anthropic-ai/sdk`, structured outputs via Zod), mammoth (DOCX text), Vercel.
+
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in the values
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Apply `supabase/migrations/001_init.sql` to a Supabase project first. The app seeds the PrepPath demo on first load.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` | Supabase project URL and publishable key |
+| `ANTHROPIC_API_KEY` | Optional. Without it Guidewise runs in rules-only mode |
+| `GUIDEWISE_MODEL` | Optional. Defaults to `claude-opus-5-5` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Limits, stated plainly
 
-## Learn More
+- Round 2 reviews text (pasted, or DOCX). Image and visual-asset review is Round 3 work.
+- There is no sign-in, so judges can open the link directly. Role rules are enforced on the server, but the database is open to the demo app by design; real workspaces need authentication.
+- Accuracy has not been measured yet. We will publish precision and recall on a planted-error test set when it has been run.
+- Guidewise supports reviewers. It does not give legal advice. Penalty precedents are cited as reported in the linked press coverage.
 
-To learn more about Next.js, take a look at the following resources:
+## Disclosures
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Claude (Anthropic) was used to help write the code during the build window.
+- PrepPath Academy, its rules, facts and students are fictional and were written by the team.
+- Open-source components: Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth. Licences are in their packages.
