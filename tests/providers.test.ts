@@ -32,7 +32,7 @@ vi.mock("@google/genai", () => ({
       generateContent: async ({ model }: { model: string }) => {
         calls.push("gemini");
         geminiModelsSeen.push(model);
-        if (model === "gemini-flash-latest") throw Object.assign(new Error("models/gemini-flash-latest is not found"), { status: 404 });
+        if (model === "gemini-2.5-flash") throw Object.assign(new Error("models/gemini-2.5-flash is not found"), { status: 404 });
         return { text: '{"findings":[{"quote":"best coaching","explanation":"from gemini","fix":"trusted coaching"}]}' };
       },
     };
@@ -59,7 +59,7 @@ describe("provider chain", () => {
     expect(out[0].explanation).toBe("from gemini");
     // one Groq retry, then Gemini: its default name 404s, so it picks the newest non-lite Flash model and retries
     expect(calls).toEqual(["groq", "groq", "gemini", "gemini"]);
-    expect(geminiModelsSeen).toEqual(["gemini-flash-latest", "gemini-3.5-flash"]);
+    expect(geminiModelsSeen).toEqual(["gemini-2.5-flash", "gemini-3.5-flash"]);
     expect(aiModel()).toMatch(/Gemini \(gemini-3.5-flash\)/);
   }, 15000);
   it("rejects an answer that does not match the schema", async () => {

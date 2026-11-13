@@ -47,7 +47,7 @@ Apply `supabase/migrations/001_init.sql` to a Supabase project first. The app se
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` | Supabase project URL and publishable key |
 | `GROQ_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Optional; set any. Keys present are tried Claude, then Groq, then Gemini, falling through on errors or rate limits. With none, Guidewise runs in rules-only mode |
-| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL` | Optional model overrides (defaults: `openai/gpt-oss-120b`, `gemini-flash-latest`, `claude-opus-5-5`) |
+| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL` | Optional model overrides (defaults: `openai/gpt-oss-120b`, `gemini-2.5-flash`, `claude-opus-5-5`) |
 | `GUIDEWISE_MODEL` | Optional. Defaults to `claude-opus-5-5` |
 
 ## Limits, stated plainly

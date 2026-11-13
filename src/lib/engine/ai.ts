@@ -13,6 +13,9 @@ import type { Intent, Rule } from "../types";
  * Zod schema, and everything it returns is then checked by code (see verify.ts).
  */
 
+// Each AI call is capped so a slow or overloaded provider cannot stall a review past the server limit.
+const CALL_TIMEOUT_MS = 20_000;
+
 interface Task<T> { name: string; system: string; user: string; schema: z.ZodType<T>; maxTokens: number }
 interface Provider { id: string; label: string; run<T>(t: Task<T>): Promise<T> }
 
@@ -36,7 +39,7 @@ function claude(): Provider | null {
   return {
     id: "claude", label: `Claude (${model})`,
     async run<T>(t: Task<T>): Promise<T> {
-      client ??= new Anthropic({ timeout: 45_000, maxRetries: 1 });
+      client ??= new Anthropic({ timeout: CALL_TIMEOUT_MS, maxRetries: 0 });
       const res = await client.messages.parse({
         model,
         max_tokens: t.maxTokens,
@@ -58,7 +61,7 @@ function groq(): Provider | null {
   return {
     id: "groq", label: `Groq (${model})`,
     async run<T>(t: Task<T>): Promise<T> {
-      client ??= new Groq({ timeout: 45_000, maxRetries: 1 });
+      client ??= new Groq({ timeout: CALL_TIMEOUT_MS, maxRetries: 0 });
       const res = await client.chat.completions.create({
         model,
         max_completion_tokens: t.maxTokens,
@@ -88,7 +91,8 @@ export async function geminiModels(): Promise<string[]> {
 function gemini(): Provider | null {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!key) return null;
-  let model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  // A stable model by default; if this key cannot use it, the newest Flash model it can use is found.
+  let model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   let resolved = false;
   let client: GoogleGenAI | null = null;
   const provider: Provider = {
@@ -129,7 +133,7 @@ export async function probeProvider(id: string): Promise<{ ok: boolean; label?: 
   const t0 = Date.now();
   if (!p) return { ok: false, ms: 0, error: "not configured" };
   try {
-    await p.run({ name: "probe", system: "Return the JSON asked for.", user: 'Return {"findings": []}.', schema: JudgeSchema, maxTokens: 200 });
+    await withTimeout(p.run({ name: "probe", system: "Return the JSON asked for.", user: 'Return {"findings": []}.', schema: JudgeSchema, maxTokens: 200 }), CALL_TIMEOUT_MS, p.label);
     return { ok: true, label: p.label, ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, label: p.label, ms: Date.now() - t0, error: (e as Error)?.message?.slice(0, 200) };
@@ -165,6 +169,12 @@ const isRateLimit = (e: unknown) => {
   return s === 429 || /rate|quota|429|exhausted/i.test(String((e as Error)?.message ?? ""));
 };
 
+function withTimeout<T>(work: Promise<T>, ms: number, who: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`${who} took longer than ${ms / 1000}s`)), ms); });
+  return Promise.race([work, limit]).finally(() => clearTimeout(timer));
+}
+
 let lastAnswered: string | null = null;
 const failures: string[] = [];
 /** Which provider answered last, and recent failures. For the health check only; never includes keys. */
@@ -180,7 +190,7 @@ async function structured<T>(t: Task<T>): Promise<T> {
   for (const p of c) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const out = await slot(() => p.run(t));
+        const out = await slot(() => withTimeout(p.run(t), CALL_TIMEOUT_MS, p.label));
         lastAnswered = p.label;
         return out;
       } catch (e) {
