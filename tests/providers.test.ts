@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls: string[] = [];
 let groqBehaviour: "rate-limit" | "bad-json" | "ok" = "rate-limit";
-let geminiModelsSeen: string[] = [];
+const geminiModelsSeen: string[] = [];
 
 vi.mock("groq-sdk", () => ({
   default: class {
