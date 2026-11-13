@@ -93,7 +93,7 @@ function gemini(): Provider | null {
   if (!key) return null;
   // A stable model by default; if this key cannot use it, the newest Flash model it can use is found.
   let model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  let resolved = false;
+  const tried: string[] = [];
   let client: GoogleGenAI | null = null;
   const provider: Provider = {
     id: "gemini", label: `Gemini (${model})`,
@@ -107,14 +107,25 @@ function gemini(): Provider | null {
       try {
         return parseJson((await call()).text, t.schema);
       } catch (e) {
-        // A model name this key cannot use: pick the newest Flash model it can, once, and retry.
-        if ((e as { status?: number })?.status !== 404 || resolved) throw e;
-        resolved = true;
-        const [best] = await geminiModels();
-        if (!best) throw e;
-        model = best;
-        provider.label = `Gemini (${model})`;
-        return parseJson((await call()).text, t.schema);
+        // A model this key cannot use (404) or one that is overloaded (503): walk the key's other Flash models
+        // and keep the first that answers.
+        const status = (e as { status?: number })?.status;
+        if (status !== 404 && status !== 503) throw e;
+        if (!tried.length) tried.push(model);
+        const candidates = (await geminiModels()).filter((m) => !tried.includes(m));
+        for (const m of candidates.slice(0, 3)) {
+          tried.push(m);
+          model = m;
+          provider.label = `Gemini (${model})`;
+          try {
+            return parseJson((await call()).text, t.schema);
+          } catch (e2) {
+            const s2 = (e2 as { status?: number })?.status;
+            if (s2 !== 404 && s2 !== 503) throw e2;
+          }
+        }
+        tried.length = 0; // let a later request try the list again
+        throw e;
       }
     },
   };
