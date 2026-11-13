@@ -5,6 +5,16 @@ import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
 import { runVisualChecks, type DraftImage } from "./visual";
 
+/**
+ * The CCPA coaching guidelines (2024) apply to centres coaching more than 50 students.
+ * If the Brand Kit says the organisation coaches 50 or fewer, those rules still run but only as suggestions.
+ */
+export function applicableRules(rules: Rule[], kit: Kit): Rule[] {
+  const n = kit.profile?.students_coached;
+  if (n === undefined || n === null || n > 50) return rules;
+  return rules.map((r) => (/CCPA/.test(r.source) ? { ...r, status: "advisory" as const, risk: "low" as const } : r));
+}
+
 const key = (f: Finding) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;
 
 /**
@@ -12,19 +22,25 @@ const key = (f: Finding) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;
  * and withdraw the fix if it introduces an issue that was not there before.
  */
 export function retestFixes(text: string, findings: Finding[], rules: Rule[], facts: Fact[], kit: Kit): number {
-  const before = new Set(runCodeChecks(text, rules, facts, kit).map(key));
+  const norm = (n: Finding) => `${n.rule_id}|${n.quote.replace(/[.!?\s]+$/, "").toLowerCase()}`;
+  const before = new Set(runCodeChecks(text, rules, facts, kit).map(norm));
   let withdrawn = 0;
   for (const f of findings) {
     if (f.fix === null || f.fix === undefined || (f.location && f.location !== "text")) continue;
     const after = runCodeChecks(text.replace(f.quote, f.fix), rules, facts, kit);
-    const introduced = after.find((n) => !before.has(key(n)) && f.fix!.includes(n.quote) && n.level === "violation");
-    if (introduced) {
+    const introduced = after.filter((n) => !before.has(norm(n)) && n.level === "violation" && n.rule_id !== f.rule_id && (f.fix!.includes(n.quote) || n.quote.includes(f.fix!)));
+    // A new issue the system can fix automatically is a follow-up, not a reason to withdraw.
+    const blocking = introduced.find((n) => n.fix === null || n.fix === undefined);
+    if (blocking) {
       f.fix_status = "withdrawn";
-      f.fix_note = `Fix withdrawn: it would introduce a new issue (${introduced.rule_id}: "${introduced.quote}").`;
+      f.fix_note = `Fix withdrawn: it would introduce a new issue (${blocking.rule_id}: "${blocking.quote}").`;
       f.fix = null;
       withdrawn++;
     } else {
       f.fix_status = "verified";
+      if (introduced.length) {
+        f.fix_note = `${f.fix_note ? f.fix_note + " " : ""}Accepting it raises a follow-up with its own fix: ${[...new Set(introduced.map((n) => n.rule_id))].join(", ")}.`;
+      }
     }
   }
   return withdrawn;
@@ -58,6 +74,7 @@ export async function reviewDraft(
   opts: { useAI?: boolean; images?: DraftImage[] } = {},
 ): Promise<{ findings: Finding[]; stats: ReviewStats }> {
   const started = Date.now();
+  rules = applicableRules(rules, kit);
   const useAI = (opts.useAI ?? true) && aiAvailable();
   const { text: safe, map } = redact(text);
   const dropped: Dropped[] = [];

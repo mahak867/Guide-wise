@@ -1,6 +1,6 @@
 import type { Fact, Finding, Kit, Rule } from "../types";
 import { reviewDraft } from "../engine/review";
-import { EVAL_DOCS, type EvalDoc } from "./dataset";
+import { EVAL_DOCS, EVAL_RULES, type EvalDoc } from "./dataset";
 
 /** Wilson score interval for a proportion, 95%. */
 export function wilson(k: number, n: number): [number, number] {
@@ -35,6 +35,8 @@ export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { us
   const started = Date.now();
   const split = opts.split ?? "test";
   const docs = EVAL_DOCS.filter((d) => split === "all" || d.split === split);
+  // The set plants errors for these rules only; other rules (disclaimers, images) are measured separately.
+  rules = rules.filter((r) => EVAL_RULES.has(r.id));
   const critical = new Set(rules.filter((r) => r.severity === "critical").map((r) => r.id));
   let mode = "rules-only";
   const results: DocResult[] = [];

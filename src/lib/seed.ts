@@ -30,6 +30,7 @@ export const SEED_KIT: Kit = {
     { label: "Admissions email", value: "admissions@preppath.in" },
     { label: "Admissions helpline", value: "+91 80000 12345" },
   ],
+  profile: { students_coached: 50000, sector: "JEE and NEET coaching" },
 };
 
 export const SEED_FACTS: Fact[] = [
@@ -159,6 +160,19 @@ export const SEED_RULES: Rule[] = [
       note: "Toppers' names and photos used without consent; one topper's course disclosed but not the others', as reported.",
       source: "https://www.storyboard18.com/how-it-works/ccpa-fines-dikshant-ias-abhimanu-ias-rs-8-lakh-each-for-deceptive-upsc-success-claims-83596.htm",
     },
+  },
+  {
+    id: "R-DISC", kind: "code", category: "disclaimer", severity: "major", status: "enforced", source: CCPA, risk: "high",
+    title: "Results need the approved disclaimer",
+    description: "A post that mentions selections, ranks or results must carry disclaimer D-1, in the same language as the claim.",
+    config: { patterns: ["\\bselections?\\b", "\\bAIR\\s*\\d+", "\\btoppers?\\b", "\\branks?\\b", "चयन", "रैंक"], fixFactId: "D-1" },
+    tests: [
+      { text: "4,200+ JEE selections in 2025 from our two-year classroom programme.", expect: "flag" },
+      { text: "4,200+ JEE selections in 2025 from our two-year classroom programme. Past results do not guarantee future selection.", expect: "pass" },
+      { text: "2025 में 4,200+ JEE चयन। Past results do not guarantee future selection.", expect: "flag" },
+      { text: "Classes start on 1 December.", expect: "pass" },
+    ],
+    precedent: null,
   },
   {
     id: "R-15", kind: "code", category: "contact", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",

@@ -131,6 +131,15 @@ export default function FactsPage() {
 
         <Card className="space-y-5 p-4">
           <div>
+            <h2 className="font-semibold">Organisation profile</h2>
+            <p className="mt-1 text-sm text-muted">The CCPA coaching guidelines (2024) apply to centres coaching more than 50 students. At 50 or fewer, Guidewise still runs those rules but shows them as suggestions.</p>
+            <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); const n = new FormData(e.currentTarget).get("n"); call(() => api("/api/kit", { profile: { ...kit.profile, students_coached: n } }), "Profile updated. Reviews use it from now on."); }}>
+              <Field label="Students coached"><input name="n" type="number" min={0} className={inputCls + " w-36"} defaultValue={kit.profile?.students_coached ?? ""} disabled={!manager} /></Field>
+              {manager && <Button type="submit" disabled={busy}>Save</Button>}
+              <span className="pb-1.5 text-sm">{(kit.profile?.students_coached ?? 51) > 50 ? <Badge tone="critical">CCPA coaching rules apply</Badge> : <Badge>CCPA coaching rules shown as suggestions</Badge>}</span>
+            </form>
+          </div>
+          <div>
             <h2 className="font-semibold">Palette</h2>
             <ul className="mt-2 flex flex-wrap gap-2 text-sm">
               {kit.palette.map((c) => (

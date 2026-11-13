@@ -90,3 +90,4 @@ function build(): EvalDoc[] {
 }
 
 export const EVAL_DOCS: EvalDoc[] = build();
+export const EVAL_RULES = new Set(ERRORS.map((e) => e.rule));

@@ -7,6 +7,10 @@ export async function POST(req: Request) {
     const b = await req.json();
     const patch: Record<string, unknown> = {};
     for (const k of ["palette", "disclaimers", "contacts"]) if (Array.isArray(b[k])) patch[k] = b[k];
+    if (b.profile && typeof b.profile === "object") {
+      const n = b.profile.students_coached;
+      patch.profile = { sector: String(b.profile.sector ?? "").slice(0, 80), students_coached: n === "" || n === null || n === undefined ? null : Math.max(0, Math.floor(Number(n))) };
+    }
     if (!Object.keys(patch).length) return fail("Nothing to change.");
     must(await db().from("kit").update(patch).eq("ws", wsOf(req)));
     const version = await bumpKit(wsOf(req));

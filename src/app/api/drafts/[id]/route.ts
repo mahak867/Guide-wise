@@ -1,6 +1,6 @@
 import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { riskTier } from "@/lib/engine/review";
-import { closeStale, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
+import { fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
@@ -49,7 +49,8 @@ export async function POST(req: Request, ctx: Ctx) {
         if (!draft.text.includes(f.quote)) return fail("Those words are no longer in the draft.");
         draft = await saveText(draft, draft.text.replace(f.quote, f.fix), `Accepted fix for ${f.rule_id}`);
         must(await d.from("findings").update({ state: "accepted", resolved_by: a.name }).eq("id", f.id!));
-        await closeStale(draft);
+        // Re-check the new text with the code checks, so overlapping findings are recomputed, not just closed.
+        await runReview(ws, draft, false);
         await log(req, id, "fix_accepted", { rule: f.rule_id, from: f.quote, to: f.fix, version: draft.version });
         break;
       }

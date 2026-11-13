@@ -290,8 +290,42 @@ export function dedupe(findings: Finding[]): Finding[] {
 }
 
 /** One code rule against the text. Also the function the rule-test run calls. */
+const DEVANAGARI = /[\u0900-\u097F]/;
+
+/** A results claim must carry the approved disclaimer, written in the claim's own script. */
+function disclaimerHits(rule: Rule, text: string, kit: Kit): Finding[] {
+  const d = kit.disclaimers.find((x) => x.id === rule.config.fixFactId) ?? kit.disclaimers[0];
+  if (!d) return [];
+  let trigger: RegExpMatchArray | null = null;
+  for (const entry of rule.config.patterns ?? []) {
+    let re: RegExp | null = null;
+    try { re = new RegExp(typeof entry === "string" ? entry : entry.re, "i"); } catch { re = null; } // non-global: keeps .index
+    const m = re ? text.match(re) : null;
+    if (m && (trigger === null || (m.index ?? 0) < (trigger.index ?? 0))) trigger = m;
+  }
+  if (!trigger) return [];
+  const has = text.toLowerCase().includes(d.text.toLowerCase().replace(/\.$/, ""));
+  const claimHindi = DEVANAGARI.test(sentenceAt(text, trigger.index ?? 0).text);
+  if (has && !claimHindi) return [];
+  if (has && claimHindi && DEVANAGARI.test(d.text)) return [];
+  const s = sentenceAt(text, trigger.index ?? 0);
+  // Quote the sentence with its closing punctuation, so the fix can add the disclaimer after it cleanly.
+  const tail = text.slice(s.end).match(/^[.!?]+/)?.[0] ?? "";
+  const quote = (s.text + tail).trim();
+  const sentence = /[.!?]$/.test(quote) ? quote.replace(/[!?]+$/, ".").replace(/\.{2,}$/, ".") : quote + ".";
+  return [{
+    ...base(rule, "code"), quote,
+    message: has
+      ? `The claim is written in Hindi but disclaimer ${d.id} appears only in English. The coaching guidelines expect the disclaimer in the same language as the claim.`
+      : `This mentions results ("${trigger[0]}") without disclaimer ${d.id}: "${d.text}"`,
+    fix: has ? null : `${sentence} ${d.text}`,
+    fix_note: has ? `Add a Hindi version of ${d.id} beside the claim; ask compliance for the approved translation.` : `Approved disclaimer ${d.id} from the Brand Kit, added after the claim.`,
+  }];
+}
+
 export function runCodeRule(rule: Rule, text: string, facts: Fact[], kit: Kit, claims?: NumberClaim[], skipQuotes: string[] = []): Finding[] {
   switch (rule.category) {
+    case "disclaimer": return disclaimerHits(rule, text, kit);
     case "term": return termHits(rule, text);
     case "contact": return contactHits(rule, text, kit);
     case "claims": return claimHits(rule, text, facts, claims ?? extractNumberClaims(text), skipQuotes);
