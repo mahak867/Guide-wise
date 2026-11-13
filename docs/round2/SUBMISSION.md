@@ -51,7 +51,7 @@ https://github.com/mahak867/Guide-wise
 25. **Engineering.**
     - 33 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
-    - A 19-step browser test of the whole journey (`npm run e2e`), run against the live site.
+    - A 20-step browser test of the whole journey (`npm run e2e`), run against the live site.
     - Functions run in Mumbai next to the database.
 
 ## Technology and implementation details

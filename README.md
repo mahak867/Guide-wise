@@ -38,7 +38,7 @@ Next.js 16 (TypeScript, App Router), Tailwind CSS 4, Supabase Postgres, AI throu
 ```bash
 npm test                                            # 33 unit tests, including a deliberately wrong AI
 npm run eval                                        # accuracy on the held-out set (code checks)
-BASE_URL=https://guidewise-kohl.vercel.app npm run e2e   # 19-step browser test of the whole journey
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e   # 20-step browser test of the whole journey
 ```
 
 ## Run locally
