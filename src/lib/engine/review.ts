@@ -148,7 +148,9 @@ export async function reviewDraft(
 /** High risk goes to compliance. A fixed rule table decides, not a model. */
 export function riskTier(findings: Finding[]): { tier: "low" | "high"; reasons: string[] } {
   const reasons: string[] = [];
-  const highRules = [...new Set(findings.filter((f) => f.risk === "high").map((f) => f.rule_id))];
+  // Findings closed because their words were edited out no longer describe the content.
+  const live = findings.filter((f) => f.state !== "resolved");
+  const highRules = [...new Set(live.filter((f) => f.risk === "high").map((f) => f.rule_id))];
   if (highRules.length) reasons.push(`Outcome, claim or regulated content was flagged (${highRules.join(", ")})`);
   const open = findings.filter((f) => f.state === "open" && f.severity === "critical" && f.level === "violation");
   if (open.length) reasons.push(`${open.length} critical finding${open.length > 1 ? "s" : ""} still unresolved`);
