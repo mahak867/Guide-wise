@@ -1,19 +1,19 @@
-import { actor, db, fail, loadKit, log, must } from "@/lib/db";
+import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { riskTier } from "@/lib/engine/review";
 import { closeStale, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(req: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const d = db();
-    const draft = await getDraft(id);
+    const draft = await getDraft(wsOf(req), id);
     if (!draft) return fail("That draft was not found. It may have been removed by a demo reset.", 404);
     const [findings, events, versions, receipt] = await Promise.all([
       getFindings(id),
-      d.from("events").select("*").eq("draft_id", id).order("at", { ascending: false }),
+      d.from("events").select("*").eq("ws", wsOf(req)).eq("draft_id", id).order("at", { ascending: false }),
       d.from("versions").select("*").eq("draft_id", id).order("version", { ascending: false }),
       d.from("receipts").select("*").eq("draft_id", id).order("at", { ascending: false }).limit(1).maybeSingle(),
     ]);
@@ -31,7 +31,8 @@ export async function POST(req: Request, ctx: Ctx) {
     const b = await req.json();
     const a = actor(req);
     const d = db();
-    let draft = await getDraft(id);
+    const ws = wsOf(req);
+    let draft = await getDraft(ws, id);
     if (!draft) return fail("That draft was not found.", 404);
     if (draft.status === "approved") return fail("This draft is approved and locked. Start a new review to change it.", 409);
     const findings = await getFindings(id);
@@ -77,19 +78,19 @@ export async function POST(req: Request, ctx: Ctx) {
         if (text === draft.text) return fail("The text has not changed.");
         draft = await saveText(draft, text, "Edited by " + a.name);
         if (draft.status === "changes_requested") must(await d.from("drafts").update({ status: "draft" }).eq("id", id));
-        await runReview(draft, b.useAI !== false);
+        await runReview(ws, draft, b.useAI !== false);
         await log(req, id, "text_edited", { version: draft.version });
         break;
       }
       case "recheck": {
-        await runReview(draft, b.useAI !== false);
-        await log(req, id, "review_run", { version: draft.version, mode: (await getDraft(id))?.mode });
+        await runReview(ws, draft, b.useAI !== false);
+        await log(req, id, "review_run", { version: draft.version, mode: (await getDraft(ws, id))?.mode });
         break;
       }
       case "submit": {
         if (inReview) return fail("This draft is already with a reviewer.", 409);
         // Code checks run once more on the exact text being submitted, then the rule table routes it.
-        await runReview(draft, false);
+        await runReview(ws, draft, false);
         const risk = riskTier(await getFindings(id));
         const status = risk.tier === "high" ? "compliance_review" : "brand_review";
         must(await d.from("drafts").update({ status, risk_tier: risk.tier, risk_reasons: risk.reasons, updated_at: new Date().toISOString() }).eq("id", id));
@@ -104,7 +105,7 @@ export async function POST(req: Request, ctx: Ctx) {
         }
         const open = findings.filter((f) => f.state === "open" && f.level === "violation");
         if (open.length) return fail(`${open.length} finding${open.length > 1 ? "s are" : " is"} still open. Dismiss each with a reason, or request changes.`, 409);
-        const { kit } = await loadKit();
+        const { kit } = await loadKit(wsOf(req));
         const count = (s: string) => findings.filter((f) => f.state === s).length;
         must(await d.from("receipts").insert({
           draft_id: id,

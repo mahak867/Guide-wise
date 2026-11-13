@@ -17,52 +17,60 @@ export function must<T>(res: { data: T | null; error: { message: string } | null
   return res.data as T;
 }
 
+/** The visitor's workspace, from the browser. Each visitor gets an isolated copy of the demo. */
+export function wsOf(req: Request): string {
+  const w = (req.headers.get("x-workspace") ?? "").toLowerCase();
+  return /^[a-z0-9-]{8,48}$/.test(w) ? w : "public";
+}
+
 export function actor(req: Request): { role: Role; name: string } {
   const r = (req.headers.get("x-role") ?? "creator") as Role;
   const role: Role = r in ROLES ? r : "creator";
   return { role, name: ROLES[role].name };
 }
 
-export async function seed(wipe: boolean): Promise<void> {
+export async function seed(ws: string, wipe: boolean): Promise<void> {
   const d = db();
   if (wipe) {
-    must(await d.from("drafts").delete().not("id", "is", null));
-    must(await d.from("events").delete().not("id", "is", null));
-    must(await d.from("rules").delete().not("id", "is", null));
-    must(await d.from("facts").delete().not("id", "is", null));
+    must(await d.from("drafts").delete().eq("ws", ws));
+    must(await d.from("events").delete().eq("ws", ws));
+    must(await d.from("rules").delete().eq("ws", ws));
+    must(await d.from("facts").delete().eq("ws", ws));
   }
-  must(await d.from("kit").upsert({ ...SEED_KIT, updated_at: new Date().toISOString() }));
-  must(await d.from("rules").upsert(SEED_RULES.map((r) => ({ ...r, last_test: null }))));
-  must(await d.from("facts").upsert(SEED_FACTS));
+  const { id: _id, ...kit } = SEED_KIT;
+  void _id;
+  must(await d.from("kit").upsert({ ...kit, ws, updated_at: new Date().toISOString() }));
+  must(await d.from("rules").upsert(SEED_RULES.map((r) => ({ ...r, ws, last_test: null }))));
+  must(await d.from("facts").upsert(SEED_FACTS.map((f) => ({ ...f, ws }))));
 }
 
-export async function loadKit(): Promise<{ kit: Kit; rules: Rule[]; facts: Fact[] }> {
+export async function loadKit(ws: string): Promise<{ kit: Kit; rules: Rule[]; facts: Fact[] }> {
   const d = db();
-  let kitRow = must(await d.from("kit").select("*").eq("id", 1).maybeSingle()) as Kit | null;
+  let kitRow = must(await d.from("kit").select("*").eq("ws", ws).maybeSingle()) as Kit | null;
   if (!kitRow) {
-    await seed(false);
-    kitRow = must(await d.from("kit").select("*").eq("id", 1).single()) as Kit;
+    await seed(ws, false);
+    kitRow = must(await d.from("kit").select("*").eq("ws", ws).single()) as Kit;
   }
   const [rules, facts] = await Promise.all([
-    d.from("rules").select("*").order("created_at").order("id"),
-    d.from("facts").select("*").order("kind").order("id"),
+    d.from("rules").select("*").eq("ws", ws).order("created_at").order("id"),
+    d.from("facts").select("*").eq("ws", ws).order("kind").order("id"),
   ]);
   const f = (must(facts) as Fact[]).map((x) => ({ ...x, value: x.value === null ? null : Number(x.value) }));
   return { kit: kitRow, rules: must(rules) as Rule[], facts: f };
 }
 
 /** Any change to rules, facts or assets creates a new Brand Kit version. */
-export async function bumpKit(): Promise<number> {
+export async function bumpKit(ws: string): Promise<number> {
   const d = db();
-  const kit = must(await d.from("kit").select("version").eq("id", 1).single()) as { version: number };
+  const kit = must(await d.from("kit").select("version").eq("ws", ws).single()) as { version: number };
   const version = kit.version + 1;
-  must(await d.from("kit").update({ version, updated_at: new Date().toISOString() }).eq("id", 1));
+  must(await d.from("kit").update({ version, updated_at: new Date().toISOString() }).eq("ws", ws));
   return version;
 }
 
 export async function log(req: Request, draft_id: string | null, action: string, detail: Record<string, unknown> = {}): Promise<void> {
   const a = actor(req);
-  must(await db().from("events").insert({ draft_id, actor: a.name, role: a.role, action, detail }));
+  must(await db().from("events").insert({ ws: wsOf(req), draft_id, actor: a.name, role: a.role, action, detail }));
 }
 
 export function fail(e: unknown, status = 400): Response {

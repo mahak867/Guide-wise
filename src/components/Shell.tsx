@@ -21,7 +21,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
 
   async function reset() {
-    if (!window.confirm("Reset the demo? This removes every draft and restores the PrepPath rules and facts.")) return;
+    if (!window.confirm("Reset your demo workspace? This removes your drafts and restores the PrepPath rules and facts. Other visitors are not affected.")) return;
     setBusy(true);
     try {
       await api("/api/reset", {});

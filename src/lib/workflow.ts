@@ -21,8 +21,9 @@ export interface DraftRow {
 
 const key = (f: { rule_id: string; quote: string }) => `${f.rule_id}|${f.quote}`;
 
-export async function getDraft(id: string): Promise<DraftRow | null> {
-  return must(await db().from("drafts").select("*").eq("id", id).maybeSingle()) as DraftRow | null;
+export async function getDraft(ws: string, id: string): Promise<DraftRow | null> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  return must(await db().from("drafts").select("*").eq("ws", ws).eq("id", id).maybeSingle()) as DraftRow | null;
 }
 
 export async function getFindings(id: string): Promise<Finding[]> {
@@ -34,9 +35,9 @@ export async function getFindings(id: string): Promise<Finding[]> {
  * decisions people made are kept, open findings whose words are gone are closed,
  * and anything new is added.
  */
-export async function runReview(draft: DraftRow, useAI: boolean): Promise<void> {
+export async function runReview(ws: string, draft: DraftRow, useAI: boolean): Promise<void> {
   const d = db();
-  const { kit, rules, facts } = await loadKit();
+  const { kit, rules, facts } = await loadKit(ws);
   const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI });
   const existing = await getFindings(draft.id);
   const found = new Set(findings.map(key));

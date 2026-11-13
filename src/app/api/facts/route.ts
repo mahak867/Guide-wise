@@ -1,4 +1,4 @@
-import { actor, bumpKit, db, fail, log, must } from "@/lib/db";
+import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
 
 const list = (v: unknown): string[] =>
   Array.isArray(v) ? v.map(String) : String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -25,8 +25,8 @@ export async function POST(req: Request) {
       disclosure_keywords: list(b.disclosure_keywords),
       meta: b.meta ?? {},
     };
-    must(await db().from("facts").upsert(row));
-    const version = await bumpKit();
+    must(await db().from("facts").upsert({ ...row, ws: wsOf(req) }));
+    const version = await bumpKit(wsOf(req));
     await log(req, null, "fact_saved", { fact: id, kit_version: version });
     return Response.json({ ok: true, id });
   } catch (e) {

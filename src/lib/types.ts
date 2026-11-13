@@ -65,12 +65,14 @@ export interface Fact {
 }
 
 export interface Kit {
-  id: number;
+  id?: number;
+  ws?: string;
   name: string;
   version: number;
   palette: { name: string; hex: string }[];
   disclaimers: { id: string; text: string; when: string }[];
   contacts: { label: string; value: string }[];
+  profile?: { students_coached?: number | null; sector?: string };
 }
 
 export interface Intent {

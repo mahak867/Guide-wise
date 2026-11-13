@@ -1,4 +1,4 @@
-import { actor, bumpKit, db, fail, log, must } from "@/lib/db";
+import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
 
 // Create or edit a rule. Only the brand manager may change the Brand Kit.
 // A new or edited rule is always advisory: it has to pass its tests again before it can be enforced.
@@ -24,8 +24,8 @@ export async function POST(req: Request) {
       precedent: b.precedent ?? null,
       updated_at: new Date().toISOString(),
     };
-    must(await db().from("rules").upsert(row));
-    const version = await bumpKit();
+    must(await db().from("rules").upsert({ ...row, ws: wsOf(req) }));
+    const version = await bumpKit(wsOf(req));
     await log(req, null, "rule_saved", { rule: id, kit_version: version });
     return Response.json({ ok: true, id, kit_version: version });
   } catch (e) {

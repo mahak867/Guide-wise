@@ -1,12 +1,12 @@
-import { actor, db, fail, log, must } from "@/lib/db";
+import { actor, db, fail, log, must, wsOf } from "@/lib/db";
 import { getDraft, runReview, type DraftRow } from "@/lib/workflow";
 
 export const maxDuration = 60;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const d = db();
-    const drafts = must(await d.from("drafts").select("id,title,content_type,status,risk_tier,version,author,mode,updated_at,created_at").order("updated_at", { ascending: false }).limit(100)) as { id: string }[];
+    const drafts = must(await d.from("drafts").select("id,title,content_type,status,risk_tier,version,author,mode,updated_at,created_at").eq("ws", wsOf(req)).order("updated_at", { ascending: false }).limit(100)) as { id: string }[];
     const findings = must(await d.from("findings").select("draft_id,state").in("draft_id", drafts.map((x) => x.id).concat("00000000-0000-0000-0000-000000000000"))) as { draft_id: string; state: string }[];
     const open: Record<string, number> = {};
     for (const f of findings) if (f.state === "open") open[f.draft_id] = (open[f.draft_id] ?? 0) + 1;
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     if (text.length > 12000) return fail("This version reviews up to 12,000 characters at a time.");
     const a = actor(req);
     const row = must(await db().from("drafts").insert({
+      ws: wsOf(req),
       title: String(b.title || text.slice(0, 48)).trim(),
       content_type: b.content_type || "social",
       text,
@@ -32,8 +33,8 @@ export async function POST(req: Request) {
       author: a.name,
     }).select("*").single()) as DraftRow;
     must(await db().from("versions").insert({ draft_id: row.id, version: 1, text, note: "Submitted for review" }));
-    await runReview(row, b.useAI !== false);
-    const after = await getDraft(row.id);
+    await runReview(wsOf(req), row, b.useAI !== false);
+    const after = await getDraft(wsOf(req), row.id);
     await log(req, row.id, "review_run", { mode: after?.mode, version: 1 });
     return Response.json({ id: row.id });
   } catch (e) {
