@@ -45,7 +45,7 @@ https://github.com/mahak867/Guide-wise
 19. **Guided tour.** A checklist on each review ticks itself off as the visitor completes the journey.
 20. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
 21. **Engineering.**
-    - 22 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
+    - 28 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
     - Functions run in Mumbai next to the database.
 
@@ -58,23 +58,24 @@ https://github.com/mahak867/Guide-wise
   - Supabase Postgres. Every table is scoped by a workspace ID, so each visitor's demo is isolated.
   - Schema in `supabase/migrations/`.
 - **Review pipeline** (`src/lib/engine/`):
-  1. **Redact** emails and phone numbers before any AI call (`redact.ts`).
+  1. **Redact** emails, phone numbers, Aadhaar, PAN and card numbers before any AI call (`redact.ts`).
   2. **Code checks** (`code.ts`): numbers are extracted into typed values (lakh and crore are understood) and compared with the Facts Register by subject first, value second. The AI never decides whether two numbers match.
-  3. **AI checks** (`ai.ts`, one adapter for Groq, Gemini and Claude with automatic fallback; every answer must pass a Zod schema): one rule per call. A rule that returns a finding is run a second time, and disagreement downgrades the finding to a suggestion. Every AI call goes through one adapter file.
+  3. **AI checks** (`ai.ts`, one adapter for Groq, Gemini and Claude with automatic fallback; every answer must pass a Zod schema): one rule per call, each capped at 20 seconds. A rule that returns a finding is run a second time, and disagreement downgrades the finding to a suggestion. A rate-limited, slow or failed provider falls through to the next; if all fail, the review continues with code checks and says so.
   4. **Verifier** (`verify.ts`): plain code checks grounding — quote, rule and fact for text findings; colour, OCR text or alt text for image findings.
   5. **Fix re-test** (`review.ts`).
   6. **Visual checks** (`visual.ts`): sRGB to CIELAB, colour difference against the palette, WCAG contrast, alt text, and every text rule applied to the OCR text.
 - **Image analysis in the browser** (`src/lib/image.ts`): dominant colours by quantisation, and OCR with tesseract.js. The OCR engine and English language data are served from our own site, not a CDN, so they work where CDNs are blocked.
 - **Documents:** mammoth (DOCX) and unpdf (PDF), read in memory and never stored.
 - **Evaluation** (`src/lib/eval/`, `scripts/eval.ts`): a seeded generator makes the same 60 drafts on every machine (the fingerprint is shown on the page). `--ai` measures the AI checks and repeat-run agreement.
-- **Testing:** Vitest (`tests/engine.test.ts`, and `tests/fake-ai.test.ts`, which swaps in a deliberately wrong AI) and GitHub Actions (`.github/workflows/ci.yml`).
-- **Open source used:** Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth, unpdf, tesseract.js. Licences are in their packages.
+- **Testing:** Vitest (`tests/engine.test.ts`; `tests/fake-ai.test.ts`, which swaps in a deliberately wrong AI; `tests/providers.test.ts`, which covers provider fallback) and GitHub Actions (`.github/workflows/ci.yml`).
+- **Open source used:** Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, groq-sdk, @google/genai, Zod, mammoth, unpdf, tesseract.js. Licences are in their packages.
 - **AI disclosure:** Claude (Anthropic) was used to help write code during the build window. The product calls an LLM through a provider adapter (Groq, Gemini or Claude, whichever keys are configured) for its AI checks and guide compiler.
 
 ## Changes from the Round 1 plan
 
 | Plan | What we did | Why |
 | --- | --- | --- |
+| AI on Claude | One adapter: Groq first, Gemini as backup, Claude when a key is set. | Free tiers keep the AI checks available to judges at no cost. The schema, verifier and tests are the same for every provider. |
 | Supabase Auth with four roles | No sign-in. A private workspace per visitor and a role switcher; role rules are enforced on the server. | The Round 2 brief requires judges to use the link without signing in. Isolated workspaces stop judges interfering with each other. |
 | Image and asset review in Round 3 | A first version ships now: palette, contrast, alt text, and OCR text through every rule. | The brief names visual identity as part of the central workflow, so it could not wait. Round 3 deepens it instead (improvement 3). |
 | Results page with measured accuracy | Shipped, for the code checks. AI-mode numbers are not published yet. | The AI service was not connected in the deployed build when we measured. We publish only numbers we have measured. |
