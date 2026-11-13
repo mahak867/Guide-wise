@@ -81,7 +81,7 @@ export default function ReviewPage() {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, [id]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { queueMicrotask(load); }, [load]);
 
   async function act(label: string, body: Record<string, unknown>, done?: string) {
     setBusy(label);

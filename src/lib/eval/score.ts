@@ -10,6 +10,8 @@ export function wilson(k: number, n: number): [number, number] {
   const d = 1 + (z * z) / n;
   const c = p + (z * z) / (2 * n);
   const m = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  if (k === n) return [Math.max(0, (c - m) / d), 1];
+  if (k === 0) return [0, Math.min(1, (c + m) / d)];
   return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)];
 }
 

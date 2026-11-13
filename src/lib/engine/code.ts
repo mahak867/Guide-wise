@@ -155,7 +155,7 @@ export function extractNumberClaims(text: string): NumberClaim[] {
   const masked: [number, number][] = [...text.matchAll(CONTACT_SPANS)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length]);
   const re = /(?:₹|rs\.?\s?)?\s?\d[\d,]*(?:\.\d+)?\s?(?:k\b|lakhs?\b|lacs?\b|crores?\b|cr\b)?\s?[+%]?/gi;
   for (const m of text.matchAll(re)) {
-    const quote = m[0].trim();
+    const quote = m[0].trim().replace(/[,.]+$/, ""); // "2025," is a year followed by a comma
     const idx = (m.index ?? 0) + m[0].indexOf(quote);
     const before = text.slice(Math.max(0, idx - 12), idx).toLowerCase();
     const after = text.slice(idx + quote.length, idx + quote.length + 14).toLowerCase();
@@ -340,7 +340,8 @@ export function runCodeChecks(text: string, rules: Rule[], facts: Fact[], kit: K
   const ordered = [...rules].sort((a, b) => (a.category === "claims" ? 1 : 0) - (b.category === "claims" ? 1 : 0));
   for (const rule of ordered) {
     if (rule.kind === "judgment") out.push(...patternHits(rule, text, facts));
-    else out.push(...runCodeRule(rule, text, facts, kit, claims, out.map((f) => f.quote)));
+    // Only a finding that is itself about the claim (e.g. a guarantee) suppresses the number check on those words.
+    else out.push(...runCodeRule(rule, text, facts, kit, claims, out.filter((f) => f.check_type === "claims").map((f) => f.quote)));
   }
   return dedupe(out);
 }

@@ -78,11 +78,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       /* storage blocked */
     }
-    if (saved && ["creator", "brand", "compliance", "manager"].includes(saved)) {
-      currentRole = saved;
-      setRoleState(saved);
-    }
-    refresh();
+    if (saved && ["creator", "brand", "compliance", "manager"].includes(saved)) currentRole = saved;
+    const role = currentRole;
+    queueMicrotask(() => {
+      setRoleState(role);
+      refresh();
+    });
   }, [refresh]);
 
   const setRole = useCallback((r: Role) => {

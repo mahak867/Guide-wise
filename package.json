@@ -8,28 +8,32 @@
     "start": "next start",
     "lint": "eslint",
     "prebuild": "node scripts/copy-ocr.mjs",
-    "predev": "node scripts/copy-ocr.mjs"
+    "predev": "node scripts/copy-ocr.mjs",
+    "test": "vitest run",
+    "eval": "tsx scripts/eval.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
     "@supabase/supabase-js": "^2.119.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "mammoth": "^1.13.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tesseract.js": "^7.0.0",
-    "zod": "^4.6.7",
-    "@tesseract.js-data/eng": "^1.0.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   }
 }

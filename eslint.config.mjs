@@ -12,7 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party OCR assets copied at build time.
+    "public/ocr/**",
   ]),
+  {
+    rules: {
+      // Copy is plain English with quotation marks; React renders them safely.
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

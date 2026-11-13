@@ -35,7 +35,7 @@ export default function Results() {
       setBusy(false);
     }
   }
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { queueMicrotask(() => load()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const r = data?.report;
   const ai = data?.ai && data.ai.measured !== false ? data.ai : null;

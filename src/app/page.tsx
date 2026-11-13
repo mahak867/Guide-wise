@@ -35,7 +35,7 @@ export default function Home() {
     }
   }, []);
   useEffect(() => {
-    load();
+    queueMicrotask(load);
     window.addEventListener("gw-reset", load);
     return () => window.removeEventListener("gw-reset", load);
   }, [load]);
