@@ -1,4 +1,5 @@
 import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
+import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
 import { cleanImages, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
 
@@ -52,6 +53,40 @@ export async function POST(req: Request, ctx: Ctx) {
         // Re-check the new text with the code checks, so overlapping findings are recomputed, not just closed.
         await runReview(ws, draft, false);
         await log(req, id, "fix_accepted", { rule: f.rule_id, from: f.quote, to: f.fix, version: draft.version });
+        break;
+      }
+      case "accept_all": {
+        if (inReview) return fail("The draft is with a reviewer. Text can change again if they request changes.", 409);
+        // Apply every available text fix in memory, re-checking after each one so follow-ups
+        // (such as a disclaimer a fix requires) are picked up; then save once.
+        const { kit, rules, facts } = await loadKit(ws);
+        const skip = new Set(findings.filter((f) => f.state === "dismissed").map((f) => `${f.rule_id}|${f.quote}`));
+        let text = draft.text;
+        const applied: { rule: string; from: string; to: string }[] = [];
+        for (let i = 0; i < 20; i++) {
+          const { findings: now } = await reviewDraft(text, draft.intent, rules, facts, kit, { useAI: false });
+          const f = now.find((x) => x.fix !== null && x.fix !== undefined && (x.location ?? "text") === "text" && !skip.has(`${x.rule_id}|${x.quote}`) && text.includes(x.quote));
+          if (!f) break;
+          text = text.replace(f.quote, f.fix!);
+          applied.push({ rule: f.rule_id, from: f.quote, to: f.fix! });
+        }
+        if (!applied.length) return fail("There are no fixes left to accept.");
+        draft = await saveText(draft, text, `Accepted ${applied.length} fix${applied.length > 1 ? "es" : ""}`);
+        const hit = findings.filter((f) => f.state === "open" && applied.some((x) => x.rule === f.rule_id && x.from === f.quote));
+        if (hit.length) must(await d.from("findings").update({ state: "accepted", resolved_by: a.name }).in("id", hit.map((f) => f.id!)));
+        // Follow-up findings that were raised and fixed inside this pass are recorded as accepted too.
+        const known = new Set(findings.map((f) => `${f.rule_id}|${f.quote}`));
+        const follow = applied.filter((x) => !known.has(`${x.rule}|${x.from}`));
+        if (follow.length) {
+          must(await d.from("findings").insert(follow.map((x) => ({
+            draft_id: id, draft_version: draft!.version, rule_id: x.rule, check_type: "code", severity: "major", level: "violation",
+            risk: rules.find((r) => r.id === x.rule)?.risk ?? "low", quote: x.from, location: "text",
+            message: "Raised by an earlier fix and fixed in the same step.", rule_text: rules.find((r) => r.id === x.rule)?.title ?? x.rule,
+            fix: x.to, fix_status: "verified", state: "accepted", resolved_by: a.name,
+          }))));
+        }
+        await runReview(ws, draft, false);
+        must(await d.from("events").insert(applied.map((x) => ({ ws, draft_id: id, actor: a.name, role: a.role, action: "fix_accepted", detail: { rule: x.rule, from: x.from, to: x.to, version: draft!.version } }))));
         break;
       }
       case "dismiss": {

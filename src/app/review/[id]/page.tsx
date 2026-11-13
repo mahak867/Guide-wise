@@ -133,14 +133,10 @@ export default function ReviewPage() {
     setBusy("Applying fixes…");
     setError(null);
     try {
-      // Accept in passes: each accepted fix re-checks the text, which can produce a follow-up finding with its own fix.
-      for (let pass = 0; pass < 3; pass++) {
-        const cur = await api<Data>(`/api/drafts/${id}`);
-        const todo = cur.findings.filter((f) => f.state === "open" && f.fix !== null && f.fix !== undefined && (f.location ?? "text") === "text");
-        if (!todo.length) break;
-        for (const f of todo) await api(`/api/drafts/${id}`, { action: "accept", finding_id: f.id }).catch(() => null);
-      }
+      await api(`/api/drafts/${id}`, { action: "accept_all" });
       await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(null);
     }
