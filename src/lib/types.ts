@@ -85,7 +85,8 @@ export interface Finding {
   id?: string;
   rule_id: string;
   fact_id?: string | null;
-  check_type: "code" | "claims" | "voice";
+  check_type: "code" | "claims" | "voice" | "visual";
+  location?: string; // "text" or "image:N"
   severity: Severity;
   level: "violation" | "suggestion";
   risk: "low" | "high";
@@ -105,6 +106,8 @@ export interface ReviewStats {
   mode: "ai" | "rules-only";
   ms: number;
   codeFindings: number;
+  visualFindings?: number;
+  images?: number;
   aiFindings: number;
   droppedByVerifier: { reason: string; quote: string; rule_id: string }[];
   fixesWithdrawn: number;

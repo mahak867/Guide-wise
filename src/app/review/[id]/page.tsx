@@ -8,6 +8,7 @@ import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
   id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string };
+  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean }[];
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
 }
 interface Ev { id: number; actor: string; role: string; action: string; detail: Record<string, unknown>; at: string }
@@ -15,7 +16,7 @@ interface Receipt { id: string; text_hash: string; approved_text: string; kit_ve
 interface Data { draft: Draft; findings: Finding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null }
 
 const REASONS = ["The rule is unclear", "The rule does not apply to this content", "The flag is wrong", "Approved exception"];
-const CHECK = { code: "Code check", claims: "Claims check", voice: "Voice check" } as const;
+const CHECK = { code: "Code check", claims: "Claims check", voice: "Voice check", visual: "Visual check" } as const;
 
 function Highlighted({ text, findings, active, onPick }: { text: string; findings: Finding[]; active: string | null; onPick: (id: string) => void }) {
   const parts = useMemo(() => {
@@ -103,6 +104,10 @@ export default function ReviewPage() {
     setActive(fid);
     document.getElementById(`f-${fid}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
+  const show = (f: Finding) => {
+    setActive(f.id!);
+    if (f.location?.startsWith("image:")) document.getElementById(`img-${f.location.slice(6)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   if (error && !data) return <Notice tone="error">{error} <Link className="underline" href="/">Back to reviews</Link></Notice>;
   if (!data) return <p className="text-sm text-muted">Loading the review…</p>;
@@ -117,7 +122,7 @@ export default function ReviewPage() {
   const needed: Role | null = draft.status === "compliance_review" ? "compliance" : draft.status === "brand_review" ? "brand" : inReview || approved ? null : "creator";
   const canApprove = inReview && (role === "compliance" || (role === "brand" && draft.status === "brand_review"));
   const canEdit = !inReview && !approved;
-  const fixable = open.filter((f) => f.fix !== null && f.fix !== undefined);
+  const fixable = open.filter((f) => f.fix !== null && f.fix !== undefined && (f.location ?? "text") === "text");
 
   async function acceptAll() {
     setBusy("Applying fixes…");
@@ -181,7 +186,7 @@ export default function ReviewPage() {
                 </div>
               </div>
             ) : (
-              <Highlighted text={draft.text} findings={open} active={active} onPick={pick} />
+              <Highlighted text={draft.text} findings={open.filter((f) => (f.location ?? "text") === "text")} active={active} onPick={pick} />
             )}
             {(draft.intent.goal || draft.intent.audience || draft.intent.cta) && (
               <dl className="mt-4 grid gap-x-4 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-3">
@@ -192,11 +197,40 @@ export default function ReviewPage() {
             )}
           </Card>
 
+          {draft.images?.length > 0 && (
+            <Card className="p-5">
+              <h2 className="font-semibold">Images</h2>
+              <div className="mt-3 space-y-4">
+                {draft.images.map((img, i) => {
+                  const mine = open.filter((f) => f.location === `image:${i + 1}`);
+                  return (
+                    <div key={i} id={`img-${i + 1}`} className="flex flex-wrap gap-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.dataUrl} alt={img.alt || `Image ${i + 1} (no alt text provided)`} className="h-44 w-44 rounded-md border border-line object-cover" />
+                      <div className="min-w-0 flex-1 space-y-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-2"><b>Image {i + 1}</b><span className="text-muted">{img.name}</span>{mine.length > 0 && <Badge tone="critical">{mine.length} open finding{mine.length > 1 ? "s" : ""}</Badge>}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {img.colours.map((c) => {
+                            const flagged = mine.some((f) => f.quote === c.hex);
+                            return <span key={c.hex} className={`inline-flex items-center gap-1 rounded border px-1 text-xs ${flagged ? "border-crit text-crit" : "border-line"}`}><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%{flagged ? " · off-palette" : ""}</span>;
+                          })}
+                        </div>
+                        <div><span className="text-xs uppercase tracking-wide text-muted">Text read from the image</span><p className="mt-0.5 whitespace-pre-wrap rounded-md bg-mist px-2 py-1.5">{img.ocr_ok === false ? "Could not be read in the browser that uploaded it." : img.ocr || "No text found."}</p></div>
+                        <div><span className="text-xs uppercase tracking-wide text-muted">Alt text</span><p>{img.alt || <span className="text-muted">None</span>}</p></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           <Card className="p-4 text-sm">
             <h2 className="font-semibold">How this review was produced</h2>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
               <li><b className="text-ink">{st.codeFindings ?? 0}</b> findings from code checks</li>
               <li><b className="text-ink">{st.aiFindings ?? 0}</b> findings from AI checks{draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls)`}</li>
+              {!!st.images && <li><b className="text-ink">{st.visualFindings ?? 0}</b> findings from {st.images} image{st.images > 1 ? "s" : ""} (colours, alt text and the text inside)</li>}
               <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
               <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>
               <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
@@ -288,10 +322,11 @@ export default function ReviewPage() {
                   <Badge tone={f.severity}>{f.severity[0].toUpperCase() + f.severity.slice(1)}</Badge>
                   <Badge>{CHECK[f.check_type]}</Badge>
                   {f.level === "suggestion" && <Badge>Suggestion</Badge>}
-                  <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => setActive(f.id!)}>Show in draft</button>
+                  {f.location?.startsWith("image:") && <Badge tone="ink">Image {f.location.slice(6)}</Badge>}
+                  <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
                 </div>
                 <p className="mt-2 font-medium">{rule?.title ?? f.rule_id}</p>
-                <blockquote className="mt-1 border-l-2 border-line pl-2 text-muted">"{f.quote}"</blockquote>
+                <blockquote className="mt-1 flex items-center gap-1.5 border-l-2 border-line pl-2 text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
                 <p className="mt-2">{f.message}</p>
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
                 {f.precedent && (

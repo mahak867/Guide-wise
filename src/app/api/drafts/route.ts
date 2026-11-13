@@ -21,18 +21,35 @@ export async function POST(req: Request) {
   try {
     const b = await req.json();
     const text = String(b.text ?? "").trim();
-    if (text.length < 10) return fail("Paste the draft text first (at least a sentence).");
+    if (text.length < 10 && !(Array.isArray(b.images) && b.images.length)) return fail("Paste the draft text or add an image first.");
     if (text.length > 12000) return fail("This version reviews up to 12,000 characters at a time.");
     const a = actor(req);
+    const images = (Array.isArray(b.images) ? b.images : []).slice(0, 4).map((i: Record<string, unknown>, n: number) => {
+      const dataUrl = String(i.dataUrl ?? "");
+      if (!dataUrl.startsWith("data:image/") || dataUrl.length > 900_000) throw new Error(`Image ${n + 1} is missing or too large.`);
+      return {
+        name: String(i.name ?? `Image ${n + 1}`).slice(0, 120),
+        alt: String(i.alt ?? "").slice(0, 600),
+        dataUrl,
+        w: Number(i.w) || null,
+        h: Number(i.h) || null,
+        colours: (Array.isArray(i.colours) ? i.colours : []).slice(0, 8)
+          .filter((c: { hex?: string }) => /^#[0-9A-F]{6}$/.test(String(c.hex)))
+          .map((c: { hex: string; share: number }) => ({ hex: c.hex, share: Math.max(0, Math.min(1, Number(c.share) || 0)) })),
+        ocr: String(i.ocr ?? "").slice(0, 4000),
+        ocr_ok: i.ocr_ok !== false,
+      };
+    });
     const row = must(await db().from("drafts").insert({
       ws: wsOf(req),
       title: String(b.title || text.slice(0, 48)).trim(),
       content_type: b.content_type || "social",
-      text,
+      text: text || "(Image only)",
+      images,
       intent: { goal: b.intent?.goal ?? "", audience: b.intent?.audience ?? "", cta: b.intent?.cta ?? "" },
       author: a.name,
     }).select("*").single()) as DraftRow;
-    must(await db().from("versions").insert({ draft_id: row.id, version: 1, text, note: "Submitted for review" }));
+    must(await db().from("versions").insert({ draft_id: row.id, version: 1, text: row.text, note: "Submitted for review" }));
     await runReview(wsOf(req), row, b.useAI !== false);
     const after = await getDraft(wsOf(req), row.id);
     await log(req, row.id, "review_run", { mode: after?.mode, version: 1 });

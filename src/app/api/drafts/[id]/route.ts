@@ -45,6 +45,7 @@ export async function POST(req: Request, ctx: Ctx) {
         const f = findings.find((x) => x.id === b.finding_id);
         if (!f || f.state !== "open") return fail("That finding is not open.");
         if (f.fix === null || f.fix === undefined) return fail("No fix is offered for this finding. Edit the text instead.");
+        if ((f.location ?? "text") !== "text") return fail("Image findings are fixed in the design file. Dismiss with a reason once the image is replaced.");
         if (!draft.text.includes(f.quote)) return fail("Those words are no longer in the draft.");
         draft = await saveText(draft, draft.text.replace(f.quote, f.fix), `Accepted fix for ${f.rule_id}`);
         must(await d.from("findings").update({ state: "accepted", resolved_by: a.name }).eq("id", f.id!));

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { db, loadKit, must } from "./db";
 import { reviewDraft, riskTier } from "./engine/review";
 import type { Finding, Intent } from "./types";
+import type { DraftImage } from "./engine/visual";
 
 export interface DraftRow {
   id: string;
@@ -9,6 +10,7 @@ export interface DraftRow {
   content_type: string;
   text: string;
   intent: Intent;
+  images: DraftImage[];
   status: string;
   risk_tier: string | null;
   risk_reasons: string[];
@@ -19,7 +21,7 @@ export interface DraftRow {
   stats: Record<string, unknown>;
 }
 
-const key = (f: { rule_id: string; quote: string }) => `${f.rule_id}|${f.quote}`;
+const key = (f: { rule_id: string; quote: string; location?: string }) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;
 
 export async function getDraft(ws: string, id: string): Promise<DraftRow | null> {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
@@ -38,13 +40,13 @@ export async function getFindings(id: string): Promise<Finding[]> {
 export async function runReview(ws: string, draft: DraftRow, useAI: boolean): Promise<void> {
   const d = db();
   const { kit, rules, facts } = await loadKit(ws);
-  const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI });
+  const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [] });
   const existing = await getFindings(draft.id);
   const found = new Set(findings.map(key));
   const known = new Map(existing.map((f) => [key(f), f]));
 
   // In a code-only re-check, an open AI finding stays open while its words are still in the text.
-  const gone = existing.filter((f) => f.state === "open" && !found.has(key(f)) && (stats.mode === "ai" || !draft.text.includes(f.quote) || f.check_type === "code"));
+  const gone = existing.filter((f) => f.state === "open" && !found.has(key(f)) && (stats.mode === "ai" || f.check_type !== "voice" && f.check_type !== "claims" || f.location !== "text" || !draft.text.includes(f.quote)));
   if (gone.length) {
     must(await d.from("findings").update({ state: "resolved", resolved_by: "edit" }).in("id", gone.map((f) => f.id!)));
   }
@@ -73,7 +75,7 @@ export async function saveText(draft: DraftRow, text: string, note: string): Pro
 
 /** Open findings whose quoted words are no longer in the text are closed. */
 export async function closeStale(draft: DraftRow): Promise<void> {
-  const open = (await getFindings(draft.id)).filter((f) => f.state === "open" && !draft.text.includes(f.quote));
+  const open = (await getFindings(draft.id)).filter((f) => f.state === "open" && (f.location ?? "text") === "text" && !draft.text.includes(f.quote));
   if (open.length) must(await db().from("findings").update({ state: "resolved", resolved_by: "edit" }).in("id", open.map((f) => f.id!)));
 }
 

@@ -3,8 +3,9 @@ import { aiAvailable, extractClaims, judgeRule } from "./ai";
 import { dedupe, extractNumberClaims, runCodeChecks, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
+import { runVisualChecks, type DraftImage } from "./visual";
 
-const key = (f: Finding) => `${f.rule_id}|${f.quote}`;
+const key = (f: Finding) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;
 
 /**
  * Re-test every suggested fix before it is offered: apply it, re-run the code checks,
@@ -14,7 +15,7 @@ export function retestFixes(text: string, findings: Finding[], rules: Rule[], fa
   const before = new Set(runCodeChecks(text, rules, facts, kit).map(key));
   let withdrawn = 0;
   for (const f of findings) {
-    if (f.fix === null || f.fix === undefined) continue;
+    if (f.fix === null || f.fix === undefined || (f.location && f.location !== "text")) continue;
     const after = runCodeChecks(text.replace(f.quote, f.fix), rules, facts, kit);
     const introduced = after.find((n) => !before.has(key(n)) && f.fix!.includes(n.quote) && n.level === "violation");
     if (introduced) {
@@ -54,7 +55,7 @@ export async function reviewDraft(
   rules: Rule[],
   facts: Fact[],
   kit: Kit,
-  opts: { useAI?: boolean } = {},
+  opts: { useAI?: boolean; images?: DraftImage[] } = {},
 ): Promise<{ findings: Finding[]; stats: ReviewStats }> {
   const started = Date.now();
   const useAI = (opts.useAI ?? true) && aiAvailable();
@@ -121,13 +122,18 @@ export async function reviewDraft(
   const aiKept = v.kept.filter((a) => !code.some((c) => c.rule_id === a.rule_id && overlaps(c.quote, a.quote)));
   const vc = verify(text, code, rules, facts);
   dropped.push(...vc.dropped);
-  const findings = dedupe([...vc.kept, ...aiKept]);
+  const images = opts.images ?? [];
+  const vis = verify(text, runVisualChecks(images, rules, facts, kit), rules, facts, images);
+  dropped.push(...vis.dropped);
+  const seenVis = new Set<string>();
+  const visual = vis.kept.filter((f) => (seenVis.has(key(f)) ? false : (seenVis.add(key(f)), true)));
+  const findings = [...dedupe([...vc.kept, ...aiKept]).map((f) => ({ ...f, location: "text" })), ...visual];
 
   // 5. Re-test fixes.
   const fixesWithdrawn = retestFixes(text, findings, rules, facts, kit);
 
   const order = { critical: 0, major: 1, minor: 2 } as const;
-  findings.sort((a, b) => order[a.severity] - order[b.severity] || text.indexOf(a.quote) - text.indexOf(b.quote));
+  findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.location ?? "").localeCompare(b.location ?? "") || text.indexOf(a.quote) - text.indexOf(b.quote));
 
   return {
     findings,
@@ -135,6 +141,8 @@ export async function reviewDraft(
       mode: useAI && !aiError ? "ai" : "rules-only",
       ms: Date.now() - started,
       codeFindings: vc.kept.length,
+      visualFindings: visual.length,
+      images: images.length,
       aiFindings: aiKept.length,
       droppedByVerifier: dropped,
       fixesWithdrawn,

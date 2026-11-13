@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Notice, PageHead, STATUS } from "@/components/ui";
 import { api, fmtDate, useApp } from "@/lib/client";
+import { analyseImage } from "@/lib/image";
 import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
 import { ROLES } from "@/lib/types";
 
@@ -24,7 +25,7 @@ export default function Home() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,17 +41,21 @@ export default function Home() {
   }, [load]);
 
   async function runDemo() {
-    setBusy(true);
+    setBusy("Reading the sample creative…");
     setError(null);
     try {
       setRole("creator");
+      const blob = await (await fetch("/sample-creative.png")).blob();
+      const image = await analyseImage(blob, "sample-creative.png", (s) => setBusy(`Sample creative: ${s}`)).catch(() => null);
+      setBusy("Reviewing the caption and the creative…");
       const { id } = await api<{ id: string }>("/api/drafts", {
-        title: "Instagram caption: December JEE batch", content_type: "social", text: DEMO_CAPTION, intent: DEMO_INTENT,
+        title: "Instagram post: December JEE batch", content_type: "social", text: DEMO_CAPTION, intent: DEMO_INTENT,
+        images: image ? [image] : [],
       });
       router.push(`/review/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -65,11 +70,11 @@ export default function Home() {
           risky content goes to the right reviewer. A person makes the final approval.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="primary" onClick={runDemo} disabled={busy}>{busy ? "Reviewing the sample…" : "Review the sample caption"}</Button>
+          <Button variant="primary" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
           <Link href="/review/new"><Button>Check your own draft</Button></Link>
         </div>
         <ol className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-4">
-          <li><b className="text-ink">1. Review.</b> The sample is an Instagram caption from a fictional coaching brand with eight problems in it.</li>
+          <li><b className="text-ink">1. Review.</b> The sample is an Instagram post from a fictional coaching brand: a caption and a creative, with problems in both.</li>
           <li><b className="text-ink">2. Resolve.</b> Accept each re-tested fix, or dismiss a finding with a reason.</li>
           <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
           <li><b className="text-ink">4. Approve.</b> Switch to Kavya with "Acting as" and approve to get the receipt.</li>

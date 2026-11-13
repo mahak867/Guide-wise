@@ -223,6 +223,40 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
   {
+    id: "VIS-PAL", kind: "code", category: "visual-palette", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "Brand colours only",
+    description: "Any colour covering a meaningful part of a creative must be a palette colour or a neutral (white, grey, black).",
+    config: {},
+    tests: [
+      { text: "#E53935 55%, #FFFFFF 45%", expect: "flag" },
+      { text: "#0F6B5F 60%, #FFFFFF 40%", expect: "pass" },
+      { text: "#16211F 70%, #F2A541 30%", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "VIS-ALT", kind: "code", category: "visual-alt", severity: "minor", status: "enforced", source: "WCAG 2.2, success criterion 1.1.1", risk: "low",
+    title: "Every image needs alt text",
+    description: "Each image carries a text alternative that describes it and repeats any words in it.",
+    config: {},
+    tests: [
+      { text: "alt:", expect: "flag" },
+      { text: "alt: PrepPath students in a classroom with the text 'December batch starts 1 December'", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "VIS-CON", kind: "code", category: "visual-contrast", severity: "minor", status: "advisory", source: "WCAG 2.2, success criterion 1.4.3", risk: "low",
+    title: "Readable colour contrast",
+    description: "The main colours of a creative should contrast by at least 4.5:1 so text placed on them stays readable.",
+    config: { guidance: "Measured on the image's dominant colours, so it is advisory: a reviewer confirms where the text sits." },
+    tests: [
+      { text: "#F2A541 60%, #FFFFFF 40%", expect: "flag" },
+      { text: "#0F6B5F 60%, #FFFFFF 40%", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
     id: "T-5", kind: "judgment", category: "tone", severity: "minor", status: "advisory", source: "PrepPath brand guide", risk: "low",
     title: "Speak to the student",
     description: "Address the reader directly as \"you\". Avoid talking about students in the third person.",

@@ -2,7 +2,9 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
+import { ImagePicker } from "@/components/ImagePicker";
 import { api, useApp } from "@/lib/client";
+import type { ImageInput } from "@/lib/image";
 import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
 
 const TYPES = [
@@ -17,6 +19,7 @@ export default function NewReview() {
   const [type, setType] = useState("social");
   const [text, setText] = useState("");
   const [intent, setIntent] = useState({ goal: "", audience: "", cta: "" });
+  const [images, setImages] = useState<ImageInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +58,7 @@ export default function NewReview() {
     setError(null);
     try {
       if (role !== "creator") setRole("creator");
-      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent });
+      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent, images });
       router.push(`/review/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -65,7 +68,7 @@ export default function NewReview() {
 
   return (
     <>
-      <PageHead title="New review" sub="Paste the draft or upload a DOCX, say what it is for, and run the review. The draft is checked before anyone else sees it." />
+      <PageHead title="New review" sub="Paste the copy or upload a DOCX or PDF, add any images, say what it is for, and run the review. The draft is checked before anyone else sees it." />
       <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
         <Card className="p-5">
           <form onSubmit={submit} className="space-y-4">
@@ -76,7 +79,7 @@ export default function NewReview() {
               </Field>
             </div>
             <Field label="Draft text">
-              <textarea required minLength={10} rows={9} className={inputCls} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the post, ad, email or page copy here" />
+              <textarea required={!images.length} minLength={images.length ? 0 : 10} rows={7} className={inputCls} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the post, ad, email or page copy here" />
             </Field>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <label className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 font-medium hover:bg-mist">
@@ -88,6 +91,7 @@ export default function NewReview() {
               </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>
             </div>
+            <ImagePicker images={images} onChange={setImages} />
             <fieldset className="rounded-md border border-line p-3">
               <legend className="px-1 text-sm font-medium">What is this draft for? <span className="font-normal text-muted">Fixes are written to keep this intent.</span></legend>
               <div className="grid gap-3 sm:grid-cols-3">
