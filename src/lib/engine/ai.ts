@@ -125,6 +125,13 @@ const isRateLimit = (e: unknown) => {
   return s === 429 || /rate|quota|429|exhausted/i.test(String((e as Error)?.message ?? ""));
 };
 
+let lastAnswered: string | null = null;
+const failures: string[] = [];
+/** Which provider answered last, and recent failures. For the health check only; never includes keys. */
+export function aiDiagnostics() {
+  return { lastAnswered, failures: failures.slice(-6) };
+}
+
 /** Run one structured task on the first provider that answers; rate limits get one short retry. */
 async function structured<T>(t: Task<T>): Promise<T> {
   const c = chain();
@@ -133,8 +140,11 @@ async function structured<T>(t: Task<T>): Promise<T> {
   for (const p of c) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        return await slot(() => p.run(t));
+        const out = await slot(() => p.run(t));
+        lastAnswered = p.label;
+        return out;
       } catch (e) {
+        failures.push(`${p.id}: ${(e as Error)?.message?.slice(0, 160) ?? String(e)}`);
         last = e;
         if (attempt === 0 && isRateLimit(e)) { await new Promise((r) => setTimeout(r, 2000)); continue; }
         break;
