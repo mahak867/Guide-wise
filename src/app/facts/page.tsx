@@ -12,6 +12,23 @@ function validity(f: Fact, today: string): { label: string; tone: string } {
   return { label: f.valid_until ? `Valid until ${f.valid_until}` : "Valid", tone: "green" };
 }
 
+/** Shrink an uploaded logo to at most 400 pixels, kept as PNG so its transparency survives. */
+async function logoDataUrl(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) throw new Error("That logo file is larger than 5 MB.");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file could not be read as an image.")); i.src = url; });
+    const k = Math.min(1, 400 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.width * k));
+    c.height = Math.max(1, Math.round(img.height * k));
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export default function FactsPage() {
   const { state, role, setRole, refresh } = useApp();
   const [form, setForm] = useState(blank);
@@ -157,7 +174,31 @@ export default function FactsPage() {
                 <Button type="submit" disabled={busy}>Add colour</Button>
               </form>
             )}
-            <p className="mt-2 text-xs text-muted">Image checks against the palette arrive in Round 3. Text review is what runs today.</p>
+            <p className="mt-2 text-xs text-muted">Every colour covering a meaningful part of a creative is compared with these (CIELAB colour difference).</p>
+          </div>
+          <div>
+            <h2>Logo</h2>
+            <p className="mt-1 text-sm text-muted">Each creative is searched for this file at many sizes, in the browser, with no AI. The logo rule then checks it is there, large enough, and has clear space around it.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+              {kit.logo
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={kit.logo} alt="Approved logo" className="h-16 w-16 rounded border border-line bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:12px_12px] object-contain p-1" />
+                : <span className="text-muted">No logo uploaded, so creatives are not checked for one.</span>}
+              {manager && (
+                <>
+                  <label className={`cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 font-medium hover:bg-mist ${busy ? "pointer-events-none opacity-50" : ""}`}>
+                    {kit.logo ? "Replace logo" : "Upload logo"}
+                    <input type="file" accept="image/png,image/webp" className="sr-only" onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) await call(async () => api("/api/kit", { logo: await logoDataUrl(f) }), "Logo updated. New images are checked against it.");
+                    }} />
+                  </label>
+                  {kit.logo && <Button onClick={() => call(() => api("/api/kit", { logo: null }), "Logo removed.")}>Remove</Button>}
+                </>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted">Use a PNG with a transparent background around the mark, so only the mark itself is matched.</p>
           </div>
           <div>
             <h2>Approved disclaimers</h2>

@@ -1,7 +1,7 @@
 import type { Fact, Kit, Rule } from "../types";
 import { aiAvailable, judgeRule } from "./ai";
 import { patternHits, runCodeRule } from "./code";
-import { altHits, contrastHits, paletteHits, parseColourTest } from "./visual";
+import { altHits, contrastHits, logoHits, paletteHits, parseColourTest, parseLogoTest } from "./visual";
 
 export type TestRun = NonNullable<Rule["last_test"]>;
 
@@ -19,6 +19,7 @@ export async function runRuleTests(rule: Rule, facts: Fact[], kit: Kit): Promise
       const hits =
         rule.category === "visual-palette" ? paletteHits(rule, colours, kit, "image:1", "Test image") :
         rule.category === "visual-contrast" ? contrastHits(rule, colours, "image:1", "Test image") :
+        rule.category === "visual-logo" ? logoHits(rule, parseLogoTest(t.text), "image:1", "Test image") :
         altHits(rule, t.text.replace(/^alt:\s*/i, ""), "image:1", "Test image");
       got = hits.length ? "flag" : "pass";
     } else if (rule.kind === "code") {

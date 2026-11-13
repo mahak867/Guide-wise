@@ -1,12 +1,18 @@
 import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
 
-// Assets: palette, approved disclaimers, approved contacts.
+// Assets: palette, approved disclaimers, approved contacts, the logo.
 export async function POST(req: Request) {
   try {
     if (actor(req).role !== "manager") return fail("Only the brand manager can change assets. Switch role to Meera.", 403);
     const b = await req.json();
     const patch: Record<string, unknown> = {};
     for (const k of ["palette", "disclaimers", "contacts"]) if (Array.isArray(b[k])) patch[k] = b[k];
+    if ("logo" in b) {
+      const l = b.logo;
+      if (l === null || l === "") patch.logo = null;
+      else if (typeof l === "string" && (/^data:image\/(png|webp);base64,/.test(l) || /^\/brand\/[\w.-]+\.png$/.test(l)) && l.length <= 400_000) patch.logo = l;
+      else return fail("The logo must be a PNG or WebP image under 300 KB.");
+    }
     if (b.profile && typeof b.profile === "object") {
       const n = b.profile.students_coached;
       patch.profile = { sector: String(b.profile.sector ?? "").slice(0, 80), students_coached: n === "" || n === null || n === undefined ? null : Math.max(0, Math.floor(Number(n))) };

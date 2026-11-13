@@ -30,6 +30,7 @@ export const SEED_KIT: Kit = {
     { label: "Admissions email", value: "admissions@preppath.in" },
     { label: "Admissions helpline", value: "+91 80000 12345" },
   ],
+  logo: "/brand/preppath-mark.png",
   profile: { students_coached: 50000, sector: "JEE and NEET coaching" },
 };
 
@@ -267,6 +268,83 @@ export const SEED_RULES: Rule[] = [
     tests: [
       { text: "#F2A541 60%, #FFFFFF 40%", expect: "flag" },
       { text: "#0F6B5F 60%, #FFFFFF 40%", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "VIS-LOGO", kind: "code", category: "visual-logo", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "The PrepPath mark on every creative",
+    description: "Every creative carries the approved mark from the Brand Kit, at least 8% of the image width, with clear space of a quarter of its height on every side.",
+    config: { logo: { minWidth: 0.08, clear: 0.25 }, guidance: "Found by matching the Brand Kit logo file against the image at many sizes, in the browser, with no AI." },
+    tests: [
+      { text: "logo: missing", expect: "flag" },
+      { text: "logo: 5% wide", expect: "flag" },
+      { text: "logo: 12% wide, crowded", expect: "flag" },
+      { text: "logo: 12% wide", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "NAME-1", kind: "code", category: "brand-name", severity: "minor", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "Write \"PrepPath\" exactly",
+    description: "One word, capital P twice. Web and email addresses keep their lower case.",
+    config: { names: ["PrepPath"] },
+    tests: [
+      { text: "Join Preppath for the December batch.", expect: "flag" },
+      { text: "Join Prep Path for the December batch.", expect: "flag" },
+      { text: "Join PrepPath. Questions: admissions@preppath.in or preppath.in/admissions", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "STY-CAPS", kind: "code", category: "caps", severity: "minor", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "No capitals for emphasis",
+    description: "Words are not set in capitals to shout. Exam names and short acronyms (JEE, NEET, AIR, IIT) are fine.",
+    config: { allow: ["NEET", "CBSE", "ICSE", "BITSAT", "KCET", "MHT-CET"] },
+    tests: [
+      { text: "100% SELECTION GUARANTEED", expect: "flag" },
+      { text: "HURRY, admissions close soon.", expect: "flag" },
+      { text: "Prepare for JEE and NEET with IIT faculty.", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "INC-1", kind: "code", category: "pattern", severity: "minor", status: "enforced", source: "PrepPath brand guide: inclusive language", risk: "low",
+    title: "Respectful, inclusive language",
+    description: "Describe students by what they need, not by labels. Address everyone, not only boys.",
+    config: {
+      patterns: [
+        { re: "\\bweak\\s+students?\\b", fix: "students who need more support" },
+        { re: "\\bslow\\s+learners?\\b", fix: "students who need more time" },
+        { re: "\\b(?:hey|hi)\\s+guys\\b", fix: "Hi everyone" },
+      ],
+    },
+    tests: [
+      { text: "Special batch for weak students.", expect: "flag" },
+      { text: "Hey guys, results are out.", expect: "flag" },
+      { text: "Extra classes for students who need more support.", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "STY-AD", kind: "code", category: "length", severity: "minor", status: "enforced", source: "PrepPath brand guide (Meta recommends 125 characters of ad primary text)", risk: "low",
+    title: "Ad text fits before \"See more\"",
+    description: "Ad text over 125 characters is cut off behind \"See more\", so the offer and any required disclaimer must come first.",
+    config: { channels: ["ad"], maxChars: 125 },
+    tests: [
+      { text: "JEE December batch at PrepPath: two-year classroom programme with weekly tests, doubt sessions and mentors. Past results do not guarantee future selection.", expect: "flag" },
+      { text: "JEE December batch at PrepPath. Classes start 1 December. Past results do not guarantee future selection.", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "STY-READ", kind: "code", category: "readability", severity: "minor", status: "advisory", source: "PrepPath brand guide", risk: "low",
+    title: "Short sentences",
+    description: "Keep sentences to 30 words or fewer. Most readers see the post on a phone.",
+    config: { maxWords: 30, guidance: "Advisory: shown as a suggestion, not a violation." },
+    tests: [
+      { text: "Our two-year classroom programme for JEE aspirants combines weekly tests, personal mentors, doubt-clearing sessions every evening, printed study material, parent meetings and an online practice portal that you can use from home at any time.", expect: "flag" },
+      { text: "Our two-year programme has weekly tests and a personal mentor. Doubt sessions run every evening.", expect: "pass" },
     ],
     precedent: null,
   },

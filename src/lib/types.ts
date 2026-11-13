@@ -20,7 +20,11 @@ export interface Precedent {
  *  contact   {}  (uses kit.contacts as the approved list)
  *  claims    {}  (numeric claims vs the Facts Register)
  *  student   { patterns: string[] } (ranked student needs a course + consent record)
- *  readability {}
+ *  brand-name { names: string[] }   (exact spelling and capitals of the brand's names)
+ *  caps      { allow?: string[] }   (no words in capitals for emphasis; acronyms allowed)
+ *  length    { maxChars: number }   (text past the limit is hidden, e.g. behind "See more")
+ *  readability { maxWords?: number } (sentences longer than this are hard to read on a phone)
+ *  visual-logo { logo?: { minWidth?: number; clear?: number } } (the Brand Kit logo must appear, large enough, with clear space)
  * judgment rules may also carry { patterns, fixText, fixFactId, guidance } - patterns are
  * the code pre-filter that still works in rules-only mode.
  */
@@ -43,6 +47,11 @@ export interface Rule {
     fixText?: string;
     fixFactId?: string;
     guidance?: string;
+    names?: string[];
+    allow?: string[];
+    maxChars?: number;
+    maxWords?: number;
+    logo?: { minWidth?: number; clear?: number };
     /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
     channels?: string[];
   };
@@ -74,6 +83,8 @@ export interface Kit {
   palette: { name: string; hex: string }[];
   disclaimers: { id: string; text: string; when: string }[];
   contacts: { label: string; value: string }[];
+  /** The approved logo: a site path or a PNG data URL, transparent around the mark. */
+  logo?: string | null;
   profile?: { students_coached?: number | null; sector?: string };
 }
 

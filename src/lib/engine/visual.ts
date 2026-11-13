@@ -10,6 +10,8 @@ export interface DraftImage {
   colours: { hex: string; share: number }[];
   ocr: string;
   ocr_ok?: boolean;
+  /** Logo search result from the browser; missing when the Brand Kit has no logo. */
+  logo?: { found: boolean; score: number; box?: { x: number; y: number; w: number; h: number }; crowd?: number } | null;
 }
 
 // --- colour science: sRGB -> CIELAB, CIEDE76 difference, WCAG contrast ---
@@ -110,6 +112,46 @@ export function altHits(rule: Rule, alt: string, location: string, label: string
   }];
 }
 
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+/** The Brand Kit logo must appear, at a minimum width, with its clear space free of other content. */
+export function logoHits(rule: Rule, logo: DraftImage["logo"], location: string, label: string): Finding[] {
+  if (!logo) return [];
+  const minWidth = rule.config.logo?.minWidth ?? 0.08;
+  const quote = `${label}: logo`;
+  if (!logo.found) {
+    return [{
+      ...base(rule, location), quote,
+      message: `${label} does not carry the approved logo from the Brand Kit. The closest match scored ${logo.score.toFixed(2)}; the logo counts as present at 0.70 or more.`,
+      fix_note: "Place the approved logo file from the Brand Kit, unaltered, in the design.",
+    }];
+  }
+  const out: Finding[] = [];
+  const w = logo.box?.w ?? 0;
+  if (w && w < minWidth) {
+    out.push({
+      ...base(rule, location), quote,
+      message: `The logo in ${label.toLowerCase()} is ${pct(w)} of the image width. The brand guide's minimum is ${pct(minWidth)}.`,
+      fix_note: `Scale the logo up to at least ${pct(minWidth)} of the width.`,
+    });
+  }
+  if ((logo.crowd ?? 0) > 0.1) {
+    out.push({
+      ...base(rule, location), quote,
+      message: `Other content sits inside the logo's clear space in ${label.toLowerCase()}: ${pct(logo.crowd!)} of the margin around it is not plain background. The margin should be free on every side.`,
+      fix_note: "Move text and graphics away from the logo, keeping a margin of a quarter of the logo's height on every side.",
+    });
+  }
+  return out;
+}
+
+/** Test text like "logo: missing", "logo: 6% wide" or "logo: 14% wide, crowded". */
+export function parseLogoTest(text: string): DraftImage["logo"] {
+  if (/missing|not found|none/i.test(text)) return { found: false, score: 0.3 };
+  const w = Number(text.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] ?? 12) / 100;
+  return { found: true, score: 0.95, box: { x: 0.05, y: 0.05, w, h: w }, crowd: /crowd/i.test(text) ? 0.3 : 0 };
+}
+
 /** Visual checks plus every text rule run on the words found inside the image. */
 export function runVisualChecks(images: DraftImage[], rules: Rule[], facts: Fact[], kit: Kit): Finding[] {
   const out: Finding[] = [];
@@ -120,9 +162,11 @@ export function runVisualChecks(images: DraftImage[], rules: Rule[], facts: Fact
       if (rule.category === "visual-palette") out.push(...paletteHits(rule, img.colours, kit, location, label));
       if (rule.category === "visual-contrast") out.push(...contrastHits(rule, img.colours, location, label));
       if (rule.category === "visual-alt") out.push(...altHits(rule, img.alt ?? "", location, label));
+      if (rule.category === "visual-logo") out.push(...logoHits(rule, img.logo, location, label));
     }
     if (img.ocr?.trim()) {
-      const textRules = rules.filter((r) => !r.category.startsWith("visual-"));
+      // Length and sentence-length rules are about body copy; text read from a design is laid out in lines.
+      const textRules = rules.filter((r) => !r.category.startsWith("visual-") && r.category !== "length" && r.category !== "readability");
       for (const f of runCodeChecks(img.ocr, textRules, facts, kit)) {
         out.push({
           ...f, location, check_type: f.check_type === "code" ? "visual" : f.check_type,

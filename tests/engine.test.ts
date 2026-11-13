@@ -10,7 +10,7 @@ import { runEval, wilson } from "../src/lib/eval/score";
 import { DEMO_CAPTION, SEED_FACTS, SEED_KIT, SEED_RULES } from "../src/lib/seed";
 import type { Finding } from "../src/lib/types";
 
-const review = (text: string) => reviewDraft(text, null, SEED_RULES, SEED_FACTS, SEED_KIT, { useAI: false });
+const review = (text: string) => reviewDraft(text, null, SEED_RULES, SEED_FACTS, SEED_KIT, { useAI: false, contentType: "social" });
 
 describe("redaction", () => {
   it("removes emails and phone numbers before AI calls and restores them", () => {

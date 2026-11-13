@@ -8,10 +8,14 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const KINDS = [
   { v: "term", l: "Replace a word (code check)" },
   { v: "pattern", l: "Flag phrases (code check)" },
+  { v: "brand-name", l: "Spell a name exactly (code check)" },
+  { v: "caps", l: "No capitals for emphasis (code check)" },
+  { v: "length", l: "Maximum length (code check)" },
+  { v: "readability", l: "Maximum sentence length (code check)" },
   { v: "tone", l: "Tone or voice (AI check)" },
   { v: "claim", l: "What may be claimed (AI check)" },
 ];
-const blank = { id: "", title: "", description: "", type: "term", severity: "major", risk: "low", avoid: "", prefer: "", phrases: "", flag: "", pass: "", channels: "" };
+const blank = { id: "", title: "", description: "", type: "term", severity: "major", risk: "low", avoid: "", prefer: "", phrases: "", flag: "", pass: "", channels: "", param: "" };
 const typeLabel = (v: string) => CONTENT_TYPES.find((t) => t.v === v)?.l ?? v;
 
 interface Proposal { title: string; description: string; kind: string; category: string; severity: string; avoid: string[]; prefer: string; flag_example: string; pass_example: string; source_passage: string }
@@ -54,7 +58,12 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
         <div className="mt-3 space-y-2 border-t border-line pt-3">
           <p className="text-xs text-muted">Source: {rule.source}</p>
           {rule.config.avoid && <p>Flags: {rule.config.avoid.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)} Use instead: <code className="rounded bg-mist px-1">{rule.config.prefer || "(remove)"}</code></p>}
-          {rule.config.guidance && <p className="text-muted">Guidance for the AI check: {rule.config.guidance}</p>}
+          {rule.config.names && <p>Exact spelling: {rule.config.names.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
+          {rule.config.allow && <p>Allowed in capitals: {rule.config.allow.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
+          {rule.config.maxChars && <p>Limit: {rule.config.maxChars} characters</p>}
+          {rule.config.maxWords && <p>Limit: {rule.config.maxWords} words per sentence</p>}
+          {rule.config.logo && <p>Minimum width {Math.round((rule.config.logo.minWidth ?? 0.08) * 100)}% of the image; clear space {Math.round((rule.config.logo.clear ?? 0.25) * 100)}% of the logo&apos;s height on every side.</p>}
+          {rule.config.guidance && <p className="text-muted">{rule.kind === "judgment" ? "Guidance for the AI check" : "Note"}: {rule.config.guidance}</p>}
           {rule.precedent && <p className="rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-xs"><b>Precedent:</b> {rule.precedent.order}. {rule.precedent.note} <a className="underline" href={rule.precedent.source} target="_blank" rel="noreferrer">Press report</a></p>}
           <table className="w-full text-left">
             <caption className="pb-1 text-left text-xs font-medium uppercase tracking-wide text-muted">Test sentences{t ? ` · last run ${fmtDate(t.at)} · ${t.mode}` : " · not run yet"}</caption>
@@ -114,13 +123,20 @@ export default function KitPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const code = form.type === "term" || form.type === "pattern";
+    const code = !["tone", "claim"].includes(form.type);
+    const num = Math.max(1, Math.floor(Number(form.param) || 0));
     const list = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
     const ok = await save({
       id: form.id, title: form.title, description: form.description, severity: form.severity, risk: form.risk,
       kind: code ? "code" : "judgment", category: form.type,
       config: {
-        ...(form.type === "term" ? { avoid: list(form.avoid), prefer: form.prefer } : form.type === "pattern" ? { patterns: list(form.phrases).map(esc) } : {}),
+        ...(form.type === "term" ? { avoid: list(form.avoid), prefer: form.prefer }
+          : form.type === "pattern" ? { patterns: list(form.phrases).map(esc) }
+          : form.type === "brand-name" ? { names: list(form.param) }
+          : form.type === "caps" ? { allow: list(form.param).map((a) => a.toUpperCase()) }
+          : form.type === "length" ? { maxChars: num }
+          : form.type === "readability" ? { maxWords: num }
+          : {}),
         ...(list(form.channels).length ? { channels: list(form.channels) } : {}),
       },
       tests: [form.flag && { text: form.flag, expect: "flag" }, form.pass && { text: form.pass, expect: "pass" }].filter(Boolean),
@@ -256,6 +272,10 @@ export default function KitPage() {
                 </div>
               )}
               {form.type === "pattern" && <Field label="Phrases to flag" hint="(comma separated)"><input required className={inputCls} value={form.phrases} onChange={(e) => set("phrases", e.target.value)} placeholder="money-back, risk-free" /></Field>}
+              {form.type === "brand-name" && <Field label="Names, spelled exactly" hint="(comma separated)"><input required className={inputCls} value={form.param} onChange={(e) => set("param", e.target.value)} placeholder="PrepPath, PrepPath Academy" /></Field>}
+              {form.type === "caps" && <Field label="Words allowed in capitals" hint="(comma separated; words of three letters or fewer are always allowed)"><input className={inputCls} value={form.param} onChange={(e) => set("param", e.target.value)} placeholder="NEET, CBSE" /></Field>}
+              {form.type === "length" && <Field label="Maximum characters"><input required type="number" min={1} className={inputCls + " w-36"} value={form.param} onChange={(e) => set("param", e.target.value)} placeholder="125" /></Field>}
+              {form.type === "readability" && <Field label="Maximum words per sentence"><input required type="number" min={5} className={inputCls + " w-36"} value={form.param} onChange={(e) => set("param", e.target.value)} placeholder="30" /></Field>}
               {(form.type === "tone" || form.type === "claim") && <p className="text-sm text-muted">This rule is judged by the AI check, one rule per call, using the test sentences below as the boundary.{!state.ai.available && " The AI service is off, so its tests can't pass until it is on."}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="A sentence that should be flagged"><input required className={inputCls} value={form.flag} onChange={(e) => set("flag", e.target.value)} /></Field>

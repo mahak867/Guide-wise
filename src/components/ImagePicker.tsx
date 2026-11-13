@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
 import { analyseImage, type ImageInput } from "@/lib/image";
+import { useApp } from "@/lib/client";
 import { Button, inputCls } from "./ui";
 
 export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChange: (i: ImageInput[]) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const logo = useApp().state?.kit.logo ?? null;
 
   async function add(files: FileList) {
     setError(null);
@@ -13,7 +15,7 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
     for (const f of Array.from(files).slice(0, 4 - images.length)) {
       if (!f.type.startsWith("image/")) { setError(`${f.name} is not an image.`); continue; }
       try {
-        next.push(await analyseImage(f, f.name, (s) => setBusy(`${f.name}: ${s}`)));
+        next.push(await analyseImage(f, f.name, (s) => setBusy(`${f.name}: ${s}`), logo));
         onChange([...next]);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
@@ -40,6 +42,7 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
                   <span key={c.hex} className="inline-flex items-center gap-1 rounded border border-line px-1 text-xs"><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%</span>
                 ))}
               </div>
+              {img.logo && <div className="text-xs text-muted">{img.logo.found ? `Logo found (match ${img.logo.score.toFixed(2)}), ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width.` : `Logo not found (best match ${img.logo.score.toFixed(2)}).`}</div>}
               <div className="text-xs text-muted">{img.ocr_ok ? (img.ocr ? <>Text found: “{img.ocr.replace(/\n/g, " ").slice(0, 140)}{img.ocr.length > 140 ? "…" : ""}”</> : "No text found in the image.") : "The text in this image could not be read here, so only its colours are checked."}</div>
               <label className="block">
                 <span className="sr-only">Alt text for image {i + 1}</span>
@@ -62,7 +65,7 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
                 setBusy(`${s.file}: starting…`);
                 try {
                   const blob = await (await fetch(`/${s.file}`)).blob();
-                  const img = await analyseImage(blob, s.file, (m) => setBusy(`${s.file}: ${m}`));
+                  const img = await analyseImage(blob, s.file, (m) => setBusy(`${s.file}: ${m}`), logo);
                   onChange([...images, { ...img, alt: s.alt ?? "" }]);
                 } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
                 setBusy(null);

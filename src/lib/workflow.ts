@@ -93,6 +93,18 @@ export function fingerprint(text: string): string {
 }
 
 /** Validate images sent by the browser: size, colour format and text length. */
+function cleanLogo(l: unknown): DraftImage["logo"] {
+  if (!l || typeof l !== "object") return null;
+  const o = l as Record<string, unknown>;
+  const n = (v: unknown) => Math.max(0, Math.min(1, Number(v) || 0));
+  const b = o.box as Record<string, unknown> | undefined;
+  return {
+    found: o.found === true, score: n(o.score),
+    ...(b ? { box: { x: n(b.x), y: n(b.y), w: n(b.w), h: n(b.h) } } : {}),
+    ...(o.crowd !== undefined ? { crowd: n(o.crowd) } : {}),
+  };
+}
+
 export function cleanImages(input: unknown): DraftImage[] {
   return (Array.isArray(input) ? input : []).slice(0, 4).map((i: Record<string, unknown>, n: number) => {
     const dataUrl = String(i.dataUrl ?? "");
@@ -108,6 +120,7 @@ export function cleanImages(input: unknown): DraftImage[] {
         .map((c: { hex: string; share: number }) => ({ hex: c.hex, share: Math.max(0, Math.min(1, Number(c.share) || 0)) })),
       ocr: String(i.ocr ?? "").slice(0, 4000),
       ocr_ok: i.ocr_ok !== false,
+      logo: cleanLogo(i.logo),
     };
   });
 }

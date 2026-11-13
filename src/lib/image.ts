@@ -1,4 +1,5 @@
 "use client";
+import { findLogo, toGray, type LogoMatch, type Template } from "./logo";
 // Runs in the browser: shrink the image, measure its dominant colours, and read any text in it (OCR).
 // The server then checks the colours against the palette and the text against every rule and fact.
 
@@ -11,6 +12,8 @@ export interface ImageInput {
   colours: { hex: string; share: number }[];
   ocr: string;
   ocr_ok: boolean;
+  /** Where the Brand Kit logo was found, if the kit has one. */
+  logo?: LogoMatch | null;
 }
 
 function load(src: string): Promise<HTMLImageElement> {
@@ -87,7 +90,32 @@ async function ocr(src: string): Promise<string> {
   return data.text.replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
 }
 
-export async function analyseImage(file: Blob, name: string, onStep?: (s: string) => void): Promise<ImageInput> {
+function pixels(img: HTMLImageElement, max: number, flatten: boolean): Template {
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.width * scale));
+  c.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  if (flatten) { ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, c.width, c.height); }
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return toGray(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+}
+
+const logoCache = new Map<string, Promise<Template | null>>();
+function logoTemplate(src: string): Promise<Template | null> {
+  if (!logoCache.has(src)) logoCache.set(src, load(src).then((i) => pixels(i, 400, false)).catch(() => null));
+  return logoCache.get(src)!;
+}
+
+/** Search the image for the Brand Kit logo (plain code in the browser, no AI). */
+async function locateLogo(img: HTMLImageElement, logoSrc?: string | null, clear?: number): Promise<LogoMatch | null> {
+  if (!logoSrc) return null;
+  const tpl = await logoTemplate(logoSrc);
+  if (!tpl) return null;
+  return findLogo(pixels(img, 1100, true), tpl, clear);
+}
+
+export async function analyseImage(file: Blob, name: string, onStep?: (s: string) => void, logoSrc?: string | null): Promise<ImageInput> {
   if (file.size > 8 * 1024 * 1024) throw new Error(`${name} is larger than 8 MB.`);
   const url = URL.createObjectURL(file);
   try {
@@ -95,6 +123,8 @@ export async function analyseImage(file: Blob, name: string, onStep?: (s: string
     onStep?.("Measuring colours…");
     const colours = dominantColours(img);
     const small = shrink(img);
+    onStep?.("Looking for the logo…");
+    const logo = await locateLogo(img, logoSrc).catch(() => null);
     onStep?.("Reading text in the image…");
     let text = "";
     let ok = true;
@@ -107,7 +137,7 @@ export async function analyseImage(file: Blob, name: string, onStep?: (s: string
       ok = false;
       workerPromise = null; // let the next image try again
     }
-    return { name, alt: "", colours, ocr: text, ocr_ok: ok, ...small };
+    return { name, alt: "", colours, ocr: text, ocr_ok: ok, logo, ...small };
   } finally {
     URL.revokeObjectURL(url);
   }

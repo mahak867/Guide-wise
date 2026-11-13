@@ -9,7 +9,7 @@ export async function GET(req: Request) {
       format: "guidewise-brand-kit",
       formatVersion: 1,
       exportedAt: new Date().toISOString(),
-      kit: { name: kit.name, version: kit.version, palette: kit.palette, disclaimers: kit.disclaimers, contacts: kit.contacts, profile: kit.profile ?? {} },
+      kit: { name: kit.name, version: kit.version, palette: kit.palette, disclaimers: kit.disclaimers, contacts: kit.contacts, logo: kit.logo ?? null, profile: kit.profile ?? {} },
       rules: rules.map((r) => strip(r, ["ws", "created_at", "updated_at", "last_test"])),
       facts: facts.map((f) => strip(f, ["ws", "created_at"])),
     });

@@ -24,6 +24,7 @@ const KitFile = z.object({
     disclaimers: z.array(z.object({ id: z.string(), text: z.string(), when: z.string() })).max(40).optional(),
     contacts: z.array(z.object({ label: z.string(), value: z.string() })).max(20).optional(),
     profile: z.record(z.string(), z.unknown()).optional(),
+    logo: z.string().max(400_000).regex(/^(data:image\/(png|webp);base64,|\/brand\/[\w.-]+\.png$)/).nullable().optional(),
   }).default({}),
   rules: z.array(RuleIn).max(200).default([]),
   facts: z.array(FactIn).max(500).default([]),

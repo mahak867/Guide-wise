@@ -356,8 +356,87 @@ function disclaimerHits(rule: Rule, text: string, kit: Kit): Finding[] {
   }];
 }
 
+/** Brand names written with the wrong capitals or spacing ("Preppath", "Prep Path"). Web and email addresses are left alone. */
+function brandNameHits(rule: Rule, text: string): Finding[] {
+  const out: Finding[] = [];
+  for (const name of rule.config.names ?? []) {
+    const parts = name.split(/(?<=[a-z])(?=[A-Z])|\s+/).filter(Boolean).map(esc);
+    if (!parts.length) continue;
+    const re = new RegExp(`(?<![\\w@./-])${parts.join("[\\s-]?")}(?![\\w-]|\\.[a-z])`, "gi");
+    const seen = new Set<string>();
+    for (const m of text.matchAll(re)) {
+      if (m[0] === name || seen.has(m[0])) continue;
+      seen.add(m[0]);
+      out.push({
+        ...base(rule, "code"), quote: m[0],
+        message: `"${m[0]}" should be written "${name}", exactly as in the Brand Kit.`,
+        fix: name, fix_note: "Brand name as registered in the Brand Kit.",
+      });
+    }
+  }
+  return out;
+}
+
+/** Words in capitals for emphasis ("SELECTION GUARANTEED"). Short acronyms and the allowed list (JEE, NEET) pass. */
+function capsHits(rule: Rule, text: string): Finding[] {
+  const allow = new Set((rule.config.allow ?? []).map((a) => a.toUpperCase()));
+  const shouting = (w: string) => w.replace(/[^A-Z]/g, "").length >= 4 && !allow.has(w.replace(/['’]S$/, ""));
+  const out: Finding[] = [];
+  for (const m of text.matchAll(/(?<![\w@.])[A-Z][A-Z'’]+(?:[\s-]+[A-Z][A-Z'’]+)*(?![\w])/g)) {
+    const words = m[0].split(/([\s-]+)/);
+    if (!words.some((w, i) => i % 2 === 0 && shouting(w))) continue;
+    const before = text.slice(0, m.index).trimEnd();
+    const startOfSentence = !before || /[.!?\n:]$/.test(before);
+    const fixed = words.map((w, i) => (i % 2 || !shouting(w) ? w : w.toLowerCase())).join("");
+    out.push({
+      ...base(rule, "code"), quote: m[0],
+      message: `"${m[0]}" is set in capitals for emphasis. The brand voice does not shout.`,
+      fix: startOfSentence ? fixed.charAt(0).toUpperCase() + fixed.slice(1) : fixed,
+      fix_note: "Same words in sentence case. Acronyms in the rule's allowed list are kept.",
+    });
+  }
+  return out;
+}
+
+/** Text past a channel's visible limit, e.g. ad text hidden behind "See more". */
+function lengthHits(rule: Rule, text: string): Finding[] {
+  const max = rule.config.maxChars ?? 0;
+  const body = text.trim();
+  if (!max || body.length <= max) return [];
+  const cut = body.lastIndexOf(" ", max) > max * 0.6 ? body.lastIndexOf(" ", max) : max;
+  const rest = body.slice(cut).trim();
+  const quote = rest.length > 70 ? rest.slice(0, rest.lastIndexOf(" ", 70) > 20 ? rest.lastIndexOf(" ", 70) : 70) : rest;
+  return [{
+    ...base(rule, "code"), quote,
+    message: `This text is ${body.length} characters; only the first ${max} show before it is cut off. Everything from "${quote}" onwards is hidden until the reader taps.`,
+    fix: null,
+    fix_note: `Put the offer, the call to action and any required disclaimer in the first ${max} characters, or shorten the text.`,
+  }];
+}
+
+/** Sentences too long to read comfortably on a phone. */
+function readabilityHits(rule: Rule, text: string): Finding[] {
+  const max = rule.config.maxWords ?? 30;
+  const out: Finding[] = [];
+  for (const m of text.matchAll(/[^.!?\n]+[.!?]*/g)) {
+    const s = m[0].trim();
+    const words = s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+    if (words <= max) continue;
+    out.push({
+      ...base(rule, "code"), quote: s,
+      message: `This sentence has ${words} words. Sentences over ${max} words are hard to follow on a phone screen.`,
+      fix: null, fix_note: "Split it into two or three sentences, one idea each.",
+    });
+  }
+  return out;
+}
+
 export function runCodeRule(rule: Rule, text: string, facts: Fact[], kit: Kit, claims?: NumberClaim[], skipQuotes: string[] = []): Finding[] {
   switch (rule.category) {
+    case "brand-name": return brandNameHits(rule, text);
+    case "caps": return capsHits(rule, text);
+    case "length": return lengthHits(rule, text);
+    case "readability": return readabilityHits(rule, text);
     case "disclaimer": return disclaimerHits(rule, text, kit);
     case "term": return termHits(rule, text);
     case "contact": return contactHits(rule, text, kit);

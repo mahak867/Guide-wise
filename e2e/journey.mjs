@@ -48,7 +48,9 @@ await step("sample post is reviewed", async () => {
   await page.getByText(/open finding/).first().waitFor({ timeout: 60000 });
   const n = await open();
   if (n < 12) throw new Error(`expected at least 12 findings, got ${n}`);
-  return `${n} findings`;
+  const r = await rows();
+  if (!r.some((x) => /PrepPath mark on every creative/.test(x))) throw new Error("the missing logo on the sample creative was not flagged");
+  return `${n} findings, logo missing flagged`;
 });
 await step("a fix can be edited before accepting", async () => {
   await page.locator("button[aria-expanded]", { hasText: "No false urgency" }).first().click();
@@ -70,9 +72,10 @@ await step("replace the image with the corrected design", async () => {
   await page.getByRole("button", { name: "Remove" }).first().click();
   await page.getByRole("button", { name: "Use the corrected sample" }).click();
   await page.locator("fieldset img").first().waitFor({ timeout: 120000 });
+  const logo = await page.getByText(/Logo found \(match/).first().innerText({ timeout: 60000 });
   await page.getByRole("button", { name: "Save and re-check" }).click();
   await page.getByText("Images updated and checked again.").waitFor({ timeout: 90000 });
-  return `${await open()} open`;
+  return `${await open()} open; ${logo}`;
 });
 await step("submit routes outcome claims to compliance", async () => {
   await page.getByRole("button", { name: "Submit for review" }).click();

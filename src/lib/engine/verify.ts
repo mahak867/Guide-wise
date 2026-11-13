@@ -28,6 +28,7 @@ export function verify(text: string, findings: Finding[], rules: Rule[], facts: 
       const grounded = !!img && (
         img.colours.some((c) => c.hex === f.quote) ||
         f.quote === `Image ${imgIdx + 1}: alt text` ||
+        (f.quote === `Image ${imgIdx + 1}: logo` && !!img.logo) ||
         (img.ocr ?? "").includes(f.quote)
       );
       if (!grounded) { drop("not found in the image it cites"); continue; }

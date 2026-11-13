@@ -21,7 +21,7 @@ const MINE: Record<string, string[]> = {
 };
 
 export default function Home() {
-  const { role, setRole } = useApp();
+  const { role, setRole, state } = useApp();
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,8 @@ export default function Home() {
     try {
       setRole("creator");
       const blob = await (await fetch("/sample-creative.png")).blob();
-      const image = await analyseImage(blob, "sample-creative.png", (s) => setBusy(`Sample creative: ${s}`)).catch(() => null);
+      const logo = state ? state.kit.logo : (await api<{ kit: { logo?: string | null } }>("/api/state").catch(() => null))?.kit.logo;
+      const image = await analyseImage(blob, "sample-creative.png", (s) => setBusy(`Sample creative: ${s}`), logo).catch(() => null);
       setBusy("Reviewing the caption and the creative…");
       const { id } = await api<{ id: string }>("/api/drafts", {
         title: "Instagram post: December JEE batch", content_type: "social", text: DEMO_CAPTION, intent: DEMO_INTENT,

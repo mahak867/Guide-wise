@@ -26,11 +26,12 @@ export default function About() {
         <Card className="p-4 text-sm">
           <h2>What this version does, and what it does not</h2>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
-            <li>Reviews text: social posts, ads, emails, page copy and DOCX files. Image and visual-identity review is planned for Round 3; the palette is stored but not yet checked against images.</li>
+            <li>Reviews text (pasted, DOCX or PDF) and up to four images per draft. For images it checks the palette, contrast, alt text and the Brand Kit logo (present, large enough, clear space), and runs every text rule on the words read from the image. It does not yet judge photos themselves, for example whether a pictured student has consented; that is planned for Round 3.</li>
+            <li>The logo check matches the logo file itself. A redrawn, recoloured or heavily stretched logo is reported as missing, and a reviewer can dismiss that with a reason.</li>
             <li>The verifier confirms that a finding is grounded in a real rule and real words. It does not prove the judgment is right, which is why any finding can be dismissed with a reason and a person approves.</li>
             <li>There is no sign-in in this version, so judges can open it directly. The four roles are switched with "Acting as". Role rules are still enforced on the server.</li>
             <li>Guidewise supports reviewers. It does not give legal advice. Regulation rules cite public sources and must be confirmed by the organisation.</li>
-            <li>Accuracy is measured on a planted-error test set written by the team; see the Results page for the numbers, the method and why they are optimistic. The AI checks are measured separately once the AI service is connected.</li>
+            <li>Accuracy is measured on a planted-error test set written by the team; see the Results page for the numbers, the method and why they are optimistic. The AI checks were measured on 20 of the held-out drafts.</li>
           </ul>
         </Card>
         <Card className="p-4 text-sm">
@@ -38,7 +39,7 @@ export default function About() {
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li><b>AI:</b> one adapter that supports Groq, Gemini and Claude and falls through to the next on errors or rate limits. In use: <code className="rounded bg-mist px-1">{state?.ai.model ?? "…"}</code>. Status now: {state ? (state.ai.available ? "on" : "off (rules-only mode: code checks and the whole workflow still run, nothing is sent outside)") : "…"}.</li>
             <li><b>Database:</b> Supabase Postgres. <b>Hosting:</b> Vercel.</li>
-            <li><b>Open source:</b> Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth (DOCX text).</li>
+            <li><b>Open source:</b> Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, groq-sdk, @google/genai, Zod, mammoth (DOCX text), unpdf (PDF text), tesseract.js (text in images).</li>
             <li><b>Demo data:</b> PrepPath Academy, its rules, facts and students are fictional and were written by the team.</li>
             <li><b>Precedents:</b> penalty orders are cited as reported in the linked press coverage. We have not read the orders themselves.</li>
             <li><b>Built with AI assistance:</b> Claude (Anthropic) was used to write code during the build window.</li>
