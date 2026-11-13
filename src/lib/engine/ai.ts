@@ -49,9 +49,9 @@ function ruleBlock(rule: Rule): string {
 
 /** One judgment rule, one call. */
 export async function judgeRule(rule: Rule, text: string, intent: Intent | null): Promise<Judgement[]> {
-  const intentLine = intent && (intent.goal || intent.audience || intent.cta)
+  const intentLine = (intent && (intent.goal || intent.audience || intent.cta)
     ? `Writer's intent - goal: ${intent.goal || "not given"}; audience: ${intent.audience || "not given"}; call to action: ${intent.cta || "not given"}`
-    : "Writer's intent: not given";
+    : "Writer's intent: not given") + (intent?.locked?.length ? `\nLocked phrases the fix must keep word for word: ${intent.locked.map((l) => `"${l}"`).join(", ")}` : "");
   const res = await getClient().messages.parse({
     model: MODEL,
     max_tokens: 4000,

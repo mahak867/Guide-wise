@@ -14,7 +14,12 @@ export async function POST(req: Request) {
     if (!guide || String(guide).trim().length < 40) return fail("Paste at least a few sentences of the brand guide.");
     if (String(guide).length > 20000) return fail("Paste up to 20,000 characters at a time.");
     const out = await compileGuide(redact(String(guide)).text);
-    return Response.json(out);
+    // No source, no rule: drop any proposal whose quoted passage is not in the pasted guide.
+    const norm = (s: string) => s.toLowerCase().replace(/[“”"']/g, "").replace(/\s+/g, " ").trim();
+    const g = norm(String(guide));
+    const rules = out.rules.filter((r) => r.source_passage.trim() && g.includes(norm(r.source_passage)));
+    const warnings = out.warnings.filter((w) => g.includes(norm(w.passage)));
+    return Response.json({ rules, warnings, dropped: out.rules.length - rules.length + out.warnings.length - warnings.length });
   } catch (e) {
     return fail(e, 500);
   }

@@ -1,6 +1,6 @@
 import type { Fact, Finding, Intent, Kit, ReviewStats, Rule } from "../types";
 import { aiAvailable, extractClaims, judgeRule } from "./ai";
-import { dedupe, extractNumberClaims, runCodeChecks, type NumberClaim } from "./code";
+import { dedupe, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
 import { runVisualChecks, type DraftImage } from "./visual";
@@ -21,16 +21,27 @@ const key = (f: Finding) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;
  * Re-test every suggested fix before it is offered: apply it, re-run the code checks,
  * and withdraw the fix if it introduces an issue that was not there before.
  */
-export function retestFixes(text: string, findings: Finding[], rules: Rule[], facts: Fact[], kit: Kit): number {
+export function retestFixes(text: string, findings: Finding[], rules: Rule[], facts: Fact[], kit: Kit, locked: string[] = []): number {
   const norm = (n: Finding) => `${n.rule_id}|${n.quote.replace(/[.!?\s]+$/, "").toLowerCase()}`;
   const before = new Set(runCodeChecks(text, rules, facts, kit).map(norm));
   let withdrawn = 0;
   for (const f of findings) {
     if (f.fix === null || f.fix === undefined || (f.location && f.location !== "text")) continue;
+    const count = (s: string, l: string) => s.toLowerCase().split(l.toLowerCase()).length - 1;
+    const fixed = text.replace(f.quote, f.fix);
+    const dropsLocked = locked.find((l) => l.trim() && count(fixed, l) < count(text, l));
+    if (dropsLocked) {
+      f.fix_status = "withdrawn";
+      f.fix_note = `Fix withdrawn: it would remove the locked phrase "${dropsLocked}". Edit the wording by hand.`;
+      f.fix = null;
+      withdrawn++;
+      continue;
+    }
     const after = runCodeChecks(text.replace(f.quote, f.fix), rules, facts, kit);
     const introduced = after.filter((n) => !before.has(norm(n)) && n.level === "violation" && n.rule_id !== f.rule_id && (f.fix!.includes(n.quote) || n.quote.includes(f.fix!)));
-    // A new issue the system can fix automatically is a follow-up, not a reason to withdraw.
-    const blocking = introduced.find((n) => n.fix === null || n.fix === undefined);
+    // A new issue the system can fix automatically is a follow-up, not a reason to withdraw,
+    // but only for approved wording from the Brand Kit. An AI-written fix may not introduce any violation.
+    const blocking = introduced.find((n) => n.fix === null || n.fix === undefined || f.origin === "ai");
     if (blocking) {
       f.fix_status = "withdrawn";
       f.fix_note = `Fix withdrawn: it would introduce a new issue (${blocking.rule_id}: "${blocking.quote}").`;
@@ -58,6 +69,7 @@ function toFinding(rule: Rule, quote: string, explanation: string, fix: string):
     rule_text: `${rule.id} · ${rule.title}: ${rule.description}`,
     fix,
     fix_note: "AI-written suggestion, re-tested against the code checks.",
+    origin: "ai",
     fix_status: "none",
     precedent: rule.precedent ?? null,
   };
@@ -92,7 +104,9 @@ export async function reviewDraft(
         const quote = restore(c.quote, map);
         const index = text.indexOf(quote);
         if (index < 0) { dropped.push({ reason: "quote is not in the draft", quote, rule_id: "claims" }); continue; }
-        claims.push({ quote, value: c.value, index });
+        // The AI only locates the figure. Its value is re-read from the quoted words by code.
+        const value = parseNumber(quote) ?? c.value;
+        claims.push({ quote, value, index });
       }
       // Code extraction stays as a floor so a missed figure is still checked.
       for (const c of extractNumberClaims(text)) if (!claims.some((x) => overlaps(x.quote, c.quote))) claims.push(c);
@@ -147,7 +161,7 @@ export async function reviewDraft(
   const findings = [...dedupe([...vc.kept, ...aiKept]).map((f) => ({ ...f, location: "text" })), ...visual];
 
   // 5. Re-test fixes.
-  const fixesWithdrawn = retestFixes(text, findings, rules, facts, kit);
+  const fixesWithdrawn = retestFixes(text, findings, rules, facts, kit, intent?.locked ?? []);
 
   const order = { critical: 0, major: 1, minor: 2 } as const;
   findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.location ?? "").localeCompare(b.location ?? "") || text.indexOf(a.quote) - text.indexOf(b.quote));

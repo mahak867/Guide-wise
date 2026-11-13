@@ -79,6 +79,8 @@ export interface Intent {
   goal: string;
   audience: string;
   cta: string;
+  /** Phrases the writer needs kept, e.g. a campaign name. A fix that removes one is withdrawn. */
+  locked?: string[];
 }
 
 export interface Finding {
@@ -96,6 +98,8 @@ export interface Finding {
   fix?: string | null;
   fix_note?: string | null;
   fix_status: "verified" | "withdrawn" | "none";
+  /** Who wrote the fix: our code (approved wording) or the AI. AI-written fixes are held to a stricter re-test. */
+  origin?: "code" | "ai";
   state?: string;
   dismiss_reason?: string | null;
   resolved_by?: string | null;
