@@ -54,13 +54,20 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
               Add image
               <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => e.target.files && add(e.target.files)} />
             </label>
-            <Button type="button" variant="ghost" disabled={!!busy} onClick={async () => {
-              const blob = await (await fetch("/sample-creative.png")).blob();
-              setBusy("Sample creative: starting…");
-              try { onChange([...images, await analyseImage(blob, "sample-creative.png", (s) => setBusy(`Sample creative: ${s}`))]); }
-              catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-              setBusy(null);
-            }}>Use the sample creative</Button>
+            {[
+              { file: "sample-creative.png", label: "Use the sample creative" },
+              { file: "sample-creative-fixed.png", label: "Use the corrected sample", alt: "PrepPath Academy creative on a teal background: 4,200+ JEE selections in 2025 from our two-year classroom programme. Past results do not guarantee future selection. Contact admissions@preppath.in." },
+            ].map((s) => (
+              <Button key={s.file} type="button" variant="ghost" disabled={!!busy} onClick={async () => {
+                setBusy(`${s.file}: starting…`);
+                try {
+                  const blob = await (await fetch(`/${s.file}`)).blob();
+                  const img = await analyseImage(blob, s.file, (m) => setBusy(`${s.file}: ${m}`));
+                  onChange([...images, { ...img, alt: s.alt ?? "" }]);
+                } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+                setBusy(null);
+              }}>{s.label}</Button>
+            ))}
             {busy && <span role="status" className="text-muted">{busy} The first image takes a few seconds while the text reader loads.</span>}
           </div>
         )}

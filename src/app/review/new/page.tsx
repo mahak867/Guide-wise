@@ -83,8 +83,8 @@ export default function NewReview() {
             </Field>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <label className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 font-medium hover:bg-mist">
-                Upload DOCX
-                <input type="file" accept=".docx" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+                Upload DOCX or PDF
+                <input type="file" accept=".docx,.pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
               </label>
               <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent(DEMO_INTENT); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
                 Use the sample caption

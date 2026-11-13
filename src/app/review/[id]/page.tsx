@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ImagePicker } from "@/components/ImagePicker";
 import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
+import type { ImageInput } from "@/lib/image";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
@@ -57,6 +59,7 @@ function describe(e: Ev): string {
     case "approved": return `approved version ${d.version} against Brand Kit v${d.kit_version}`;
     case "changes_requested": return `requested changes: ${d.comment}`;
     case "comment": return `commented: ${d.comment}`;
+    case "images_updated": return `updated the images (version ${d.version}) and re-ran the checks`;
     default: return e.action;
   }
 }
@@ -73,6 +76,7 @@ export default function ReviewPage() {
   const [comment, setComment] = useState("");
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [showResolved, setShowResolved] = useState(false);
+  const [imgEdit, setImgEdit] = useState<ImageInput[] | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -180,7 +184,10 @@ export default function ReviewPage() {
           <Card className="p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Draft</h2>
-              {canEdit && editing === null && <Button onClick={() => setEditing(draft.text)}>Edit text</Button>}
+              <div className="flex gap-2">
+                {canEdit && editing === null && !draft.images?.length && role === "creator" && imgEdit === null && <Button onClick={() => setImgEdit([])}>Add images</Button>}
+                {canEdit && editing === null && <Button onClick={() => setEditing(draft.text)}>Edit text</Button>}
+              </div>
             </div>
             {editing !== null ? (
               <div className="space-y-2">
@@ -203,9 +210,24 @@ export default function ReviewPage() {
             )}
           </Card>
 
-          {draft.images?.length > 0 && (
+          {imgEdit !== null && (
             <Card className="p-5">
-              <h2 className="font-semibold">Images</h2>
+              <h2 className="font-semibold">Update images</h2>
+              <p className="mt-0.5 text-sm text-muted">Replace a creative with the corrected design, add alt text, or add another image. The checks run again when you save.</p>
+              <div className="mt-3"><ImagePicker images={imgEdit} onChange={setImgEdit} /></div>
+              <div className="mt-3 flex gap-2">
+                <Button variant="primary" disabled={!!busy} onClick={async () => { if (await act("Re-checking…", { action: "images", images: imgEdit }, "Images updated and checked again.")) setImgEdit(null); }}>{busy === "Re-checking…" ? busy : "Save and re-check"}</Button>
+                <Button onClick={() => setImgEdit(null)}>Cancel</Button>
+              </div>
+            </Card>
+          )}
+
+          {draft.images?.length > 0 && imgEdit === null && (
+            <Card className="p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">Images</h2>
+                {canEdit && role === "creator" && <Button onClick={() => setImgEdit(draft.images.map((x) => ({ ...x, w: 0, h: 0, ocr_ok: x.ocr_ok !== false })))}>Replace or edit images</Button>}
+              </div>
               <div className="mt-3 space-y-4">
                 {draft.images.map((img, i) => {
                   const mine = open.filter((f) => f.location === `image:${i + 1}`);

@@ -1,5 +1,5 @@
 import { actor, db, fail, log, must, wsOf } from "@/lib/db";
-import { getDraft, runReview, type DraftRow } from "@/lib/workflow";
+import { cleanImages, getDraft, runReview, type DraftRow } from "@/lib/workflow";
 
 export const maxDuration = 60;
 
@@ -24,22 +24,7 @@ export async function POST(req: Request) {
     if (text.length < 10 && !(Array.isArray(b.images) && b.images.length)) return fail("Paste the draft text or add an image first.");
     if (text.length > 12000) return fail("This version reviews up to 12,000 characters at a time.");
     const a = actor(req);
-    const images = (Array.isArray(b.images) ? b.images : []).slice(0, 4).map((i: Record<string, unknown>, n: number) => {
-      const dataUrl = String(i.dataUrl ?? "");
-      if (!dataUrl.startsWith("data:image/") || dataUrl.length > 900_000) throw new Error(`Image ${n + 1} is missing or too large.`);
-      return {
-        name: String(i.name ?? `Image ${n + 1}`).slice(0, 120),
-        alt: String(i.alt ?? "").slice(0, 600),
-        dataUrl,
-        w: Number(i.w) || null,
-        h: Number(i.h) || null,
-        colours: (Array.isArray(i.colours) ? i.colours : []).slice(0, 8)
-          .filter((c: { hex?: string }) => /^#[0-9A-F]{6}$/.test(String(c.hex)))
-          .map((c: { hex: string; share: number }) => ({ hex: c.hex, share: Math.max(0, Math.min(1, Number(c.share) || 0)) })),
-        ocr: String(i.ocr ?? "").slice(0, 4000),
-        ocr_ok: i.ocr_ok !== false,
-      };
-    });
+    const images = cleanImages(b.images);
     const row = must(await db().from("drafts").insert({
       ws: wsOf(req),
       title: String(b.title || text.slice(0, 48)).trim(),
