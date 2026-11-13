@@ -71,23 +71,50 @@ function groq(): Provider | null {
   };
 }
 
+/** Flash models this key can call, newest first (lite models last). */
+export async function geminiModels(): Promise<string[]> {
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key) return [];
+  const pager = await new GoogleGenAI({ apiKey: key }).models.list();
+  const names: string[] = [];
+  for await (const m of pager) {
+    const n = (m.name ?? "").replace(/^models\//, "");
+    if (/flash/i.test(n) && !/image|tts|audio|live|preview-native|embedding/i.test(n) && (m.supportedActions ?? ["generateContent"]).includes("generateContent")) names.push(n);
+  }
+  const ver = (n: string) => Number(n.match(/(\d+(?:\.\d+)?)/)?.[1] ?? 0);
+  return names.sort((x, y) => Number(/lite/.test(x)) - Number(/lite/.test(y)) || ver(y) - ver(x) || Number(/preview|exp/.test(x)) - Number(/preview|exp/.test(y)));
+}
+
 function gemini(): Provider | null {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!key) return null;
-  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  let model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  let resolved = false;
   let client: GoogleGenAI | null = null;
-  return {
+  const provider: Provider = {
     id: "gemini", label: `Gemini (${model})`,
     async run<T>(t: Task<T>): Promise<T> {
       client ??= new GoogleGenAI({ apiKey: key });
-      const res = await client.models.generateContent({
+      const call = () => client!.models.generateContent({
         model,
         contents: t.user,
         config: { systemInstruction: t.system, responseMimeType: "application/json", responseJsonSchema: jsonSchema(t.schema), maxOutputTokens: t.maxTokens },
       });
-      return parseJson(res.text, t.schema);
+      try {
+        return parseJson((await call()).text, t.schema);
+      } catch (e) {
+        // A model name this key cannot use: pick the newest Flash model it can, once, and retry.
+        if ((e as { status?: number })?.status !== 404 || resolved) throw e;
+        resolved = true;
+        const [best] = await geminiModels();
+        if (!best) throw e;
+        model = best;
+        provider.label = `Gemini (${model})`;
+        return parseJson((await call()).text, t.schema);
+      }
     },
   };
+  return provider;
 }
 
 let providers: Provider[] | null = null;
@@ -146,7 +173,13 @@ async function structured<T>(t: Task<T>): Promise<T> {
       } catch (e) {
         failures.push(`${p.id}: ${(e as Error)?.message?.slice(0, 160) ?? String(e)}`);
         last = e;
-        if (attempt === 0 && isRateLimit(e)) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+        if (attempt === 0 && isRateLimit(e)) {
+          // Wait as long as the provider asks (capped), then try once more before falling through.
+          const h = (e as { headers?: Record<string, string> | Headers })?.headers;
+          const ra = Number((h instanceof Headers ? h.get("retry-after") : h?.["retry-after"]) ?? 0);
+          await new Promise((r) => setTimeout(r, Math.min(8000, Math.max(2000, ra * 1000))));
+          continue;
+        }
         break;
       }
     }

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls: string[] = [];
 let groqBehaviour: "rate-limit" | "bad-json" | "ok" = "rate-limit";
+let geminiModelsSeen: string[] = [];
 
 vi.mock("groq-sdk", () => ({
   default: class {
@@ -22,8 +23,16 @@ vi.mock("groq-sdk", () => ({
 vi.mock("@google/genai", () => ({
   GoogleGenAI: class {
     models = {
-      generateContent: async () => {
+      list: async () => [
+        { name: "models/gemini-2.5-flash", supportedActions: ["generateContent"] },
+        { name: "models/gemini-3.5-flash-lite", supportedActions: ["generateContent"] },
+        { name: "models/gemini-3.5-flash", supportedActions: ["generateContent"] },
+        { name: "models/gemini-3.5-flash-image", supportedActions: ["generateContent"] },
+      ],
+      generateContent: async ({ model }: { model: string }) => {
         calls.push("gemini");
+        geminiModelsSeen.push(model);
+        if (model === "gemini-flash-latest") throw Object.assign(new Error("models/gemini-flash-latest is not found"), { status: 404 });
         return { text: '{"findings":[{"quote":"best coaching","explanation":"from gemini","fix":"trusted coaching"}]}' };
       },
     };
@@ -44,12 +53,15 @@ describe("provider chain", () => {
   it("lists Groq first, then Gemini", () => {
     expect(aiModel()).toMatch(/^Groq .* then Gemini/);
   });
-  it("falls through to Gemini when Groq is rate-limited", async () => {
+  it("falls through to Gemini when Groq is rate-limited, and finds a Gemini model the key can use", async () => {
     groqBehaviour = "rate-limit";
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
     expect(out[0].explanation).toBe("from gemini");
-    expect(calls).toEqual(["groq", "groq", "gemini"]); // one retry, then the next provider
-  }, 10000);
+    // one Groq retry, then Gemini: its default name 404s, so it picks the newest non-lite Flash model and retries
+    expect(calls).toEqual(["groq", "groq", "gemini", "gemini"]);
+    expect(geminiModelsSeen).toEqual(["gemini-flash-latest", "gemini-3.5-flash"]);
+    expect(aiModel()).toMatch(/Gemini \(gemini-3.5-flash\)/);
+  }, 15000);
   it("rejects an answer that does not match the schema", async () => {
     groqBehaviour = "bad-json";
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
