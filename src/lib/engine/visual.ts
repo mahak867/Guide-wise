@@ -87,6 +87,8 @@ export function contrastHits(rule: Rule, colours: DraftImage["colours"], locatio
   const bg = main[0];
   const out: Finding[] = [];
   for (const fg of main.slice(1)) {
+    // Two shades of the same surface (panels, gradients) are not text on a background.
+    if (deltaE(bg.hex, fg.hex) < 12) continue;
     const r = contrast(bg.hex, fg.hex);
     if (r >= 4.5) continue;
     out.push({

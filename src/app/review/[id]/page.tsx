@@ -158,6 +158,7 @@ export default function ReviewPage() {
 
       <DemoGuide s={{
         hasImages: events.some((e) => e.action === "images_updated") || (draft.images?.length ?? 0) > 0,
+        isSample: (draft.images ?? []).some((i) => i.name.startsWith("sample-creative")) || draft.title.startsWith("Instagram post: December JEE batch"),
         accepted: findings.filter((f) => f.state === "accepted").length,
         imagesUpdated: events.some((e) => e.action === "images_updated"),
         submitted: events.some((e) => e.action === "submitted"),
@@ -368,11 +369,16 @@ export default function ReviewPage() {
             const isOpen = expanded === f.id;
             return (
               <div key={f.id} id={`f-${f.id}`} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
-                <button className="flex w-full items-baseline gap-2 px-4 py-2.5 text-left" aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
-                  <span className="font-serif text-[15.5px] font-medium leading-snug">{rule?.title ?? f.rule_id}</span>
-                  {!isOpen && <span className="min-w-0 flex-1 truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
-                  <span className="ml-auto shrink-0 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)} · ` : ""}{f.severity}{f.fix != null ? " · fix ready" : ""}</span>
-                  <span aria-hidden className="shrink-0 text-muted">{isOpen ? "–" : "+"}</span>
+                <button className="flex w-full items-start gap-3 px-4 py-2.5 text-left" aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-serif text-[15.5px] font-medium leading-snug">{rule?.title ?? f.rule_id}</span>
+                    {!isOpen && <span className="mt-0.5 block truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
+                  </span>
+                  <span className="shrink-0 pt-1 text-right text-[10.5px] font-medium uppercase leading-4 tracking-[0.06em] text-muted">
+                    {f.severity}{f.level === "suggestion" ? " · suggestion" : ""}
+                    <span className="block">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : "Text"}{f.fix != null ? " · fix ready" : ""}</span>
+                  </span>
+                  <span aria-hidden className="shrink-0 pt-0.5 text-muted">{isOpen ? "–" : "+"}</span>
                 </button>
                 {isOpen && (<div className="px-4 pb-4">
                 <div className="flex flex-wrap items-center gap-1.5">

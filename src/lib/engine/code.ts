@@ -132,6 +132,21 @@ export interface NumberClaim {
   quote: string; // exact words in the draft
   value: number;
   index: number;
+  /** "ai" when the AI identified it as a claim; code-found figures must also look like a claim. */
+  source?: "ai" | "code";
+}
+
+// Words that make a figure a claim the reader is asked to believe, rather than a page number or a count in passing.
+const CLAIM_NOUNS = /^[\s\w-]{0,24}?\b(students?|selections?|selected|toppers?|ranks?|rankers|results?|years?|centres?|centers?|branches|cities|teachers?|faculty|mentors?|batches|courses?|learners?|aspirants?|parents?|reviews?|ratings?|stars?|seats?|qualified|cleared|success|placements?|alumni|members|customers|users|families|schools|colleges)\b/i;
+const CLAIM_LEAD = /\b(over|more than|nearly|almost|up to|upto|above|at least|top|record|only|just|trusted by|join)\s*$/i;
+
+/** Does this figure read as a claim? Units, +, % and currency say so; otherwise the words around it must. */
+export function claimLike(text: string, c: NumberClaim): boolean {
+  if (c.source === "ai") return true;
+  if (/[+%₹]|lakh|lac|crore|\bcr\b|\bk\b|rs\.?/i.test(c.quote)) return true;
+  const after = text.slice(c.index + c.quote.length, c.index + c.quote.length + 40);
+  const before = text.slice(Math.max(0, c.index - 24), c.index);
+  return CLAIM_NOUNS.test(after) || CLAIM_LEAD.test(before);
 }
 
 const MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec";
@@ -178,6 +193,16 @@ export function extractNumberClaims(text: string): NumberClaim[] {
 
 const has = (hay: string, kws: string[]) => kws.some((k) => new RegExp(`(?<![a-z])${esc(k.toLowerCase())}`, "i").test(hay));
 
+/**
+ * The words a figure counts: what follows it up to the next figure or clause break, plus a few words before it.
+ * "Join 2,000+ students, 300+ teachers" gives "students" for 2,000+ and "teachers" for 300+.
+ */
+export function subjectWindow(text: string, c: NumberClaim): string {
+  const after = text.slice(c.index + c.quote.length, c.index + c.quote.length + 48).split(/[\d.;!?,]|\band\b/)[0];
+  const before = text.slice(Math.max(0, c.index - 28), c.index).split(/[\d.;!?,]/).pop() ?? "";
+  return `${before} ${after}`;
+}
+
 /** Compare numeric claims with the Facts Register. The AI never decides whether two numbers match. */
 export function claimHits(rule: Rule, text: string, facts: Fact[], claims: NumberClaim[], skipQuotes: string[]): Finding[] {
   const out: Finding[] = [];
@@ -190,7 +215,8 @@ export function claimHits(rule: Rule, text: string, facts: Fact[], claims: Numbe
     const sent = sentenceAt(text, c.index);
     const sameValue = numericFacts.filter((f) => Number(f.value) === c.value);
     const b = base(rule, "claims");
-    const subjectMatch = sameValue.find((f) => has(sent.text, f.keywords));
+    const near = subjectWindow(text, c);
+    const subjectMatch = sameValue.find((f) => has(near, f.keywords));
     const f = subjectMatch ?? sameValue[0];
     if (f) {
       if (f.valid_from && f.valid_from > t) {
@@ -230,20 +256,27 @@ export function claimHits(rule: Rule, text: string, facts: Fact[], claims: Numbe
       }
       continue;
     }
-    const sameSubject = numericFacts.find((x) => has(sent.text, x.keywords) && (!x.valid_from || x.valid_from <= t) && (!x.valid_until || x.valid_until >= t));
+    const sameSubject = numericFacts.find((x) => has(near, x.keywords) && (!x.valid_from || x.valid_from <= t) && (!x.valid_until || x.valid_until >= t));
     if (sameSubject) {
       out.push({
         ...b, severity: "critical", risk: "high", fact_id: sameSubject.id, quote: c.quote,
         message: `Contradicts an approved fact. The draft says ${c.quote}; ${sameSubject.id} says: "${sameSubject.statement}".`,
         fix: null, fix_note: `Use the figure in ${sameSubject.id}.`,
       });
-    } else {
+    } else if (claimLike(text, c)) {
       out.push({
-        ...b, severity: "major", level: "suggestion", quote: c.quote,
+        ...b, severity: "minor", level: "suggestion", quote: c.quote,
         message: `No approved fact supports ${c.quote}. Add it to the Facts Register with evidence, or remove it.`,
         fix: null,
       });
     }
+  }
+  // Many unsupported figures in one place are one problem, not many: keep the first and list the rest.
+  const unsupported = out.filter((f) => f.message.startsWith("No approved fact supports"));
+  if (unsupported.length > 2) {
+    const [first, ...rest] = unsupported;
+    first.message = `${unsupported.length} figures have no approved fact behind them: ${unsupported.map((f) => f.quote).join(", ")}. Add them to the Facts Register with evidence, or remove them.`;
+    return out.filter((f) => !rest.includes(f));
   }
   return out;
 }

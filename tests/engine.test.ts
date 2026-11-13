@@ -135,3 +135,22 @@ describe("evaluation", () => {
     expect(missedEasy).toEqual([]);
   });
 });
+
+describe("ordinary content is not flooded", () => {
+  it("leaves bare numbers alone and groups unsupported figures", async () => {
+    const { findings } = await review("Page 27 of 34. Room 12, floor 3. Join 2,000+ students, 300+ teachers, 40+ centres and 15+ cities.");
+    const claims = findings.filter((f) => f.rule_id === "R-CLAIM");
+    // Page, room and floor numbers are not claims.
+    expect(claims.map((f) => f.quote)).not.toEqual(expect.arrayContaining(["27", "34", "12", "3"]));
+    // "2,000+ students" is about the same subject as the approved "50,000+ students", so it contradicts it.
+    expect(claims.find((f) => f.quote === "2,000+")?.message).toMatch(/Contradicts/);
+    // The other three figures are about different subjects with no fact: one grouped, minor finding.
+    const grouped = claims.find((f) => /3 figures have no approved fact/.test(f.message));
+    expect(grouped?.severity).toBe("minor");
+    expect(claims).toHaveLength(2);
+  });
+  it("does not compare two shades of the same surface for contrast", () => {
+    const f = runVisualChecks([{ name: "dark.png", alt: "A dark dashboard screenshot", colours: [{ hex: "#1F2020", share: 0.6 }, { hex: "#2E2F2F", share: 0.3 }], ocr: "" }], SEED_RULES, SEED_FACTS, SEED_KIT);
+    expect(f.filter((x) => x.rule_id === "VIS-CON")).toEqual([]);
+  });
+});

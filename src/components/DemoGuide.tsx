@@ -4,6 +4,7 @@ import { Card } from "./ui";
 
 export interface GuideState {
   hasImages: boolean;
+  isSample?: boolean;
   accepted: number;
   imagesUpdated: boolean;
   submitted: boolean;
@@ -17,7 +18,9 @@ export function DemoGuide({ s }: { s: GuideState }) {
   const steps = [
     { done: true, text: "Read a finding: each one quotes the exact words, cites the rule and its source, and regulation findings show a real penalty order." },
     { done: s.accepted > 0, text: "Accept a fix (or “Accept all”). Each fix was re-tested before it was offered, and the checks run again on the new text." },
-    ...(s.hasImages ? [{ done: s.imagesUpdated, text: "Replace the image: “Replace or edit images” → remove it → “Use the corrected sample” → Save and re-check." }] : []),
+    ...(s.hasImages ? [{ done: s.imagesUpdated, text: s.isSample
+      ? "Replace the image: “Replace or edit images” → remove it → “Use the corrected sample” → Save and re-check."
+      : "Fix the design, then “Replace or edit images” with the new version, or add alt text, and save to re-check." }] : []),
     { done: s.submitted, text: "Submit for review. A fixed rule table routes it: outcome claims go to compliance, everything else to the brand reviewer." },
     { done: s.approved, text: `Act as ${s.routedTo === "brand_review" ? "Arjun (brand)" : "Kavya (compliance)"}, dismiss anything left with a reason, and approve.` },
     { done: s.approved, text: "Read the approval receipt: a fingerprint of the exact approved text and the Brand Kit version it was checked against." },

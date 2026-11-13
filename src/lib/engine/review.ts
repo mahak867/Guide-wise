@@ -106,7 +106,7 @@ export async function reviewDraft(
         if (index < 0) { dropped.push({ reason: "quote is not in the draft", quote, rule_id: "claims" }); continue; }
         // The AI only locates the figure. Its value is re-read from the quoted words by code.
         const value = parseNumber(quote) ?? c.value;
-        claims.push({ quote, value, index });
+        claims.push({ quote, value, index, source: "ai" });
       }
       // Code extraction stays as a floor so a missed figure is still checked.
       for (const c of extractNumberClaims(text)) if (!claims.some((x) => overlaps(x.quote, c.quote))) claims.push(c);
