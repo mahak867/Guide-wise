@@ -123,6 +123,19 @@ function chain(): Provider[] {
   return providers;
 }
 
+/** Health check only: run one tiny structured task on a single named provider. */
+export async function probeProvider(id: string): Promise<{ ok: boolean; label?: string; ms: number; error?: string }> {
+  const p = chain().find((x) => x.id === id);
+  const t0 = Date.now();
+  if (!p) return { ok: false, ms: 0, error: "not configured" };
+  try {
+    await p.run({ name: "probe", system: "Return the JSON asked for.", user: 'Return {"findings": []}.', schema: JudgeSchema, maxTokens: 200 });
+    return { ok: true, label: p.label, ms: Date.now() - t0 };
+  } catch (e) {
+    return { ok: false, label: p.label, ms: Date.now() - t0, error: (e as Error)?.message?.slice(0, 200) };
+  }
+}
+
 export function aiAvailable(): boolean {
   return chain().length > 0;
 }
