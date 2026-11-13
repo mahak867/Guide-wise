@@ -109,7 +109,7 @@ export default function NewReview() {
         </Card>
 
         <Card className="h-fit p-4">
-          <h2 className="font-semibold">Brief card</h2>
+          <h2>Brief card</h2>
           <p className="mt-0.5 text-sm text-muted">The rules in force and the facts that are safe to use today.</p>
           {!brief ? <p className="mt-3 text-sm text-muted">Loading…</p> : (
             <div className="mt-3 space-y-4 text-sm">

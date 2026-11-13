@@ -5,28 +5,28 @@ const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).jo
 
 export function Button({ variant = "secondary", className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" }) {
   const v = {
-    primary: "bg-brand text-white hover:bg-brand-dark border-brand",
-    secondary: "bg-white text-ink hover:bg-mist border-line",
-    ghost: "bg-transparent text-brand hover:bg-brand-soft border-transparent",
-    danger: "bg-white text-crit hover:bg-crit-soft border-line",
+    primary: "bg-ink text-paper hover:bg-brand-dark border-ink",
+    secondary: "bg-white text-ink hover:border-ink/40 border-line",
+    ghost: "bg-transparent text-ink underline decoration-line underline-offset-4 hover:decoration-ink border-transparent px-1.5",
+    danger: "bg-white text-crit hover:border-crit/50 border-line",
   }[variant];
-  return <button {...p} className={cx("inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50", v, className)} />;
+  return <button {...p} className={cx("inline-flex items-center justify-center gap-1.5 rounded-[5px] border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45", v, className)} />;
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={cx("rounded-lg border border-line bg-white", className)}>{children}</section>;
+  return <section className={cx("rounded-md border border-line bg-white shadow-[0_1px_0_rgba(28,27,24,0.03)]", className)}>{children}</section>;
 }
 
 const TONES: Record<string, string> = {
-  critical: "bg-crit-soft text-crit",
-  major: "bg-major-soft text-major",
-  minor: "bg-minor-soft text-minor",
-  green: "bg-brand-soft text-brand-dark",
-  grey: "bg-mist text-muted border border-line",
-  ink: "bg-ink text-white",
+  critical: "border-crit/40 text-crit",
+  major: "border-major/40 text-major",
+  minor: "border-minor/40 text-minor",
+  green: "border-brand/40 text-brand",
+  grey: "border-line text-muted",
+  ink: "border-ink bg-ink text-paper",
 };
 export function Badge({ tone = "grey", children }: { tone?: string; children: ReactNode }) {
-  return <span className={cx("inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium", TONES[tone] ?? TONES.grey)}>{children}</span>;
+  return <span className={cx("inline-flex items-center whitespace-nowrap rounded-[3px] border px-1.5 py-px font-sans text-[10.5px] font-medium uppercase tracking-[0.06em]", TONES[tone] ?? TONES.grey)}>{children}</span>;
 }
 
 export const STATUS: Record<string, { label: string; tone: string }> = {
@@ -47,7 +47,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-export const inputCls = "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm placeholder:text-muted/70";
+export const inputCls = "w-full rounded-[5px] border border-line bg-white px-2.5 py-1.5 text-sm placeholder:text-muted/60 focus:border-ink/50 focus:outline-none focus-visible:outline-none";
 
 export function Notice({ tone = "info", children }: { tone?: "info" | "error" | "ok"; children: ReactNode }) {
   const c = { info: "border-line bg-mist text-ink", error: "border-crit/30 bg-crit-soft text-crit", ok: "border-brand/30 bg-brand-soft text-brand-dark" }[tone];
@@ -58,7 +58,7 @@ export function PageHead({ title, sub, action }: { title: string; sub?: ReactNod
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="tracking-tight">{title}</h1>
         {sub && <p className="mt-1 max-w-3xl text-sm text-muted">{sub}</p>}
       </div>
       {action}

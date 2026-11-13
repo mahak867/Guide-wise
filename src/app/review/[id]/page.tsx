@@ -45,7 +45,7 @@ function Highlighted({ text, findings, active, onPick }: { text: string; finding
     if (pos < text.length) out.push(text.slice(pos));
     return out;
   }, [text, findings, active, onPick]);
-  return <p className="whitespace-pre-wrap text-[15px] leading-7">{parts}</p>;
+  return <p className="proof whitespace-pre-wrap">{parts}</p>;
 }
 
 function describe(e: Ev): string {
@@ -146,7 +146,7 @@ export default function ReviewPage() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link href="/" className="text-sm text-muted hover:underline">Reviews</Link><span className="text-muted">/</span>
-        <h1 className="text-xl font-semibold tracking-tight">{draft.title}</h1>
+        <h1 className="tracking-tight">{draft.title}</h1>
         <Badge tone={STATUS[draft.status]?.tone}>{STATUS[draft.status]?.label ?? draft.status}</Badge>
         {draft.risk_tier && <Badge tone={draft.risk_tier === "high" ? "critical" : "green"}>{draft.risk_tier === "high" ? "High risk" : "Low risk"}</Badge>}
         <Badge>v{draft.version}</Badge>
@@ -189,7 +189,7 @@ export default function ReviewPage() {
         <div className="space-y-5">
           <Card className="p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">Draft</h2>
+              <h2>Draft</h2>
               <div className="flex gap-2">
                 {canEdit && editing === null && !draft.images?.length && role === "creator" && imgEdit === null && <Button onClick={() => setImgEdit([])}>Add images</Button>}
                 {canEdit && editing === null && <Button onClick={() => setEditing(draft.text)}>Edit text</Button>}
@@ -218,7 +218,7 @@ export default function ReviewPage() {
 
           {imgEdit !== null && (
             <Card className="p-5">
-              <h2 className="font-semibold">Update images</h2>
+              <h2>Update images</h2>
               <p className="mt-0.5 text-sm text-muted">Replace a creative with the corrected design, add alt text, or add another image. The checks run again when you save.</p>
               <div className="mt-3"><ImagePicker images={imgEdit} onChange={setImgEdit} /></div>
               <div className="mt-3 flex gap-2">
@@ -231,7 +231,7 @@ export default function ReviewPage() {
           {draft.images?.length > 0 && imgEdit === null && (
             <Card className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold">Images</h2>
+                <h2>Images</h2>
                 {canEdit && role === "creator" && <Button onClick={() => setImgEdit(draft.images.map((x) => ({ ...x, w: 0, h: 0, ocr_ok: x.ocr_ok !== false })))}>Replace or edit images</Button>}
               </div>
               <div className="mt-3 space-y-4">
@@ -260,7 +260,7 @@ export default function ReviewPage() {
           )}
 
           <Card className="p-4 text-sm">
-            <h2 className="font-semibold">How this review was produced</h2>
+            <h2>How this review was produced</h2>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
               <li><b className="text-ink">{st.codeFindings ?? 0}</b> findings from code checks</li>
               <li><b className="text-ink">{st.aiFindings ?? 0}</b> findings from AI checks{draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls)`}</li>
@@ -279,7 +279,7 @@ export default function ReviewPage() {
 
           {inReview && (
             <Card className="p-4">
-              <h2 className="font-semibold">Reviewer decision</h2>
+              <h2>Reviewer decision</h2>
               {!canApprove ? (
                 <p className="mt-1 text-sm text-muted">
                   {draft.status === "compliance_review" ? "This draft is high risk, so only the compliance reviewer can decide." : "A brand or compliance reviewer decides."}{" "}
@@ -302,7 +302,7 @@ export default function ReviewPage() {
           {receipt && (
             <Card className="border-brand/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold">Approval receipt</h2>
+                <h2>Approval receipt</h2>
                 <Button onClick={() => {
                   const blob = new Blob([JSON.stringify({ product: "Guidewise", draft: draft.title, ...receipt }, null, 2)], { type: "application/json" });
                   const a = document.createElement("a");
@@ -323,7 +323,7 @@ export default function ReviewPage() {
           )}
 
           <Card className="p-4">
-            <h2 className="font-semibold">Activity</h2>
+            <h2>Activity</h2>
             <ol className="mt-2 space-y-1.5 text-sm">
               {events.map((e) => (
                 <li key={e.id} className="flex gap-2"><span className="w-28 shrink-0 text-xs text-muted">{fmtDate(e.at)}</span><span><b>{e.actor}</b> {describe(e)}</span></li>
@@ -344,14 +344,14 @@ export default function ReviewPage() {
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
+            <h2>{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
             {canEdit && role === "creator" && fixable.length > 1 && <Button disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
           </div>
           {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : "No findings. This draft follows the rules in force."}</Card>}
           {open.map((f) => {
             const rule = state?.rules.find((r) => r.id === f.rule_id);
             return (
-              <Card key={f.id} className={`p-3.5 text-sm ${active === f.id ? "ring-2 ring-ink" : ""}`}>
+              <Card key={f.id} className={`border-l-[3px] p-4 text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${active === f.id ? "ring-1 ring-ink" : ""}`}>
                 <div id={`f-${f.id}`} className="flex flex-wrap items-center gap-1.5">
                   <Badge tone={f.severity}>{f.severity[0].toUpperCase() + f.severity.slice(1)}</Badge>
                   <Badge>{CHECK[f.check_type]}</Badge>
@@ -359,8 +359,8 @@ export default function ReviewPage() {
                   {f.location?.startsWith("image:") && <Badge tone="ink">Image {f.location.slice(6)}</Badge>}
                   <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
                 </div>
-                <p className="mt-2 font-medium">{rule?.title ?? f.rule_id}</p>
-                <blockquote className="mt-1 flex items-center gap-1.5 border-l-2 border-line pl-2 text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
+                <p className="mt-2 font-serif text-[17px] font-medium leading-snug">{rule?.title ?? f.rule_id}</p>
+                <blockquote className="mt-1 flex items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
                 <p className="mt-2">{f.message}</p>
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
                 {f.precedent && (

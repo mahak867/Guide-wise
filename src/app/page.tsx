@@ -63,23 +63,24 @@ export default function Home() {
 
   return (
     <>
-      <Card className="mb-6 p-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Check a draft before it is published</h1>
-        <p className="mt-1.5 max-w-3xl text-sm text-muted">
+      <section className="mb-10 border-b border-line pb-8 pt-4">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">Brand rules that run</p>
+        <h1 className="mt-2 max-w-3xl !text-[2.9rem] !leading-[1.05]">Check a draft <em>before</em> it is published.</h1>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted">
           Guidewise checks marketing content against the team's approved rules and dated facts. Every finding quotes the rule it breaks and the exact words, offers a re-tested fix, and
           risky content goes to the right reviewer. A person makes the final approval.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           <Button variant="primary" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
           <Link href="/review/new"><Button>Check your own draft</Button></Link>
         </div>
-        <ol className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-4">
+        <ol className="mt-8 grid gap-x-6 gap-y-3 border-t border-line pt-5 text-[13px] leading-relaxed text-muted sm:grid-cols-4">
           <li><b className="text-ink">1. Review.</b> The sample is an Instagram post from a fictional coaching brand: a caption and a creative, with problems in both.</li>
           <li><b className="text-ink">2. Resolve.</b> Accept the re-tested fixes for the caption. Image findings are fixed in the design file, so they stay open for the reviewer.</li>
           <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
           <li><b className="text-ink">4. Approve.</b> Switch to Kavya, dismiss what is left with a reason (or request changes), and approve to get the receipt.</li>
         </ol>
-      </Card>
+      </section>
 
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
 

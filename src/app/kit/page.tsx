@@ -163,9 +163,9 @@ export default function KitPage() {
       {msg && <div className="mb-3"><Notice tone="ok">{msg}</Notice></div>}
       {err && <div className="mb-3"><Notice tone="error">{err}</Notice></div>}
 
-      <h2 className="mb-2 font-semibold">Enforced rules ({enforced.length})</h2>
+      <h2 className="mb-2">Enforced rules ({enforced.length})</h2>
       <div className="space-y-2">{enforced.map((r) => <RuleCard key={r.id} rule={r} manager={manager} onChange={onChange} />)}</div>
-      <h2 className="mb-2 mt-6 font-semibold">Advisory rules ({advisory.length})</h2>
+      <h2 className="mb-2 mt-6">Advisory rules ({advisory.length})</h2>
       <p className="mb-2 text-sm text-muted">Advisory rules show as suggestions and never block approval.</p>
       <div className="space-y-2">
         {advisory.length === 0 && <p className="text-sm text-muted">None.</p>}
@@ -174,7 +174,7 @@ export default function KitPage() {
 
       <div className="mt-8 grid gap-5 lg:grid-cols-2">
         <Card className="p-4">
-          <h2 className="font-semibold">Add a rule</h2>
+          <h2>Add a rule</h2>
           {!manager && <p className="mt-1 text-sm text-muted">Only the brand manager can add rules.</p>}
           <form onSubmit={submit} className="mt-3 space-y-3">
             <fieldset disabled={!manager || busy} className="space-y-3">
@@ -206,7 +206,7 @@ export default function KitPage() {
         </Card>
 
         <Card className="p-4">
-          <h2 className="font-semibold">Compile rules from a brand guide</h2>
+          <h2>Compile rules from a brand guide</h2>
           <p className="mt-1 text-sm text-muted">Paste guide text. Guidewise proposes rules with test sentences and points out passages too vague to check. You confirm each rule; nothing is saved until you do.</p>
           <label className="sr-only" htmlFor="guide">Brand guide text</label>
           <textarea id="guide" rows={6} className={inputCls + " mt-3"} value={guide} onChange={(e) => setGuide(e.target.value)} placeholder={'Example: "Always call our teachers mentors. Never promise a rank. Keep the tone warm and engaging."'} />

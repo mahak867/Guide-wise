@@ -37,17 +37,17 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-line bg-white">
+      <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span className="grid h-7 w-7 place-items-center rounded-md bg-brand text-sm text-white">G</span>
-            Guidewise
+            <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full border border-ink font-serif text-[15px] italic leading-none">g</span>
+            <span className="font-serif text-[21px] font-medium tracking-tight">Guidewise</span>
           </Link>
           <nav aria-label="Main" className="flex flex-wrap gap-1 text-sm">
             {NAV.map((n) => {
               const on = n.href === "/" ? path === "/" || (path.startsWith("/review/") && path !== "/review/new") : path.startsWith(n.href);
               return (
-                <Link key={n.href} href={n.href} aria-current={on ? "page" : undefined} className={`rounded-md px-2.5 py-1.5 ${on ? "bg-brand-soft font-medium text-brand-dark" : "text-muted hover:bg-mist hover:text-ink"}`}>
+                <Link key={n.href} href={n.href} aria-current={on ? "page" : undefined} className={`border-b-[1.5px] px-1 py-1.5 mx-1.5 ${on ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
                   {n.label}
                 </Link>
               );
@@ -82,7 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
         )}
         {children}
       </main>
-      <footer className="border-t border-line bg-white px-4 py-3 text-center text-xs text-muted">
+      <footer className="border-t border-line px-4 py-3 text-center text-xs text-muted">
         Guidewise · CodeNova India 2026, Round 2 · PrepPath Academy is a fictional brand written for this demo · Guidewise supports reviewers; it does not give legal advice.
       </footer>
     </div>

@@ -70,7 +70,7 @@ export default function Results() {
           </div>
 
           <Card className="mt-4 p-4 text-sm">
-            <h2 className="font-semibold">With the AI checks</h2>
+            <h2>With the AI checks</h2>
             {ai ? (
               <p className="mt-1">Precision {pct(ai.precision ?? 0)} ({ci((ai.precisionCI ?? [0, 0]) as [number, number])}), recall {pct(ai.recall ?? 0)} ({ci((ai.recallCI ?? [0, 0]) as [number, number])}), hard phrasings caught {ai.hardCaught} of {ai.hardPlanted}{ai.agreement !== undefined ? `, repeat-run agreement ${pct(ai.agreement)}` : ""}. Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} with {ai.mode}.</p>
             ) : (
@@ -95,7 +95,7 @@ export default function Results() {
               </table>
             </Card>
             <Card className="min-w-0 p-4 text-sm">
-              <h2 className="font-semibold">Every draft</h2>
+              <h2>Every draft</h2>
               <p className="mt-0.5 text-muted">Open a draft to see what was planted and what Guidewise found.</p>
               <ul className="mt-2 divide-y divide-line">
                 {r.results.map((d) => {
@@ -125,7 +125,7 @@ export default function Results() {
           </div>
 
           <Card className="mt-4 p-4 text-sm">
-            <h2 className="font-semibold">Method and limits</h2>
+            <h2>Method and limits</h2>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>60 short drafts for the fictional PrepPath Academy, built from 15 clean sentences and 24 planted errors across 9 rules by a seeded generator, so the set is identical on every run (see the fingerprint). About a quarter are left clean. 20 drafts were used while building (development); 40 were held out and are the headline numbers.</li>
               <li>A finding counts as correct when it cites the planted error's rule and quotes overlapping words. Any other finding counts as a false flag, including suggestions.</li>

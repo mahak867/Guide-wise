@@ -103,7 +103,7 @@ export default function FactsPage() {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card className="p-4">
-          <h2 className="font-semibold">Add a fact</h2>
+          <h2>Add a fact</h2>
           {!canEdit && <p className="mt-1 text-sm text-muted">Only the brand manager or compliance reviewer can add facts.</p>}
           <form className="mt-3" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/facts", form), `${form.id.toUpperCase()} saved. Reviews now check against it.`)) setForm(blank); }}>
             <fieldset disabled={!canEdit || busy} className="space-y-3">
@@ -131,7 +131,7 @@ export default function FactsPage() {
 
         <Card className="space-y-5 p-4">
           <div>
-            <h2 className="font-semibold">Organisation profile</h2>
+            <h2>Organisation profile</h2>
             <p className="mt-1 text-sm text-muted">The CCPA coaching guidelines (2024) apply to centres coaching more than 50 students. At 50 or fewer, Guidewise still runs those rules but shows them as suggestions.</p>
             <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); const n = new FormData(e.currentTarget).get("n"); call(() => api("/api/kit", { profile: { ...kit.profile, students_coached: n } }), "Profile updated. Reviews use it from now on."); }}>
               <Field label="Students coached"><input name="n" type="number" min={0} className={inputCls + " w-36"} defaultValue={kit.profile?.students_coached ?? ""} disabled={!manager} /></Field>
@@ -140,7 +140,7 @@ export default function FactsPage() {
             </form>
           </div>
           <div>
-            <h2 className="font-semibold">Palette</h2>
+            <h2>Palette</h2>
             <ul className="mt-2 flex flex-wrap gap-2 text-sm">
               {kit.palette.map((c) => (
                 <li key={c.hex + c.name} className="flex items-center gap-2 rounded-md border border-line py-1 pl-1 pr-2">
@@ -160,7 +160,7 @@ export default function FactsPage() {
             <p className="mt-2 text-xs text-muted">Image checks against the palette arrive in Round 3. Text review is what runs today.</p>
           </div>
           <div>
-            <h2 className="font-semibold">Approved disclaimers</h2>
+            <h2>Approved disclaimers</h2>
             <ul className="mt-2 space-y-1.5 text-sm">
               {kit.disclaimers.map((d) => (
                 <li key={d.id} className="rounded-md border border-line px-2 py-1.5"><span className="font-mono text-xs text-muted">{d.id}</span> {d.text}<div className="text-xs text-muted">Use: {d.when}
@@ -176,7 +176,7 @@ export default function FactsPage() {
             )}
           </div>
           <div>
-            <h2 className="font-semibold">Approved contacts</h2>
+            <h2>Approved contacts</h2>
             <ul className="mt-2 space-y-1 text-sm">{kit.contacts.map((c) => <li key={c.value}>{c.label}: <span className="font-mono text-xs">{c.value}</span></li>)}</ul>
             <p className="mt-1 text-xs text-muted">Any other email or phone number in a draft is flagged and replaced with one of these.</p>
           </div>

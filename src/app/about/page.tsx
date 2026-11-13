@@ -18,13 +18,13 @@ export default function About() {
       <PageHead title="How Guidewise works" sub="Only one step uses AI. Everything around it is code that can reject what the AI returns." />
       <ol className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {STEPS.map(([t, d], i) => (
-          <li key={t}><Card className={`h-full p-4 ${i === 2 ? "border-brand" : ""}`}><div className="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}{i === 2 ? " · the only AI step" : ""}</div><h2 className="mt-1 font-semibold">{t}</h2><p className="mt-1 text-sm text-muted">{d}</p></Card></li>
+          <li key={t}><Card className={`h-full p-4 ${i === 2 ? "border-brand" : ""}`}><div className="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}{i === 2 ? " · the only AI step" : ""}</div><h2 className="mt-1">{t}</h2><p className="mt-1 text-sm text-muted">{d}</p></Card></li>
         ))}
       </ol>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <Card className="p-4 text-sm">
-          <h2 className="font-semibold">What this version does, and what it does not</h2>
+          <h2>What this version does, and what it does not</h2>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>Reviews text: social posts, ads, emails, page copy and DOCX files. Image and visual-identity review is planned for Round 3; the palette is stored but not yet checked against images.</li>
             <li>The verifier confirms that a finding is grounded in a real rule and real words. It does not prove the judgment is right, which is why any finding can be dismissed with a reason and a person approves.</li>
@@ -34,7 +34,7 @@ export default function About() {
           </ul>
         </Card>
         <Card className="p-4 text-sm">
-          <h2 className="font-semibold">Services and data</h2>
+          <h2>Services and data</h2>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li><b>AI:</b> Claude API (Anthropic), model <code className="rounded bg-mist px-1">{state?.ai.model ?? "…"}</code>. Status now: {state ? (state.ai.available ? "on" : "off (rules-only mode: code checks and the whole workflow still run, nothing is sent outside)") : "…"}.</li>
             <li><b>Database:</b> Supabase Postgres. <b>Hosting:</b> Vercel.</li>
