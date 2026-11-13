@@ -2,7 +2,8 @@
 // Usage: node docs/round2/build-pdf.mjs   (needs Playwright; run `npx tsx scripts/eval.ts` numbers first)
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { chromium } from "playwright";
+import { createRequire } from "node:module";
+const { chromium } = createRequire(import.meta.url)("playwright");
 
 const dir = "docs/round2";
 const code = JSON.parse(execSync("npx tsx scripts/eval-json.ts", { encoding: "utf8" }));
@@ -39,7 +40,7 @@ tr { break-inside: avoid; }
 ul, ol { margin: 0 0 6pt; padding-left: 14pt; }
 li { margin-bottom: 2pt; }
 figure { margin: 8pt 0 10pt; break-inside: avoid; }
-figure img { width: 100%; border: 1px solid var(--line); border-radius: 3pt; }
+figure img { width: 100%; max-height: 120mm; object-fit: contain; object-position: top left; border: 1px solid var(--line); border-radius: 3pt; }
 figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
 .box { border: 1px solid var(--line); border-radius: 4pt; padding: 8pt 10pt; break-inside: avoid; }
@@ -82,7 +83,7 @@ ${img("06-kit.png", "Brand Kit", "Brand Kit: each rule carries test sentences an
 ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are dismissed and why, and facts about to expire.")}
 </div>
 
-<h2 class="page">Completed features</h2>
+<h2>Completed features</h2>
 <table>
 <tr><th style="width:32mm">Area</th><th>What a judge can do with it</th></tr>
 <tr><td>Review</td><td>Paste copy, or upload DOCX, PDF and up to four images; state goal, audience, call to action and locked phrases no fix may remove.</td></tr>
@@ -122,18 +123,18 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><td>Quality</td><td>${tests} Vitest tests, including six that swap in a deliberately wrong AI (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data); CI runs lint, type-check, tests, evaluation and build on every push.</td></tr>
 </table>
 
-<h2 class="page">Measured results</h2>
+<h2>Measured results</h2>
 <p>60 short drafts for PrepPath with errors planted in known places (20 used while building, <b>40 held out</b>). A finding counts as correct when it cites the planted error's rule and quotes overlapping words; anything else is a false flag. Intervals are 95% Wilson intervals. Test-set fingerprint <code>${code.fingerprint}</code>.</p>
 <table>
 <tr><th>Held-out set</th><th>Precision</th><th>Recall</th><th>Critical recall</th><th>Hard phrasings</th><th>Repeat-run agreement</th></tr>
 <tr><td>Code checks only <span>(40 drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${pct(code.criticalRecall)}</td><td>${code.hardCaught} of ${code.hardPlanted}</td><td>100% <span>(deterministic)</span></td></tr>
 ${aiBlock}
 </table>
-${img("07-results.png", "Results page", "The live Results page: the code checks re-run on every visit; the AI checks were measured on the live site.")}
+<div style="width:70%">${img("07-results.png", "Results page", "The live Results page: the code checks re-run on every visit; the AI checks were measured on the live site.")}</div>
 <p class="note">${aiNote}</p>
 <p class="note">These numbers are optimistic: the team wrote both the rules and the test drafts. "Hard" errors were written on purpose to avoid keyword patterns. The next step is real, anonymised drafts from coaching-centre marketers.</p>
 
-<h2>Changes from the Round 1 plan</h2>
+<section style="break-inside: avoid"><h2>Changes from the Round 1 plan</h2>
 <table>
 <tr><th style="width:42mm">Plan</th><th style="width:52mm">What we did</th><th>Why</th></tr>
 <tr><td>Supabase Auth with four roles</td><td>No sign-in; a private workspace per visitor and a role switcher, role rules enforced on the server</td><td>The Round 2 brief requires judges to use the link without signing in.</td></tr>
@@ -143,9 +144,9 @@ ${img("07-results.png", "Results page", "The live Results page: the code checks 
 <tr><td>alex, write-good, axe-core</td><td>Not used yet</td><td>Time went to the core workflow and image review.</td></tr>
 <tr><td>Hands-on tests with students</td><td>Moved to the start of Round 3</td><td>Build time went into image review and the measured evaluation.</td></tr>
 </table>
-<p class="corr"><b>Correction to Round 1.</b> The Round 1 PDF stated CCPA maximum penalties of "up to ₹10 lakh / ₹50 lakh" on pages 2 and 14. We could not confirm these amounts against the Act and withdraw them. The penalty orders shown in the product are cited as reported in the linked press coverage.</p>
+<p class="corr"><b>Correction to Round 1.</b> The Round 1 PDF stated CCPA maximum penalties of "up to ₹10 lakh / ₹50 lakh" on pages 2 and 14. We could not confirm these amounts against the Act and withdraw them. The penalty orders shown in the product are cited as reported in the linked press coverage.</p></section>
 
-<h2 class="page">The three major improvements for Round 3</h2>
+<h2>The three major improvements for Round 3</h2>
 <div class="box"><b>1. Guideline Health loop — the brand guide fixes itself</b>
 <p>Round 2 already flags rules that two or more people dismiss as unclear. Round 3 closes the loop: Guidewise drafts an amendment with new test sentences, the manager approves it, and a new Brand Kit version must pass its tests. Changing a fact lists every draft and approved piece that used it.</p>
 <p class="note"><b>Test:</b> dismiss one rule as three different creators → it is marked unclear with a drafted amendment that passes its tests; change a fact → every affected piece is listed.</p></div>
@@ -156,7 +157,7 @@ ${img("07-results.png", "Results page", "The live Results page: the code checks 
 <p>Review a whole campaign together (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets: prices, dates, claims, promo codes. AI vision checks what OCR cannot see: a student photo with no consent record, logo placement and clear space, stylised claims.</p>
 <p class="note"><b>Test:</b> upload a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p></div>
 
-<h2>Team and disclosures</h2>
+<section style="break-inside: avoid"><h2>Team and disclosures</h2>
 <table>
 <tr><th>Member</th><th>Role</th><th>College</th><th>Course</th></tr>
 <tr><td>Mahak Fahad (team leader)</td><td>Backend + AI / ML</td><td>Chennai Institute of Technology</td><td>B.E. Computer Science and Engineering, batch of 2029</td></tr>
@@ -168,7 +169,7 @@ ${img("07-results.png", "Results page", "The live Results page: the code checks 
 <li><b>Reused code or templates:</b> none, apart from the Next.js starter (create-next-app). All product code was written inside the build window; the commit history starts on 13 November 2026 at 10:09 IST.</li>
 <li><b>Open source:</b> Next.js, React, Tailwind CSS, supabase-js, Zod, Anthropic SDK, groq-sdk, @google/genai, mammoth, unpdf, tesseract.js.</li>
 <li><b>Demo data:</b> PrepPath Academy, its rules, facts and students are fictional. Penalty orders are cited as reported in the linked press coverage; we have not read the orders themselves. Guidewise supports reviewers; it does not give legal advice.</li>
-</ul>
+</ul></section>
 </body></html>`;
 
 writeFileSync(`${dir}/Guidewise_Round2.html`, html);

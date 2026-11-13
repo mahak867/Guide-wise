@@ -13,7 +13,7 @@ await p.getByText("Review the sample post").click();
 await p.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
 await p.getByText(/open finding/).first().waitFor({ timeout: 60000 });
 await p.getByRole("button", { name: /Hide/ }).first().click();
-await p.locator("button[aria-expanded]", { hasText: "No guaranteed outcomes" }).first().click();
+await p.locator("button[aria-expanded]", { hasText: "100% selection guaranteed!!" }).first().click();
 await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
 await p.screenshot({ path: `${OUT}/02-review.png` });
 await p.locator("#img-1").scrollIntoViewIfNeeded();
@@ -31,7 +31,9 @@ await p.getByText(/Waiting for Kavya/).waitFor({ timeout: 30000 });
 await p.getByRole("combobox").first().selectOption("compliance"); await p.waitForTimeout(600);
 for (let k = 0; k < 15 && (await open()) > 0; k++) {
   const n = await open();
-  await p.getByRole("button", { name: "Dismiss", exact: true }).first().click();
+  const dis = p.getByRole("button", { name: "Dismiss", exact: true }).first();
+  if (!(await dis.count())) { const row = p.locator("button[aria-expanded=false]").nth(1); if (await row.count()) await row.click(); }
+  await dis.click();
   await p.locator('select[id^="r-"]').selectOption("Approved exception");
   for (let w = 0; w < 80 && (await open()) === n; w++) await p.waitForTimeout(250);
 }
