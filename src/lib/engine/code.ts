@@ -147,8 +147,12 @@ export function parseNumber(raw: string): number | null {
   return v;
 }
 
+// Phone numbers and email addresses are contact details, not claims.
+const CONTACT_SPANS = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
 export function extractNumberClaims(text: string): NumberClaim[] {
   const out: NumberClaim[] = [];
+  const masked: [number, number][] = [...text.matchAll(CONTACT_SPANS)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length]);
   const re = /(?:₹|rs\.?\s?)?\s?\d[\d,]*(?:\.\d+)?\s?(?:k\b|lakhs?\b|lacs?\b|crores?\b|cr\b)?\s?[+%]?/gi;
   for (const m of text.matchAll(re)) {
     const quote = m[0].trim();
@@ -157,6 +161,7 @@ export function extractNumberClaims(text: string): NumberClaim[] {
     const after = text.slice(idx + quote.length, idx + quote.length + 14).toLowerCase();
     const value = parseNumber(quote);
     if (value === null) continue;
+    if (masked.some(([s0, e0]) => idx >= s0 && idx < e0)) continue;
     const bare = /^\d+$/.test(quote);
     if (/(air|rank|#|no\.)\s*$/.test(before)) continue; // ranks belong to the student rule
     if (/^#/.test(text.slice(Math.max(0, idx - 1), idx))) continue;

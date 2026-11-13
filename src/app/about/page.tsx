@@ -30,7 +30,7 @@ export default function About() {
             <li>The verifier confirms that a finding is grounded in a real rule and real words. It does not prove the judgment is right, which is why any finding can be dismissed with a reason and a person approves.</li>
             <li>There is no sign-in in this version, so judges can open it directly. The four roles are switched with "Acting as". Role rules are still enforced on the server.</li>
             <li>Guidewise supports reviewers. It does not give legal advice. Regulation rules cite public sources and must be confirmed by the organisation.</li>
-            <li>Accuracy has not been measured yet. We will publish precision and recall on a planted-error test set when it is run, and not before.</li>
+            <li>Accuracy is measured on a planted-error test set written by the team; see the Results page for the numbers, the method and why they are optimistic. The AI checks are measured separately once the AI service is connected.</li>
           </ul>
         </Card>
         <Card className="p-4 text-sm">

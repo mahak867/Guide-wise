@@ -11,6 +11,7 @@ const NAV = [
   { href: "/review/new", label: "New review" },
   { href: "/kit", label: "Brand Kit" },
   { href: "/facts", label: "Facts and assets" },
+  { href: "/results", label: "Results" },
   { href: "/about", label: "How it works" },
 ];
 

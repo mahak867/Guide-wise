@@ -51,9 +51,9 @@ Apply `supabase/migrations/001_init.sql` to a Supabase project first. The app se
 
 ## Limits, stated plainly
 
-- Round 2 reviews text (pasted, or DOCX). Image and visual-asset review is Round 3 work.
+- Images are checked for palette colours, contrast, alt text and the text inside them (OCR in the browser). Layout, logo placement and photo content are not checked yet.
 - There is no sign-in, so judges can open the link directly. Role rules are enforced on the server, but the database is open to the demo app by design; real workspaces need authentication.
-- Accuracy has not been measured yet. We will publish precision and recall on a planted-error test set when it has been run.
+- Accuracy is measured on 60 planted-error drafts written by the team (`npx tsx scripts/eval.ts`), with a live Results page. The numbers are optimistic because the same team wrote the rules and the drafts.
 - Guidewise supports reviewers. It does not give legal advice. Penalty precedents are cited as reported in the linked press coverage.
 
 ## Disclosures
