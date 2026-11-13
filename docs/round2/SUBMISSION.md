@@ -20,7 +20,7 @@ https://github.com/mahak867/Guide-wise
 
 1. **Review of text and images before publication.** Paste copy, or upload a DOCX or PDF, and add up to four images. State the goal, audience and call to action.
 2. **Code checks.** These cover preferred terms, banned phrases, approved contact details, student results (course and consent record), the results disclaimer (including a same-language check for Hindi claims), and every figure compared with the Facts Register.
-3. **Image checks.** Text inside each image is read (OCR in the browser) and goes through every rule and fact check. Dominant colours are checked against the brand palette (CIELAB colour difference), along with colour contrast (WCAG) and alt text.
+3. **Image checks.** Text inside each image is read (OCR in the browser) and goes through every rule and fact check. Dominant colours are checked against the brand palette (CIELAB colour difference), along with colour contrast (WCAG) and alt text. The Brand Kit logo is searched for in each creative at many sizes (plain code in the browser, no AI), then checked for a minimum size and clear space around it.
 4. **Facts Register with dates.** Each fact has evidence, an owner, a valid-from and valid-until date, and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated. A figure used for the wrong subject is flagged as a contradiction.
 5. **"No source, no flag" verifier.** Plain code drops any finding whose quoted words are not in the draft, or whose rule or fact does not exist.
 6. **Cited findings.** Each finding quotes the exact words and cites its rule and the rule's source. Regulation findings show a real CCPA penalty order as precedent, as reported in the linked press coverage.
@@ -47,9 +47,10 @@ https://github.com/mahak867/Guide-wise
 21. **Rules per content type.** A rule can apply to some content types only (for example, no shortened links on social posts and ads, but allowed in emails). The brief card shows the rules for the type being written.
 22. **Brand Kit export and import.** The whole kit (assets, rules with tests, facts) as one JSON file. Imported rules that are new or changed arrive as advisory and must pass their own tests before they can be enforced.
 23. **AI answer cache.** The same rule on the same text is answered from a cache, so many people reviewing the same sample do not use up the AI quota. The second, independent run of a rule and the accuracy measurement never use the cache.
-24. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
-25. **Engineering.**
-    - 33 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
+24. **Writing-style rules.** Code rule types a manager can create: exact brand-name spelling ("Preppath" becomes "PrepPath", web addresses left alone), capitals used for emphasis (exam acronyms allowed), a length limit per content type (ad text past 125 characters, where "See more" cuts it off), a sentence-length limit, and inclusive wording. Each has test sentences and a fix where one is safe.
+25. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
+26. **Engineering.**
+    - 46 automated tests, including logo matching on the real sample creatives, and six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
     - A 20-step browser test of the whole journey (`npm run e2e`), run against the live site.
     - Functions run in Mumbai next to the database.
@@ -82,9 +83,9 @@ https://github.com/mahak867/Guide-wise
 | --- | --- | --- |
 | AI on Claude | One adapter: Groq first, Gemini as backup, Claude when a key is set. | Free tiers keep the AI checks available to judges at no cost. The schema, verifier and tests are the same for every provider. |
 | Supabase Auth with four roles | No sign-in. A private workspace per visitor and a role switcher; role rules are enforced on the server. | The Round 2 brief requires judges to use the link without signing in. Isolated workspaces stop judges interfering with each other. |
-| Image and asset review in Round 3 | A first version ships now: palette, contrast, alt text, and OCR text through every rule. | The brief names visual identity as part of the central workflow, so it could not wait. Round 3 deepens it instead (improvement 3). |
+| Image and asset review in Round 3 | A first version ships now: palette, contrast, alt text, logo presence, size and clear space, and OCR text through every rule. | The brief names visual identity as part of the central workflow, so it could not wait. Round 3 deepens it instead (improvement 3). |
 | Results page with measured accuracy | Shipped. Code checks on all 40 held-out drafts; AI checks on 20 of them, one run. | A full AI run twice over would have used most of the free AI tier's daily allowance that judges need. |
-| alex, write-good, axe-core | Not used yet. Contrast and alt-text checks for images were built in instead. | Time went to the core workflow and image review. The brand's own term and tone rules cover the wording checks we needed for the demo. |
+| alex, write-good, axe-core | Replaced by our own code rules: brand-name spelling, capitals, length per content type, sentence length, inclusive wording; contrast and alt text for images. | As Brand Kit rules they have test sentences, can be edited by the manager, and cite their source. The libraries' fixed word lists could not. |
 | Eight findings on the demo caption | Ten on the caption, plus five on the sample creative. | The two superlatives are flagged separately, and the disclaimer rule was added from the regulation pack. |
 | Fixes withdrawn if they introduce any issue | Withdrawn only if the new issue has no automatic fix; otherwise it is shown as a follow-up. | Testing showed that fixing a guarantee claim correctly raises a disclaimer requirement, and withdrawing that fix was the wrong call. |
 | Hands-on tests with fellow students in Round 2 | Not done yet. Moved to the start of Round 3. | Build time went into the image review and the measured evaluation. |
@@ -104,7 +105,7 @@ https://github.com/mahak867/Guide-wise
    - **Test:** call `check_draft` from the playground and from an MCP client with a key, get the same cited findings as the app, and see a new audit entry.
 3. **Campaign and creative review with AI vision.**
    - Review a whole campaign (caption, creatives, landing-page copy, PDF brochure) together, and flag inconsistencies across assets: prices, dates, claims, promo codes.
-   - AI vision checks what OCR cannot see: a student photo with no consent record, logo placement and clear space, and claims set in stylised type.
+   - AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, and claims set in stylised type.
    - **Test:** upload a three-asset campaign with a price mismatch between the creative and the brochure and an unconsented student photo. Both are found, cited, and routed to compliance.
 
 We will also measure the AI checks on the same test set, and add real, anonymised drafts from coaching-centre marketers to it.
@@ -117,7 +118,7 @@ The certificate prints this exactly as written, so write it yourself, in your ow
 - **What exists in the backend and AI layer:**
   - the review pipeline: redaction, code checks, AI checks, verifier, fix re-test
   - the Facts Register logic
-  - the visual checks
+  - the visual checks, including logo matching
   - risk routing and approval receipts
   - workspace isolation
   - the evaluation set and results

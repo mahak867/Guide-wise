@@ -12,7 +12,7 @@ import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
   id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[] };
-  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean }[];
+  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null }[];
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
 }
 interface Ev { id: number; actor: string; role: string; action: string; detail: Record<string, unknown>; at: string }
@@ -255,6 +255,7 @@ export default function ReviewPage() {
                           })}
                         </div>
                         <div><span className="text-xs uppercase tracking-wide text-muted">Text read from the image</span><p className="mt-0.5 whitespace-pre-wrap rounded-md bg-mist px-2 py-1.5">{img.ocr_ok === false ? "Could not be read in the browser that uploaded it." : img.ocr || "No text found."}</p></div>
+                        {img.logo && <div><span className="text-xs uppercase tracking-wide text-muted">Logo</span><p>{img.logo.found ? `Found: match ${img.logo.score.toFixed(2)}, ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width${(img.logo.crowd ?? 0) > 0.1 ? ", clear space crowded" : ", clear space free"}.` : <span className="text-crit">Not found. Best match {img.logo.score.toFixed(2)}; the logo counts as present at 0.70.</span>}</p></div>}
                         <div><span className="text-xs uppercase tracking-wide text-muted">Alt text</span><p>{img.alt || <span className="text-muted">None</span>}</p></div>
                       </div>
                     </div>

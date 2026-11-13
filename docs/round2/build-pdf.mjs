@@ -90,7 +90,8 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><td>Code checks</td><td>Preferred terms, banned phrases, approved contacts, student results (course and consent record), the results disclaimer (with a same-language check for Hindi claims), and every figure against the Facts Register.</td></tr>
 <tr><td>AI checks</td><td>Claims and voice rules judged one rule per call, run twice when they find something; disagreement becomes a suggestion. Groq, then Gemini, with a 20-second cap per call; the app keeps working in rules-only mode if both are down.</td></tr>
 <tr><td>Verifier</td><td>Plain code drops any finding whose quoted words, rule or fact does not exist ("no source, no flag").</td></tr>
-<tr><td>Images</td><td>OCR in the browser (served from our own site), palette check in CIELAB, WCAG contrast, alt text; image text runs through every rule and fact.</td></tr>
+<tr><td>Images</td><td>OCR in the browser (served from our own site), palette check in CIELAB, WCAG contrast, alt text; image text runs through every rule and fact. Logo check: the Brand Kit logo is searched for at many sizes (masked normalised cross-correlation, no AI), then checked for minimum size and clear space.</td></tr>
+<tr><td>Writing style</td><td>Code rule types for exact brand-name spelling, capitals used for emphasis, maximum length per content type (ad text cut off at "See more"), maximum sentence length, and inclusive wording, each with a fix where one is safe.</td></tr>
 <tr><td>Facts Register</td><td>Facts with evidence, owner, valid-from, valid-until and required disclosure; embargoed, expired and wrong-subject figures are each flagged.</td></tr>
 <tr><td>Fixes</td><td>Each fix is applied and re-checked before it is offered; AI-written fixes may not introduce any violation; edit a fix before accepting; "Accept all" works through follow-ups.</td></tr>
 <tr><td>Brand Kit</td><td>Rules with test sentences, an enforce gate, versioning, and a guide compiler that drops any proposed rule whose quoted passage is not in the guide.</td></tr>
@@ -138,10 +139,10 @@ ${aiBlock}
 <table>
 <tr><th style="width:42mm">Plan</th><th style="width:52mm">What we did</th><th>Why</th></tr>
 <tr><td>Supabase Auth with four roles</td><td>No sign-in; a private workspace per visitor and a role switcher, role rules enforced on the server</td><td>The Round 2 brief requires judges to use the link without signing in.</td></tr>
-<tr><td>Image review in Round 3</td><td>A first version ships now (palette, contrast, alt text, OCR text through every rule)</td><td>The brief names visual identity as part of the central workflow. Round 3 deepens it.</td></tr>
+<tr><td>Image review in Round 3</td><td>A first version ships now (palette, contrast, alt text, logo presence, size and clear space, OCR text through every rule)</td><td>The brief names visual identity as part of the central workflow. Round 3 deepens it.</td></tr>
 <tr><td>AI on Claude</td><td>One adapter: Groq, then Gemini, Claude when a key is set</td><td>Free tiers make the AI checks available to judges at no cost; the schema and verifier are the same for all.</td></tr>
 <tr><td>Fixes withdrawn on any new issue</td><td>Withdrawn only when the new issue has no automatic fix (AI-written fixes: any new issue)</td><td>Fixing a guarantee correctly raises a disclaimer requirement; withdrawing that fix was wrong.</td></tr>
-<tr><td>alex, write-good, axe-core</td><td>Not used yet</td><td>Time went to the core workflow and image review.</td></tr>
+<tr><td>alex, write-good, axe-core</td><td>Replaced by our own code rules: brand-name spelling, capitals, length, sentence length, inclusive wording; contrast and alt text for images</td><td>As Brand Kit rules they carry test sentences, can be edited by the manager and cite their source, which the libraries' fixed word lists could not.</td></tr>
 <tr><td>Hands-on tests with students</td><td>Moved to the start of Round 3</td><td>Build time went into image review and the measured evaluation.</td></tr>
 </table>
 <p class="corr"><b>Correction to Round 1.</b> The Round 1 PDF stated CCPA maximum penalties of "up to ₹10 lakh / ₹50 lakh" on pages 2 and 14. We could not confirm these amounts against the Act and withdraw them. The penalty orders shown in the product are cited as reported in the linked press coverage.</p></section>
@@ -154,7 +155,7 @@ ${aiBlock}
 <p>A REST API with scoped keys and an MCP server exposing <code>get_brief</code> and <code>check_draft</code>, so AI writing tools fetch the rules and the facts valid today and check a draft before handing it over. An in-app playground and a per-key audit trail.</p>
 <p class="note"><b>Test:</b> call <code>check_draft</code> from the playground and from an MCP client with a key → the same cited findings as the app, and a new audit entry.</p></div>
 <div class="box" style="margin-top:8pt"><b>3. Campaign and creative review with AI vision</b>
-<p>Review a whole campaign together (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets: prices, dates, claims, promo codes. AI vision checks what OCR cannot see: a student photo with no consent record, logo placement and clear space, stylised claims.</p>
+<p>Review a whole campaign together (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets: prices, dates, claims, promo codes. AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, stylised claims.</p>
 <p class="note"><b>Test:</b> upload a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p></div>
 
 <section style="break-inside: avoid"><h2>Team and disclosures</h2>
