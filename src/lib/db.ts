@@ -74,5 +74,6 @@ export async function log(req: Request, draft_id: string | null, action: string,
 }
 
 export function fail(e: unknown, status = 400): Response {
+  if (status >= 500) console.error("[guidewise]", e);
   return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status });
 }
