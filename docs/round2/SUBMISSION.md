@@ -33,16 +33,19 @@ https://github.com/mahak867/Guide-wise
     - Accept, dismiss with a reason, or reopen findings. Only compliance can dismiss a critical finding.
     - Comments, version history, an activity log, and request changes.
 12. **Risk routing.** A fixed rule table, not a model, sends outcome claims and regulated content to compliance and everything else to the brand reviewer.
-13. **Approval receipt.** A SHA-256 fingerprint of the exact approved text, the Brand Kit version, the findings resolved and dismissed with reasons, and the approver. Downloadable as JSON.
-14. **Brief card.** Before writing, the creator sees the rules in force and the facts that are safe to use today.
-15. **Measured results page.**
+13. **Approval receipt and record.** A SHA-256 fingerprint of the exact approved text, the Brand Kit version, every finding and how it was resolved, and the approver. Downloadable as JSON, or as a printable approval record (save as PDF).
+14. **Writer control.** Locked phrases that no fix may remove, editing a suggested fix before accepting it (the checks run again on the edit), and version history with word-level changes.
+15. **Insights.** Which rules fire most, which are dismissed and why (a rule two or more people call unclear is flagged), and a watch on facts that have expired, are embargoed, or expire within 60 days.
+16. **Brief card.** Before writing, the creator sees the rules in force and the facts that are safe to use today.
+17. **Measured results page.**
     - 60 planted-error drafts (40 held out), with precision, recall and 95% Wilson intervals, re-run live.
     - Held out, code checks only: precision 100% (93–100%), recall 74% (63–83%).
     - Every miss is a deliberately hard phrasing.
-16. **Rules-only mode.** Without the AI service, the code checks and the whole workflow still run, and the app says so.
-17. **Guided tour.** A checklist on each review ticks itself off as the visitor completes the journey.
-18. **Engineering.**
-    - 16 automated tests.
+18. **Rules-only mode.** Without the AI service, the code checks and the whole workflow still run, and the app says so.
+19. **Guided tour.** A checklist on each review ticks itself off as the visitor completes the journey.
+20. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
+21. **Engineering.**
+    - 22 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
     - Functions run in Mumbai next to the database.
 
@@ -64,7 +67,7 @@ https://github.com/mahak867/Guide-wise
 - **Image analysis in the browser** (`src/lib/image.ts`): dominant colours by quantisation, and OCR with tesseract.js. The OCR engine and English language data are served from our own site, not a CDN, so they work where CDNs are blocked.
 - **Documents:** mammoth (DOCX) and unpdf (PDF), read in memory and never stored.
 - **Evaluation** (`src/lib/eval/`, `scripts/eval.ts`): a seeded generator makes the same 60 drafts on every machine (the fingerprint is shown on the page). `--ai` measures the AI checks and repeat-run agreement.
-- **Testing:** Vitest (`tests/engine.test.ts`) and GitHub Actions (`.github/workflows/ci.yml`).
+- **Testing:** Vitest (`tests/engine.test.ts`, and `tests/fake-ai.test.ts`, which swaps in a deliberately wrong AI) and GitHub Actions (`.github/workflows/ci.yml`).
 - **Open source used:** Next.js, React, Tailwind CSS, supabase-js, Anthropic SDK, Zod, mammoth, unpdf, tesseract.js. Licences are in their packages.
 - **AI disclosure:** Claude (Anthropic) was used to help write code during the build window. The product uses the Claude API for its AI checks and guide compiler.
 
@@ -84,7 +87,7 @@ https://github.com/mahak867/Guide-wise
 ## The three major improvements for Round 3
 
 1. **Guideline Health loop: the brand guide fixes itself.**
-   - Dismissals are analysed per rule. A rule that several different creators dismiss as unclear is marked unclear.
+   - Round 2 already shows which rules are dismissed and flags those two or more people call unclear. Round 3 closes the loop.
    - Guidewise drafts an amendment with new test sentences. The manager approves it, which creates a new Brand Kit version that must pass its tests.
    - Changing a fact lists every draft and approved piece that used it.
    - **Test:** dismiss one rule as three different creators and see it marked unclear, with a drafted amendment that passes its tests. Change a fact and see every affected piece listed.
