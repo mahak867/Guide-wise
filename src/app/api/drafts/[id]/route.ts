@@ -128,7 +128,7 @@ export async function POST(req: Request, ctx: Ctx) {
         draft = await saveText(draft, draft.text, `Images updated by ${a.name} (${images.length} image${images.length === 1 ? "" : "s"})`);
         draft.images = images;
         if (draft.status === "changes_requested") must(await d.from("drafts").update({ status: "draft" }).eq("id", id));
-        await runReview(ws, draft, b.useAI !== false);
+        await runReview(ws, draft, false, true); // only images changed: no AI call needed
         await log(req, id, "images_updated", { count: images.length, version: draft.version });
         break;
       }

@@ -37,7 +37,11 @@ export async function getFindings(id: string): Promise<Finding[]> {
  * decisions people made are kept, open findings whose words are gone are closed,
  * and anything new is added.
  */
-export async function runReview(ws: string, draft: DraftRow, useAI: boolean): Promise<void> {
+/**
+ * keepAI: re-run the code and image checks only, keeping the AI findings and AI stats from the last review.
+ * Used when only images changed: the AI judges text, and the text is the same.
+ */
+export async function runReview(ws: string, draft: DraftRow, useAI: boolean, keepAI = false): Promise<void> {
   const d = db();
   const { kit, rules, facts } = await loadKit(ws);
   const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [], contentType: draft.content_type });
@@ -60,7 +64,12 @@ export async function runReview(ws: string, draft: DraftRow, useAI: boolean): Pr
 
   const risk = riskTier(await getFindings(draft.id));
   must(await d.from("drafts").update({
-    mode: stats.mode, stats, kit_version: kit.version, risk_tier: risk.tier, risk_reasons: risk.reasons,
+    ...(() => {
+      if (!keepAI || draft.mode !== "ai") return { mode: stats.mode, stats };
+      const prev = draft.stats as Partial<typeof stats>;
+      return { mode: draft.mode, stats: { ...stats, mode: "ai" as const, aiFindings: prev.aiFindings ?? 0, aiCalls: prev.aiCalls ?? 0, aiCached: prev.aiCached ?? 0 } };
+    })(),
+    kit_version: kit.version, risk_tier: risk.tier, risk_reasons: risk.reasons,
     updated_at: new Date().toISOString(),
   }).eq("id", draft.id));
 }
