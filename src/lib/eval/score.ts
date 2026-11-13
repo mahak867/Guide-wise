@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Fact, Finding, Kit, Rule } from "../types";
 import { reviewDraft } from "../engine/review";
 import { EVAL_DOCS, EVAL_RULES, type EvalDoc } from "./dataset";
@@ -20,7 +21,7 @@ export interface DocResult {
   extra: { rule: string; quote: string; level: string }[];
 }
 export interface EvalReport {
-  mode: string; at: string; docs: number; split: string;
+  mode: string; at: string; docs: number; split: string; fingerprint: string;
   planted: number; caught: number; predicted: number; correct: number;
   precision: number; precisionCI: [number, number]; recall: number; recallCI: [number, number];
   criticalRecall: number; criticalCI: [number, number]; criticalPlanted: number;
@@ -63,6 +64,7 @@ export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { us
   const rulesSeen = [...new Set([...all.map((p) => p.rule), ...extras.map((e) => e.rule)])].sort();
   return {
     mode, at: new Date().toISOString(), docs: docs.length, split,
+    fingerprint: createHash("sha256").update(JSON.stringify(EVAL_DOCS)).digest("hex").slice(0, 16),
     planted: all.length, caught, predicted, correct: caught,
     precision: predicted ? caught / predicted : 1, precisionCI: wilson(caught, predicted),
     recall: all.length ? caught / all.length : 1, recallCI: wilson(caught, all.length),

@@ -78,7 +78,12 @@ function build(): EvalDoc[] {
       const c = pick(CLEAN);
       if (!clean.includes(c)) clean.push(c);
     }
-    const parts = [...clean, ...errs.map((e) => e.text)].sort(() => r() - 0.5);
+    // Fisher-Yates with the seeded PRNG: identical order on every machine and Node version.
+    const parts = [...clean, ...errs.map((e) => e.text)];
+    for (let k = parts.length - 1; k > 0; k--) {
+      const j = Math.floor(r() * (k + 1));
+      [parts[k], parts[j]] = [parts[j], parts[k]];
+    }
     docs.push({
       id: `D${String(i + 1).padStart(2, "0")}`,
       split: i < 20 ? "dev" : "test",

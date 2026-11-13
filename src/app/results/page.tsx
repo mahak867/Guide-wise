@@ -61,7 +61,7 @@ export default function Results() {
       {error && <Notice tone="error">{error}</Notice>}
       {!r ? <p className="text-sm text-muted">Running the evaluation…</p> : (
         <>
-          <h2 className="mb-2 font-semibold">Code checks only <Badge>{r.docs} drafts · {r.planted} planted errors · {r.ms} ms</Badge></h2>
+          <h2 className="mb-2 flex flex-wrap items-center gap-2 font-semibold">Code checks only <Badge>{r.docs} drafts · {r.planted} planted errors · {r.ms} ms</Badge><span className="text-xs font-normal text-muted">Test set fingerprint <code className="font-mono">{r.fingerprint}</code></span></h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label="Precision" value={pct(r.precision)} sub={`${r.correct} of ${r.predicted} findings were planted errors. 95% interval ${ci(r.precisionCI)}.`} />
             <Metric label="Recall" value={pct(r.recall)} sub={`${r.caught} of ${r.planted} planted errors caught. 95% interval ${ci(r.recallCI)}.`} />
@@ -127,7 +127,7 @@ export default function Results() {
           <Card className="mt-4 p-4 text-sm">
             <h2 className="font-semibold">Method and limits</h2>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
-              <li>60 short drafts for the fictional PrepPath Academy, built from 15 clean sentences and 24 planted errors across 9 rules. About a quarter are left clean. 20 drafts were used while building (development); 40 were held out and are the headline numbers.</li>
+              <li>60 short drafts for the fictional PrepPath Academy, built from 15 clean sentences and 24 planted errors across 9 rules by a seeded generator, so the set is identical on every run (see the fingerprint). About a quarter are left clean. 20 drafts were used while building (development); 40 were held out and are the headline numbers.</li>
               <li>A finding counts as correct when it cites the planted error's rule and quotes overlapping words. Any other finding counts as a false flag, including suggestions.</li>
               <li>Intervals are 95% Wilson score intervals. With 40 drafts they are wide, and they should be read that way.</li>
               <li><b>These numbers are optimistic.</b> The team wrote both the rules and the test drafts, so the drafts are phrased the way the rules expect. The "hard" errors were written to avoid the patterns on purpose, and the code checks miss all of them. Real marketing copy will be messier. The next step is a set of real, anonymised drafts from coaching-centre marketers.</li>
