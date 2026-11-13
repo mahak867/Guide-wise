@@ -14,8 +14,9 @@ const img = (f, alt, cap) => existsSync(`${dir}/img/${f}`)
   ? `<figure><img src="img/${f}" alt="${alt}"><figcaption>${cap}</figcaption></figure>` : "";
 
 const aiBlock = ai.measured
-  ? `<tr><td>Code and AI checks</td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${pct(ai.criticalRecall)}</td><td>${ai.hardCaught} of ${ai.hardPlanted}</td><td>${ai.agreement !== undefined ? pct(ai.agreement) : "–"}</td></tr>`
+  ? `<tr><td>Code and AI checks <span>(${ai.docs} drafts)</span></td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${pct(ai.criticalRecall)}</td><td>${ai.hardCaught} of ${ai.hardPlanted}</td><td>${ai.agreement !== undefined ? pct(ai.agreement) : "not measured"}</td></tr>`
   : `<tr><td>Code and AI checks</td><td colspan="5">Not measured yet.</td></tr>`;
+const aiNote = ai.measured ? `The AI row is measured on ${ai.docs} of the 40 held-out drafts (every second one), one run each, on the live site; repeat-run agreement was not measured because a second run would have used most of the free AI tier's daily allowance. Its one false flag (a time, "4 pm", read as a figure) was fixed afterwards and is covered by a test.` : "";
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Guidewise · Round 2</title>
 <style>
@@ -95,7 +96,10 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><td>Regulation pack</td><td>CCPA coaching guidelines (2024) with a real penalty order shown on each regulation finding, and the "more than 50 students" applicability gate.</td></tr>
 <tr><td>Workflow</td><td>Four roles enforced on the server; risk routing by a fixed rule table; comments, version history with word-level diffs, activity log, approval record (save as PDF).</td></tr>
 <tr><td>Insights</td><td>Most-flagged rules, dismissal reasons, rules two or more people call unclear, fact expiry watch.</td></tr>
-<tr><td>Privacy</td><td>Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.</td></tr>
+<tr><td>Privacy</td><td>Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call. A draft marked confidential is never sent to AI at all.</td></tr>
+<tr><td>Channels</td><td>A rule can apply to some content types only (for example, no shortened links on social posts and ads); the brief card shows the rules for the type being written.</td></tr>
+<tr><td>Portability</td><td>The Brand Kit exports and imports as one JSON file; imported new or changed rules arrive as advisory until they pass their tests.</td></tr>
+<tr><td>Reliability</td><td>AI answers are cached by rule and text, so many judges reviewing the same sample spend no extra quota; a 20-second cap on every AI call; a 20-step browser test of the whole journey runs against the live site.</td></tr>
 <tr><td>Usability</td><td>One-click sample post, a guided tour that ticks itself off, private workspace per visitor, works on a phone.</td></tr>
 </table>
 
@@ -121,10 +125,12 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <h2 class="page">Measured results</h2>
 <p>60 short drafts for PrepPath with errors planted in known places (20 used while building, <b>40 held out</b>). A finding counts as correct when it cites the planted error's rule and quotes overlapping words; anything else is a false flag. Intervals are 95% Wilson intervals. Test-set fingerprint <code>${code.fingerprint}</code>.</p>
 <table>
-<tr><th>Held-out set (40 drafts, ${code.planted} planted errors)</th><th>Precision</th><th>Recall</th><th>Critical recall</th><th>Hard phrasings</th><th>Repeat-run agreement</th></tr>
-<tr><td>Code checks only</td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${pct(code.criticalRecall)}</td><td>${code.hardCaught} of ${code.hardPlanted}</td><td>100% <span>(deterministic)</span></td></tr>
+<tr><th>Held-out set</th><th>Precision</th><th>Recall</th><th>Critical recall</th><th>Hard phrasings</th><th>Repeat-run agreement</th></tr>
+<tr><td>Code checks only <span>(40 drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${pct(code.criticalRecall)}</td><td>${code.hardCaught} of ${code.hardPlanted}</td><td>100% <span>(deterministic)</span></td></tr>
 ${aiBlock}
 </table>
+${img("07-results.png", "Results page", "The live Results page: the code checks re-run on every visit; the AI checks were measured on the live site.")}
+<p class="note">${aiNote}</p>
 <p class="note">These numbers are optimistic: the team wrote both the rules and the test drafts. "Hard" errors were written on purpose to avoid keyword patterns. The next step is real, anonymised drafts from coaching-centre marketers.</p>
 
 <h2>Changes from the Round 1 plan</h2>

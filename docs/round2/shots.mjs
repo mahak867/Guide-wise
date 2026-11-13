@@ -1,0 +1,52 @@
+// Takes the product screenshots used in the Round 2 PDF, from a running deployment.
+//   BASE_URL=https://guidewise-kohl.vercel.app node docs/round2/shots.mjs
+import { createRequire } from "node:module";
+const { chromium } = createRequire(import.meta.url)("playwright");
+const L = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+const OUT = "docs/round2/img";
+const b = await chromium.launch({ proxy: process.env.HTTPS_PROXY && L.startsWith("https") ? { server: process.env.HTTPS_PROXY } : undefined });
+const p = await b.newPage({ viewport: { width: 1280, height: 820 }, deviceScaleFactor: 2, ignoreHTTPSErrors: true });
+const open = async () => parseInt(await p.getByRole("heading", { name: /open finding/ }).innerText());
+await p.goto(L); await p.waitForTimeout(1500);
+await p.screenshot({ path: `${OUT}/01-home.png` });
+await p.getByText("Review the sample post").click();
+await p.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
+await p.getByText(/open finding/).first().waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /Hide/ }).first().click();
+await p.locator("button[aria-expanded]", { hasText: "No guaranteed outcomes" }).first().click();
+await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
+await p.screenshot({ path: `${OUT}/02-review.png` });
+await p.locator("#img-1").scrollIntoViewIfNeeded();
+await p.locator("#img-1").screenshot({ path: `${OUT}/03-image.png` });
+await p.getByRole("button", { name: /Accept all/ }).click();
+await p.getByRole("button", { name: /Accept all|Applying/ }).waitFor({ state: "detached", timeout: 90000 });
+await p.getByRole("button", { name: "Replace or edit images" }).click();
+await p.getByRole("button", { name: "Remove" }).first().click();
+await p.getByRole("button", { name: "Use the corrected sample" }).click();
+await p.locator("fieldset img").first().waitFor({ timeout: 120000 });
+await p.getByRole("button", { name: "Save and re-check" }).click();
+await p.getByText("Images updated and checked again.").waitFor({ timeout: 90000 });
+await p.getByRole("button", { name: "Submit for review" }).click();
+await p.getByText(/Waiting for Kavya/).waitFor({ timeout: 30000 });
+await p.getByRole("combobox").first().selectOption("compliance"); await p.waitForTimeout(600);
+for (let k = 0; k < 15 && (await open()) > 0; k++) {
+  const n = await open();
+  await p.getByRole("button", { name: "Dismiss", exact: true }).first().click();
+  await p.locator('select[id^="r-"]').selectOption("Approved exception");
+  for (let w = 0; w < 80 && (await open()) === n; w++) await p.waitForTimeout(250);
+}
+await p.getByRole("button", { name: "Approve", exact: true }).click();
+await p.getByText("Approval receipt").waitFor({ timeout: 30000 });
+await p.getByRole("link", { name: "Approval record (PDF)" }).click();
+await p.getByText("Guidewise approval record").waitFor({ timeout: 30000 }); await p.waitForTimeout(800);
+const box = await p.locator("article").boundingBox();
+await p.screenshot({ path: `${OUT}/05-receipt.png`, fullPage: true, clip: { x: box.x, y: box.y, width: box.width, height: Math.min(box.height, 1100) } });
+await p.goto(L + "/kit"); await p.getByRole("combobox").first().selectOption("manager"); await p.waitForTimeout(800);
+await p.getByRole("button", { name: "Run tests" }).first().click(); await p.getByText(/Tests pass|Tests fail/).first().waitFor({ timeout: 30000 });
+await p.screenshot({ path: `${OUT}/06-kit.png` });
+await p.goto(L + "/results"); await p.getByText("With the AI checks").waitFor({ timeout: 30000 }); await p.waitForTimeout(800);
+await p.screenshot({ path: `${OUT}/07-results.png`, fullPage: false });
+await p.goto(L + "/insights"); await p.getByText("Rules by how often they fire").waitFor({ timeout: 30000 }); await p.waitForTimeout(800);
+await p.screenshot({ path: `${OUT}/08-insights.png` });
+await b.close();
+console.log("screenshots written to", OUT);
