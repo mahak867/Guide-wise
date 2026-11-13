@@ -1,69 +1,122 @@
-import Image from "next/image";
+"use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { Badge, Button, Card, Notice, PageHead, STATUS } from "@/components/ui";
+import { api, fmtDate, useApp } from "@/lib/client";
+import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
+import { ROLES } from "@/lib/types";
+
+interface Row {
+  id: string; title: string; content_type: string; status: string; risk_tier: string | null;
+  version: number; author: string; mode: string; updated_at: string; open: number;
+}
+
+const MINE: Record<string, string[]> = {
+  creator: ["draft", "changes_requested"],
+  brand: ["brand_review"],
+  compliance: ["compliance_review"],
+  manager: [],
+};
 
 export default function Home() {
+  const { role, setRole } = useApp();
+  const router = useRouter();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setRows((await api<{ drafts: Row[] }>("/api/drafts")).drafts);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+  useEffect(() => {
+    load();
+    window.addEventListener("gw-reset", load);
+    return () => window.removeEventListener("gw-reset", load);
+  }, [load]);
+
+  async function runDemo() {
+    setBusy(true);
+    setError(null);
+    try {
+      setRole("creator");
+      const { id } = await api<{ id: string }>("/api/drafts", {
+        title: "Instagram caption: December JEE batch", content_type: "social", text: DEMO_CAPTION, intent: DEMO_INTENT,
+      });
+      router.push(`/review/${id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  }
+
+  const mine = rows?.filter((r) => MINE[role].includes(r.status)) ?? [];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <Card className="mb-6 p-5">
+        <h1 className="text-2xl font-semibold tracking-tight">Check a draft before it is published</h1>
+        <p className="mt-1.5 max-w-3xl text-sm text-muted">
+          Guidewise checks marketing content against the team's approved rules and dated facts. Every finding quotes the rule it breaks and the exact words, offers a re-tested fix, and
+          risky content goes to the right reviewer. A person makes the final approval.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="primary" onClick={runDemo} disabled={busy}>{busy ? "Reviewing the sample…" : "Review the sample caption"}</Button>
+          <Link href="/review/new"><Button>Check your own draft</Button></Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <ol className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-4">
+          <li><b className="text-ink">1. Review.</b> The sample is an Instagram caption from a fictional coaching brand with eight problems in it.</li>
+          <li><b className="text-ink">2. Resolve.</b> Accept each re-tested fix, or dismiss a finding with a reason.</li>
+          <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
+          <li><b className="text-ink">4. Approve.</b> Switch to Kavya with "Acting as" and approve to get the receipt.</li>
+        </ol>
+      </Card>
+
+      {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+
+      <PageHead
+        title="Reviews"
+        sub={MINE[role].length
+          ? `${mine.length} waiting for ${ROLES[role].name} (${ROLES[role].title.toLowerCase()}). Everything else is shown below it.`
+          : `${ROLES[role].name} owns the Brand Kit. All reviews are listed for reference.`}
+      />
+      <Card>
+        {rows === null ? (
+          <p className="p-5 text-sm text-muted">Loading reviews…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-muted">No drafts have been reviewed yet. Start with the sample caption above.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-4 py-2.5 font-medium">Draft</th><th className="px-4 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 font-medium">Risk</th>
+                  <th className="px-4 py-2.5 font-medium">Open findings</th><th className="px-4 py-2.5 font-medium">Version</th><th className="px-4 py-2.5 font-medium">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...mine, ...rows.filter((r) => !mine.includes(r))].map((r) => (
+                  <tr key={r.id} className={`border-b border-line last:border-0 ${mine.includes(r) ? "bg-brand-soft/40" : ""}`}>
+                    <td className="px-4 py-2.5">
+                      <Link href={`/review/${r.id}`} className="font-medium text-brand-dark underline-offset-2 hover:underline">{r.title}</Link>
+                      <div className="text-xs text-muted">{r.content_type} · by {r.author}{mine.includes(r) ? " · waiting for you" : ""}</div>
+                    </td>
+                    <td className="px-4 py-2.5"><Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge></td>
+                    <td className="px-4 py-2.5">{r.risk_tier ? <Badge tone={r.risk_tier === "high" ? "critical" : "green"}>{r.risk_tier === "high" ? "High" : "Low"}</Badge> : "–"}</td>
+                    <td className="px-4 py-2.5">{r.open}</td>
+                    <td className="px-4 py-2.5">v{r.version}</td>
+                    <td className="px-4 py-2.5 text-muted">{fmtDate(r.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
   );
 }
