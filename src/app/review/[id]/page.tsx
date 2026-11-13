@@ -7,6 +7,7 @@ import { ImagePicker } from "@/components/ImagePicker";
 import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
 import type { ImageInput } from "@/lib/image";
 import { api, fmtDate, useApp } from "@/lib/client";
+import { wordDiff } from "@/lib/diff";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
@@ -78,6 +79,7 @@ export default function ReviewPage() {
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [showResolved, setShowResolved] = useState(false);
   const [imgEdit, setImgEdit] = useState<ImageInput[] | null>(null);
+  const [fixEdit, setFixEdit] = useState<{ id: string; text: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -304,13 +306,14 @@ export default function ReviewPage() {
             <Card className="border-brand/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2>Approval receipt</h2>
-                <Button onClick={() => {
+                <div className="flex gap-2"><Button onClick={() => {
                   const blob = new Blob([JSON.stringify({ product: "Guidewise", draft: draft.title, ...receipt }, null, 2)], { type: "application/json" });
                   const a = document.createElement("a");
                   a.href = URL.createObjectURL(blob);
                   a.download = `guidewise-receipt-${receipt.id.slice(0, 8)}.json`;
                   a.click();
-                }}>Download</Button>
+                }}>Download JSON</Button>
+                <Link href={`/review/${draft.id}/record`} className="rounded-[5px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-paper">Approval record (PDF)</Link></div>
               </div>
               <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div><dt className="text-xs uppercase tracking-wide text-muted">Approved by</dt><dd>{receipt.approver} ({ROLES[receipt.approver_role as Role]?.title ?? receipt.approver_role}) · {fmtDate(receipt.at)}</dd></div>
@@ -338,7 +341,15 @@ export default function ReviewPage() {
               </form>
             )}
             <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted">Version history ({versions.length})</summary>
-              <ol className="mt-2 space-y-2">{versions.map((v) => <li key={v.version} className="rounded-md border border-line p-2"><div className="text-xs text-muted">v{v.version} · {v.note} · {fmtDate(v.at)}</div><div className="mt-1 whitespace-pre-wrap">{v.text}</div></li>)}</ol>
+              <ol className="mt-2 space-y-2">{versions.map((v, i) => {
+                const prev = versions[i + 1];
+                return (
+                  <li key={v.version} className="rounded-md border border-line p-2">
+                    <div className="text-xs text-muted">v{v.version} · {v.note} · {fmtDate(v.at)}</div>
+                    <div className="mt-1 whitespace-pre-wrap leading-relaxed">{prev ? wordDiff(prev.text, v.text).map((p, k) => p.t === "same" ? <span key={k}>{p.s}</span> : p.t === "add" ? <ins key={k} className="bg-brand-soft no-underline">{p.s}</ins> : <del key={k} className="text-crit/80">{p.s}</del>) : v.text}</div>
+                  </li>
+                );
+              })}</ol>
             </details>
           </Card>
         </div>
@@ -401,7 +412,21 @@ export default function ReviewPage() {
                     </div>
                   ) : (
                     <div className="mt-2.5 flex flex-wrap gap-2">
-                      {canEdit && f.fix !== null && f.fix !== undefined && <Button variant="primary" disabled={!!busy} onClick={() => act("…", { action: "accept", finding_id: f.id })}>Accept fix</Button>}
+                      {canEdit && f.fix !== null && f.fix !== undefined && (fixEdit?.id === f.id ? (
+                        <div className="flex w-full flex-col gap-2">
+                          <label className="sr-only" htmlFor={`fx-${f.id}`}>Edit the fix</label>
+                          <textarea id={`fx-${f.id}`} rows={2} className={inputCls} value={fixEdit?.text ?? ""} onChange={(e) => setFixEdit({ id: f.id!, text: e.target.value })} />
+                          <div className="flex gap-2">
+                            <Button variant="primary" disabled={!!busy || !fixEdit?.text.trim()} onClick={async () => { if (await act("…", { action: "accept", finding_id: f.id, fix: fixEdit?.text }, "Edited fix applied. The checks ran again on the new text.")) setFixEdit(null); }}>Apply edited fix</Button>
+                            <Button onClick={() => setFixEdit(null)}>Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Button variant="primary" disabled={!!busy} onClick={() => act("…", { action: "accept", finding_id: f.id })}>Accept fix</Button>
+                          <Button disabled={!!busy} onClick={() => setFixEdit({ id: f.id!, text: f.fix ?? "" })}>Edit fix</Button>
+                        </>
+                      ))}
                       <Button disabled={!!busy} onClick={() => { setError(null); setDismissing(f.id!); }}>Dismiss</Button>
                     </div>
                   )

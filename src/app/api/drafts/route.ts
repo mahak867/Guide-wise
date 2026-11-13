@@ -31,7 +31,10 @@ export async function POST(req: Request) {
       content_type: b.content_type || "social",
       text: text || "(Image only)",
       images,
-      intent: { goal: b.intent?.goal ?? "", audience: b.intent?.audience ?? "", cta: b.intent?.cta ?? "" },
+      intent: {
+        goal: String(b.intent?.goal ?? "").slice(0, 300), audience: String(b.intent?.audience ?? "").slice(0, 300), cta: String(b.intent?.cta ?? "").slice(0, 300),
+        locked: (Array.isArray(b.intent?.locked) ? b.intent.locked : String(b.intent?.locked ?? "").split(",")).map((x: unknown) => String(x).trim()).filter(Boolean).slice(0, 10),
+      },
       author: a.name,
     }).select("*").single()) as DraftRow;
     must(await db().from("versions").insert({ draft_id: row.id, version: 1, text: row.text, note: "Submitted for review" }));

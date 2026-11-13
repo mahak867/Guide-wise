@@ -48,11 +48,13 @@ export async function POST(req: Request, ctx: Ctx) {
         if (f.fix === null || f.fix === undefined) return fail("No fix is offered for this finding. Edit the text instead.");
         if ((f.location ?? "text") !== "text") return fail("Image findings are fixed in the design file. Dismiss with a reason once the image is replaced.");
         if (!draft.text.includes(f.quote)) return fail("Those words are no longer in the draft.");
-        draft = await saveText(draft, draft.text.replace(f.quote, f.fix), `Accepted fix for ${f.rule_id}`);
-        must(await d.from("findings").update({ state: "accepted", resolved_by: a.name }).eq("id", f.id!));
+        const edited = typeof b.fix === "string" && b.fix.trim() !== f.fix ? b.fix.trim().slice(0, 1000) : null;
+        const replacement = edited ?? f.fix;
+        draft = await saveText(draft, draft.text.replace(f.quote, replacement), `${edited ? "Accepted an edited fix" : "Accepted fix"} for ${f.rule_id}`);
+        must(await d.from("findings").update({ state: "accepted", resolved_by: a.name, ...(edited ? { fix: edited, fix_note: "Edited by the writer before accepting; the checks ran again on it." } : {}) }).eq("id", f.id!));
         // Re-check the new text with the code checks, so overlapping findings are recomputed, not just closed.
         await runReview(ws, draft, false);
-        await log(req, id, "fix_accepted", { rule: f.rule_id, from: f.quote, to: f.fix, version: draft.version });
+        await log(req, id, "fix_accepted", { rule: f.rule_id, from: f.quote, to: replacement, edited: !!edited, version: draft.version });
         break;
       }
       case "accept_all": {

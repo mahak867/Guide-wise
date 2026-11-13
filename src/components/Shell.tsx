@@ -11,6 +11,7 @@ const NAV = [
   { href: "/review/new", label: "New review" },
   { href: "/kit", label: "Brand Kit" },
   { href: "/facts", label: "Facts and assets" },
+  { href: "/insights", label: "Insights" },
   { href: "/results", label: "Results" },
   { href: "/about", label: "How it works" },
 ];
@@ -37,7 +38,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
+      <header className="sticky print:hidden top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full border border-ink font-serif text-[15px] italic leading-none">g</span>
@@ -82,7 +83,7 @@ export function Shell({ children }: { children: ReactNode }) {
         )}
         {children}
       </main>
-      <footer className="border-t border-line px-4 py-3 text-center text-xs text-muted">
+      <footer className="print:hidden border-t border-line px-4 py-3 text-center text-xs text-muted">
         Guidewise · CodeNova India 2026, Round 2 · PrepPath Academy is a fictional brand written for this demo · Guidewise supports reviewers; it does not give legal advice.
       </footer>
     </div>

@@ -18,7 +18,7 @@ export default function NewReview() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("social");
   const [text, setText] = useState("");
-  const [intent, setIntent] = useState({ goal: "", audience: "", cta: "" });
+  const [intent, setIntent] = useState({ goal: "", audience: "", cta: "", locked: "" });
   const [images, setImages] = useState<ImageInput[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export default function NewReview() {
                 Upload DOCX or PDF
                 <input type="file" accept=".docx,.pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
               </label>
-              <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent(DEMO_INTENT); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
+              <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent({ ...DEMO_INTENT, locked: "" }); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
                 Use the sample caption
               </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>
@@ -99,6 +99,7 @@ export default function NewReview() {
                 <Field label="Audience"><input className={inputCls} value={intent.audience} onChange={(e) => setIntent({ ...intent, audience: e.target.value })} placeholder="JEE aspirants" /></Field>
                 <Field label="Call to action"><input className={inputCls} value={intent.cta} onChange={(e) => setIntent({ ...intent, cta: e.target.value })} placeholder="Enquire now" /></Field>
               </div>
+              <div className="mt-3"><Field label="Locked phrases" hint="(comma separated; no fix may remove them)"><input className={inputCls} value={intent.locked} onChange={(e) => setIntent({ ...intent, locked: e.target.value })} placeholder="Mission IIT 2027, December batch" /></Field></div>
             </fieldset>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="flex items-center gap-3">
