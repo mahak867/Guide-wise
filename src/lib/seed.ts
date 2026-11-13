@@ -271,6 +271,20 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
   {
+    id: "LINK-1", kind: "code", category: "pattern", severity: "minor", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "No shortened links on social posts and ads",
+    description: "Social posts and ads show the full preppath.in address. A shortened link hides where it leads.",
+    config: {
+      channels: ["social", "ad"],
+      patterns: [{ re: "(?:https?://)?(?:bit\\.ly|tinyurl\\.com|t\\.co|goo\\.gl|rb\\.gy)/[\\w-]+", fix: "preppath.in/admissions" }],
+    },
+    tests: [
+      { text: "Apply now: bit.ly/pp-dec", expect: "flag" },
+      { text: "Apply now: preppath.in/admissions", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
     id: "T-5", kind: "judgment", category: "tone", severity: "minor", status: "advisory", source: "PrepPath brand guide", risk: "low",
     title: "Speak to the student",
     description: "Address the reader directly as \"you\". Avoid talking about students in the third person.",

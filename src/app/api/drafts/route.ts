@@ -33,6 +33,7 @@ export async function POST(req: Request) {
       images,
       intent: {
         goal: String(b.intent?.goal ?? "").slice(0, 300), audience: String(b.intent?.audience ?? "").slice(0, 300), cta: String(b.intent?.cta ?? "").slice(0, 300),
+        confidential: b.intent?.confidential === true,
         locked: (Array.isArray(b.intent?.locked) ? b.intent.locked : String(b.intent?.locked ?? "").split(",")).map((x: unknown) => String(x).trim()).filter(Boolean).slice(0, 10),
       },
       author: a.name,

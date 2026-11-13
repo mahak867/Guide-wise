@@ -11,7 +11,7 @@ import { wordDiff } from "@/lib/diff";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
-  id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string };
+  id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[] };
   images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean }[];
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
 }
@@ -154,6 +154,7 @@ export default function ReviewPage() {
         {draft.risk_tier && <Badge tone={draft.risk_tier === "high" ? "critical" : "green"}>{draft.risk_tier === "high" ? "High risk" : "Low risk"}</Badge>}
         <Badge>v{draft.version}</Badge>
         <Badge tone={draft.mode === "ai" ? "green" : "grey"}>{draft.mode === "ai" ? "Code and AI checks" : "Code checks only"}</Badge>
+        {draft.intent.confidential && <Badge tone="ink">Confidential · never sent to AI</Badge>}
       </div>
 
       <DemoGuide s={{
@@ -267,7 +268,7 @@ export default function ReviewPage() {
             <h2>How this review was produced</h2>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
               <li><b className="text-ink">{st.codeFindings ?? 0}</b> findings from code checks</li>
-              <li><b className="text-ink">{st.aiFindings ?? 0}</b> findings from AI checks{draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls)`}</li>
+              <li><b className="text-ink">{st.aiFindings ?? 0}</b> findings from AI checks{draft.intent.confidential ? " (off: confidential draft)" : draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls${st.aiCached ? `, ${st.aiCached} answered from cache` : ""})`}</li>
               {!!st.images && <li><b className="text-ink">{st.visualFindings ?? 0}</b> findings from {st.images} image{st.images > 1 ? "s" : ""} (colours, alt text and the text inside)</li>}
               <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
               <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>

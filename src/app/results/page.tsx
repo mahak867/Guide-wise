@@ -72,7 +72,19 @@ export default function Results() {
           <Card className="mt-4 p-4 text-sm">
             <h2>With the AI checks</h2>
             {ai ? (
-              <p className="mt-1">Precision {pct(ai.precision ?? 0)} ({ci((ai.precisionCI ?? [0, 0]) as [number, number])}), recall {pct(ai.recall ?? 0)} ({ci((ai.recallCI ?? [0, 0]) as [number, number])}), hard phrasings caught {ai.hardCaught} of {ai.hardPlanted}{ai.agreement !== undefined ? `, repeat-run agreement ${pct(ai.agreement)}` : ""}. Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} with {ai.mode}.</p>
+              <>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Metric label="Precision" value={pct(ai.precision ?? 0)} sub={`${ai.correct} of ${ai.predicted} findings were planted errors. 95% interval ${ci((ai.precisionCI ?? [0, 0]) as [number, number])}.`} />
+                  <Metric label="Recall" value={pct(ai.recall ?? 0)} sub={`${ai.caught} of ${ai.planted} planted errors caught. 95% interval ${ci((ai.recallCI ?? [0, 0]) as [number, number])}.`} />
+                  <Metric label="Recall, critical rules" value={pct(ai.criticalRecall ?? 0)} sub={`95% interval ${ci((ai.criticalCI ?? [0, 0]) as [number, number])}.`} />
+                  <Metric label="Hard phrasings caught" value={`${ai.hardCaught} of ${ai.hardPlanted}`} sub="The code checks alone catch none of these." />
+                </div>
+                <p className="mt-3 text-muted">
+                  Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on {ai.docs} of the 40 held-out drafts (every second one), one run each, on the live deployment with {ai.mode}.
+                  {ai.agreement !== undefined ? ` Repeat-run agreement ${pct(ai.agreement)}.` : " Repeat-run agreement was not measured: a second full run would have used most of the free AI tier's daily allowance that judges need."}
+                  {" "}The one false flag was the AI reading the “4” in “4 pm” as a figure; code now discards times and small bare numbers the AI picks up, and a test covers it. That fix came after this measurement, which is shown as measured.
+                </p>
+              </>
             ) : (
               <p className="mt-1 text-muted">Not measured yet. The AI service is not connected in this deployment. When it is, the same set is run with <code className="rounded bg-mist px-1">npx tsx scripts/eval.ts --ai</code> and the result is published here. We do not publish a number we have not measured.</p>
             )}

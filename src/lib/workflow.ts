@@ -40,7 +40,7 @@ export async function getFindings(id: string): Promise<Finding[]> {
 export async function runReview(ws: string, draft: DraftRow, useAI: boolean): Promise<void> {
   const d = db();
   const { kit, rules, facts } = await loadKit(ws);
-  const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [] });
+  const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [], contentType: draft.content_type });
   const existing = await getFindings(draft.id);
   const found = new Set(findings.map(key));
   const known = new Map(existing.map((f) => [key(f), f]));

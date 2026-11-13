@@ -154,3 +154,16 @@ describe("ordinary content is not flooded", () => {
     expect(f.filter((x) => x.rule_id === "VIS-CON")).toEqual([]);
   });
 });
+
+describe("rules limited to some content types", () => {
+  const text = "Apply now: bit.ly/pp-dec";
+  const run = (contentType?: string) => reviewDraft(text, null, SEED_RULES, SEED_FACTS, SEED_KIT, { useAI: false, contentType });
+  it("applies a social-only rule to social posts and ads, not to emails", async () => {
+    expect((await run("social")).findings.map((f) => f.rule_id)).toContain("LINK-1");
+    expect((await run("ad")).findings.map((f) => f.rule_id)).toContain("LINK-1");
+    expect((await run("email")).findings.map((f) => f.rule_id)).not.toContain("LINK-1");
+  });
+  it("offers the full address as the fix", async () => {
+    expect((await run("social")).findings.find((f) => f.rule_id === "LINK-1")?.fix).toBe("preppath.in/admissions");
+  });
+});

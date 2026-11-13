@@ -66,7 +66,7 @@ export async function POST(req: Request, ctx: Ctx) {
         let text = draft.text;
         const applied: { rule: string; from: string; to: string }[] = [];
         for (let i = 0; i < 20; i++) {
-          const { findings: now } = await reviewDraft(text, draft.intent, rules, facts, kit, { useAI: false });
+          const { findings: now } = await reviewDraft(text, draft.intent, rules, facts, kit, { useAI: false, contentType: draft.content_type });
           const f = now.find((x) => x.fix !== null && x.fix !== undefined && (x.location ?? "text") === "text" && !skip.has(`${x.rule_id}|${x.quote}`) && text.includes(x.quote));
           if (!f) break;
           text = text.replace(f.quote, f.fix!);

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
 import { api, fmtDate, useApp } from "@/lib/client";
-import type { Rule } from "@/lib/types";
+import { CONTENT_TYPES, type Rule } from "@/lib/types";
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const KINDS = [
@@ -11,7 +11,8 @@ const KINDS = [
   { v: "tone", l: "Tone or voice (AI check)" },
   { v: "claim", l: "What may be claimed (AI check)" },
 ];
-const blank = { id: "", title: "", description: "", type: "term", severity: "major", risk: "low", avoid: "", prefer: "", phrases: "", flag: "", pass: "" };
+const blank = { id: "", title: "", description: "", type: "term", severity: "major", risk: "low", avoid: "", prefer: "", phrases: "", flag: "", pass: "", channels: "" };
+const typeLabel = (v: string) => CONTENT_TYPES.find((t) => t.v === v)?.l ?? v;
 
 interface Proposal { title: string; description: string; kind: string; category: string; severity: string; avoid: string[]; prefer: string; flag_example: string; pass_example: string; source_passage: string }
 
@@ -39,6 +40,7 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
         <Badge>{rule.kind === "code" ? "Code check" : rule.config.patterns?.length ? "AI check + code patterns" : "AI check"}</Badge>
         <Badge tone={rule.severity}>{rule.severity}</Badge>
         {rule.risk === "high" && <Badge tone="critical">Routes to compliance</Badge>}
+        {!!rule.config.channels?.length && <Badge tone="minor">{rule.config.channels.map(typeLabel).join(", ")} only</Badge>}
         {t && <Badge tone={t.passed ? "green" : "critical"}>{t.passed ? "Tests pass" : "Tests fail"}</Badge>}
         <span className="ml-auto flex gap-1.5">
           <Button disabled={busy} onClick={() => { setOpen(true); run("test"); }}>{busy ? "Running…" : "Run tests"}</Button>
@@ -117,7 +119,10 @@ export default function KitPage() {
     const ok = await save({
       id: form.id, title: form.title, description: form.description, severity: form.severity, risk: form.risk,
       kind: code ? "code" : "judgment", category: form.type,
-      config: form.type === "term" ? { avoid: list(form.avoid), prefer: form.prefer } : form.type === "pattern" ? { patterns: list(form.phrases).map(esc) } : {},
+      config: {
+        ...(form.type === "term" ? { avoid: list(form.avoid), prefer: form.prefer } : form.type === "pattern" ? { patterns: list(form.phrases).map(esc) } : {}),
+        ...(list(form.channels).length ? { channels: list(form.channels) } : {}),
+      },
       tests: [form.flag && { text: form.flag, expect: "flag" }, form.pass && { text: form.pass, expect: "pass" }].filter(Boolean),
     });
     if (ok) setForm(blank);
@@ -131,6 +136,36 @@ export default function KitPage() {
       const out = await api<{ rules: Proposal[]; warnings: { passage: string; problem: string }[] }>("/api/compile", { guide });
       setProposals(out.rules);
       setWarnings(out.warnings);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportKit() {
+    setErr(null);
+    try {
+      const kit = await api<Record<string, unknown>>("/api/kit/export");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(kit, null, 2)], { type: "application/json" }));
+      a.download = `guidewise-brand-kit-v${state?.kit.version ?? 1}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function importKit(file: File) {
+    setBusy(true);
+    setErr(null);
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error("That file is larger than 2 MB.");
+      let parsed: unknown;
+      try { parsed = JSON.parse(await file.text()); } catch { throw new Error("That file is not valid JSON."); }
+      const out = await api<{ rules: { imported: number; unchanged: number }; facts: number; kit_version: number }>("/api/kit/import", parsed);
+      await onChange(`Imported: ${out.rules.imported} new or changed rule${out.rules.imported === 1 ? "" : "s"} (added as advisory until their tests pass), ${out.rules.unchanged} unchanged, ${out.facts} fact${out.facts === 1 ? "" : "s"}. Brand Kit is now version ${out.kit_version}.`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -158,7 +193,19 @@ export default function KitPage() {
       <PageHead
         title={`Brand Kit · version ${state.kit.version}`}
         sub="Each rule carries test sentences. A rule starts as advisory and can only be enforced when its own check passes those tests. Every change makes a new Brand Kit version, and each review records the version it was checked against."
-        action={!manager ? <Button onClick={() => setRole("manager")}>Act as Meera to edit</Button> : undefined}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={exportKit} disabled={busy}>Export Brand Kit</Button>
+            {manager ? (
+              <label className={`cursor-pointer rounded-[5px] border border-line bg-white px-3 py-1.5 text-[13px] font-medium hover:border-ink/40 ${busy ? "pointer-events-none opacity-45" : ""}`}>
+                Import Brand Kit
+                <input type="file" accept="application/json,.json" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importKit(f); }} />
+              </label>
+            ) : (
+              <Button onClick={() => setRole("manager")}>Act as Meera to edit</Button>
+            )}
+          </div>
+        }
       />
       {msg && <div className="mb-3"><Notice tone="ok">{msg}</Notice></div>}
       {err && <div className="mb-3"><Notice tone="error">{err}</Notice></div>}
@@ -188,6 +235,20 @@ export default function KitPage() {
                 <Field label="Severity"><select className={inputCls} value={form.severity} onChange={(e) => set("severity", e.target.value)}><option>critical</option><option>major</option><option>minor</option></select></Field>
                 <Field label="If flagged, route to"><select className={inputCls} value={form.risk} onChange={(e) => set("risk", e.target.value)}><option value="low">Brand reviewer</option><option value="high">Compliance reviewer</option></select></Field>
               </div>
+              <fieldset>
+                <legend className="text-sm font-medium">Applies to <span className="font-normal text-muted">(leave all unticked for every content type)</span></legend>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  {CONTENT_TYPES.map((t) => {
+                    const on = form.channels.split(",").filter(Boolean).includes(t.v);
+                    return (
+                      <label key={t.v} className="flex items-center gap-1.5">
+                        <input type="checkbox" className="h-4 w-4 accent-[var(--color-ink)]" checked={on} onChange={() => set("channels", (on ? form.channels.split(",").filter((x) => x && x !== t.v) : [...form.channels.split(",").filter(Boolean), t.v]).join(","))} />
+                        {t.l}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
               {form.type === "term" && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Words to flag" hint="(comma separated)"><input required className={inputCls} value={form.avoid} onChange={(e) => set("avoid", e.target.value)} placeholder="teacher, tutor" /></Field>

@@ -43,6 +43,8 @@ export interface Rule {
     fixText?: string;
     fixFactId?: string;
     guidance?: string;
+    /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
+    channels?: string[];
   };
   tests: RuleTest[];
   last_test?: { passed: boolean; at: string; mode: string; results: { text: string; expect: string; got: string; ok: boolean }[] } | null;
@@ -81,6 +83,8 @@ export interface Intent {
   cta: string;
   /** Phrases the writer needs kept, e.g. a campaign name. A fix that removes one is withdrawn. */
   locked?: string[];
+  /** The writer marked this draft confidential: it is never sent to an AI service. */
+  confidential?: boolean;
 }
 
 export interface Finding {
@@ -116,6 +120,8 @@ export interface ReviewStats {
   droppedByVerifier: { reason: string; quote: string; rule_id: string }[];
   fixesWithdrawn: number;
   aiCalls: number;
+  aiCached?: number;
+  confidential?: boolean;
   redactions: number;
   aiError?: string;
 }
@@ -126,3 +132,11 @@ export const ROLES: Record<Role, { name: string; title: string }> = {
   compliance: { name: "Kavya", title: "Compliance reviewer" },
   manager: { name: "Meera", title: "Brand manager" },
 };
+
+export const CONTENT_TYPES = [
+  { v: "social", l: "Social post" },
+  { v: "ad", l: "Advertisement" },
+  { v: "email", l: "Email" },
+  { v: "landing", l: "Landing page" },
+  { v: "document", l: "Document or brochure" },
+] as const;

@@ -33,6 +33,14 @@ Use **Reset demo** to start again.
 
 Next.js 16 (TypeScript, App Router), Tailwind CSS 4, Supabase Postgres, AI through one adapter that supports Groq, Gemini and Claude with automatic fallback (structured outputs validated with Zod), mammoth (DOCX text), Vercel.
 
+## Tests
+
+```bash
+npm test                                            # 33 unit tests, including a deliberately wrong AI
+npm run eval                                        # accuracy on the held-out set (code checks)
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e   # 19-step browser test of the whole journey
+```
+
 ## Run locally
 
 ```bash
@@ -54,7 +62,7 @@ Apply `supabase/migrations/001_init.sql` to a Supabase project first. The app se
 
 - Images are checked for palette colours, contrast, alt text and the text inside them (OCR in the browser). Layout, logo placement and photo content are not checked yet.
 - There is no sign-in, so judges can open the link directly. Role rules are enforced on the server, but the database is open to the demo app by design; real workspaces need authentication.
-- Accuracy is measured on 60 planted-error drafts written by the team (`npx tsx scripts/eval.ts`), with a live Results page. The numbers are optimistic because the same team wrote the rules and the drafts.
+- Accuracy is measured on 60 planted-error drafts written by the team (`npx tsx scripts/eval.ts`), with a live Results page. Code checks on the 40 held-out drafts: precision 100%, recall 74%. With the AI checks, on 20 of them: precision 96%, recall 100%. The numbers are optimistic because the same team wrote the rules and the drafts.
 - Guidewise supports reviewers. It does not give legal advice. Penalty precedents are cited as reported in the linked press coverage.
 
 ## Disclosures

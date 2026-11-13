@@ -40,6 +40,7 @@ vi.mock("@google/genai", () => ({
 }));
 
 process.env.GROQ_API_KEY = "test";
+process.env.GUIDEWISE_AI_CACHE = "off"; // provider behaviour is tested without the answer cache
 process.env.GEMINI_API_KEY = "test";
 delete process.env.ANTHROPIC_API_KEY;
 
@@ -73,5 +74,22 @@ describe("provider chain", () => {
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
     expect(calls).toEqual(["groq"]);
     expect(out[0].fix).toBe("trusted coaching");
+  });
+
+  it("answers a repeated question from the cache, but keeps the second run independent", async () => {
+    process.env.GUIDEWISE_AI_CACHE = "on";
+    groqBehaviour = "ok";
+    let hits = 0;
+    const opts = { onCacheHit: () => { hits++; } };
+    const text = "A sentence only this test uses: the best coaching in Salem.";
+    await judgeRule(rule, text, null, opts);
+    await judgeRule(rule, text, null, opts);
+    expect(calls).toEqual(["groq"]); // the second identical question never reached the provider
+    expect(hits).toBe(1);
+    await judgeRule(rule, text, null, { variant: 2 }); // the agreement run is a separate sample
+    expect(calls).toEqual(["groq", "groq"]);
+    await judgeRule(rule, text, null, { cache: false }); // accuracy measurement always asks the AI
+    expect(calls).toEqual(["groq", "groq", "groq"]);
+    process.env.GUIDEWISE_AI_CACHE = "off";
   });
 });

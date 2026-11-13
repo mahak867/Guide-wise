@@ -41,7 +41,7 @@ export function evalRules(rules: Rule[]): Rule[] {
 
 /** Review one test draft and match its findings to the planted answer key. */
 export async function scoreDoc(d: EvalDoc, rules: Rule[], facts: Fact[], kit: Kit, useAI: boolean): Promise<DocResult & { mode: string; aiError?: string }> {
-  const { findings, stats } = await reviewDraft(d.text, null, evalRules(rules), facts, kit, { useAI });
+  const { findings, stats } = await reviewDraft(d.text, null, evalRules(rules), facts, kit, { useAI, aiCache: false });
   const used = new Set<Finding>();
   const planted = d.planted.map((p) => {
     const hit = findings.find((f) => !used.has(f) && f.rule_id === p.rule && overlaps(f.quote, p.quote));

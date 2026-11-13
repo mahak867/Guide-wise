@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import type { Intent, Rule } from "../types";
+import { cacheGet, cacheKey, cacheOn, cacheSet } from "./aicache";
 
 /*
  * Provider adapter: every AI call in the product goes through this file.
@@ -193,8 +194,31 @@ export function aiDiagnostics() {
   return { lastAnswered, failures: failures.slice(-6) };
 }
 
+export interface CallOpts {
+  /** false = always ask the AI (used when measuring accuracy). */
+  cache?: boolean;
+  /** Which independent sample this is. The second run of a rule uses 2, so it is a genuinely separate answer. */
+  variant?: number;
+  /** Called when the answer came from the cache. */
+  onCacheHit?: () => void;
+}
+
+/** A structured task, answered from the cache when the same question has been asked before. */
+async function structured<T>(t: Task<T>, opts: CallOpts = {}): Promise<T> {
+  if (opts.cache === false || !cacheOn()) return ask(t);
+  const key = cacheKey([t.name, opts.variant ?? 1, t.system, t.user]);
+  const hit = await cacheGet<unknown>(key);
+  if (hit !== undefined) {
+    const parsed = t.schema.safeParse(hit);
+    if (parsed.success) { opts.onCacheHit?.(); return parsed.data; }
+  }
+  const out = await ask(t);
+  await cacheSet(key, out, t.name);
+  return out;
+}
+
 /** Run one structured task on the first provider that answers; rate limits get one short retry. */
-async function structured<T>(t: Task<T>): Promise<T> {
+async function ask<T>(t: Task<T>): Promise<T> {
   const c = chain();
   if (!c.length) throw new Error("No AI service is configured.");
   let last: unknown;
@@ -251,14 +275,14 @@ function ruleBlock(rule: Rule): string {
 }
 
 /** One judgment rule, one call. */
-export async function judgeRule(rule: Rule, text: string, intent: Intent | null): Promise<Judgement[]> {
+export async function judgeRule(rule: Rule, text: string, intent: Intent | null, opts: CallOpts = {}): Promise<Judgement[]> {
   const intentLine = (intent && (intent.goal || intent.audience || intent.cta)
     ? `Writer's intent - goal: ${intent.goal || "not given"}; audience: ${intent.audience || "not given"}; call to action: ${intent.cta || "not given"}`
     : "Writer's intent: not given") + (intent?.locked?.length ? `\nLocked phrases the fix must keep word for word: ${intent.locked.map((l) => `"${l}"`).join(", ")}` : "");
   const out = await structured({
     name: "rule_check", system: SYSTEM, schema: JudgeSchema, maxTokens: 3000,
     user: `${ruleBlock(rule)}\n\n${intentLine}\n\nDraft:\n"""\n${text}\n"""`,
-  });
+  }, opts);
   return out.findings;
 }
 
@@ -274,7 +298,7 @@ const ClaimSchema = z.object({
 export type ExtractedClaim = z.infer<typeof ClaimSchema>["claims"][number];
 
 /** The AI only extracts number claims into typed fields. Code compares them with the Facts Register. */
-export async function extractClaims(text: string): Promise<ExtractedClaim[]> {
+export async function extractClaims(text: string, opts: CallOpts = {}): Promise<ExtractedClaim[]> {
   const out = await structured({
     name: "number_claims", schema: ClaimSchema, maxTokens: 3000,
     system: `You extract number claims from marketing drafts for a later check done by code. Do not judge them.
@@ -288,7 +312,7 @@ For each claim return:
 
 Return an empty list if there are none.`,
     user: `Draft:\n"""\n${text}\n"""`,
-  });
+  }, opts);
   return out.claims;
 }
 

@@ -6,11 +6,9 @@ import { ImagePicker } from "@/components/ImagePicker";
 import { api, useApp } from "@/lib/client";
 import type { ImageInput } from "@/lib/image";
 import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
+import { CONTENT_TYPES } from "@/lib/types";
 
-const TYPES = [
-  { v: "social", l: "Social post" }, { v: "ad", l: "Advertisement" }, { v: "email", l: "Email" },
-  { v: "landing", l: "Landing page" }, { v: "document", l: "Document or brochure" },
-];
+const TYPES = CONTENT_TYPES;
 
 export default function NewReview() {
   const { state, role, setRole } = useApp();
@@ -20,6 +18,7 @@ export default function NewReview() {
   const [text, setText] = useState("");
   const [intent, setIntent] = useState({ goal: "", audience: "", cta: "", locked: "" });
   const [images, setImages] = useState<ImageInput[]>([]);
+  const [confidential, setConfidential] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,12 +27,12 @@ export default function NewReview() {
     if (!state) return null;
     const facts = state.facts.filter((f) => f.kind === "fact");
     return {
-      rules: state.rules.filter((r) => r.status === "enforced"),
+      rules: state.rules.filter((r) => r.status === "enforced" && (!r.config.channels?.length || r.config.channels.includes(type))),
       usable: facts.filter((f) => (!f.valid_from || f.valid_from <= today) && (!f.valid_until || f.valid_until >= today)),
       embargoed: facts.filter((f) => f.valid_from && f.valid_from > today),
       expired: facts.filter((f) => f.valid_until && f.valid_until < today),
     };
-  }, [state, today]);
+  }, [state, today, type]);
 
   async function upload(file: File) {
     setBusy("Reading the document…");
@@ -58,7 +57,7 @@ export default function NewReview() {
     setError(null);
     try {
       if (role !== "creator") setRole("creator");
-      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent, images });
+      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent: { ...intent, confidential }, images });
       router.push(`/review/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -100,6 +99,10 @@ export default function NewReview() {
                 <Field label="Call to action"><input className={inputCls} value={intent.cta} onChange={(e) => setIntent({ ...intent, cta: e.target.value })} placeholder="Enquire now" /></Field>
               </div>
               <div className="mt-3"><Field label="Locked phrases" hint="(comma separated; no fix may remove them)"><input className={inputCls} value={intent.locked} onChange={(e) => setIntent({ ...intent, locked: e.target.value })} placeholder="Mission IIT 2027, December batch" /></Field></div>
+              <label className="mt-3 flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--color-ink)]" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} />
+                <span><b className="font-medium">Confidential draft.</b> <span className="text-muted">Never send this draft to an AI service. Only the code checks run, for this review and every re-check.</span></span>
+              </label>
             </fieldset>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="flex items-center gap-3">
@@ -132,7 +135,7 @@ export default function NewReview() {
                 </div>
               )}
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Rules in force ({brief.rules.length})</h3>
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Rules in force for a {TYPES.find((t) => t.v === type)?.l.toLowerCase()} ({brief.rules.length})</h3>
                 <ul className="mt-1.5 space-y-1">
                   {brief.rules.map((r) => <li key={r.id}><span className="font-mono text-xs text-muted">{r.id}</span> {r.title}</li>)}
                 </ul>

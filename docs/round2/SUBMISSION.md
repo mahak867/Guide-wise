@@ -39,14 +39,19 @@ https://github.com/mahak867/Guide-wise
 16. **Brief card.** Before writing, the creator sees the rules in force and the facts that are safe to use today.
 17. **Measured results page.**
     - 60 planted-error drafts (40 held out), with precision, recall and 95% Wilson intervals, re-run live.
-    - Held out, code checks only: precision 100% (93–100%), recall 74% (63–83%).
-    - Every miss is a deliberately hard phrasing.
+    - Held out, code checks only: precision 100% (93–100%), recall 74% (63–83%). Every miss is a deliberately hard phrasing.
+    - With the AI checks, on 20 of the held-out drafts on the live site: precision 96% (81–99%), recall 100% (86–100%), all 10 hard phrasings caught. The one false flag (a time read as a figure) has since been fixed and is covered by a test.
 18. **Rules-only mode.** Without the AI service, the code checks and the whole workflow still run, and the app says so.
 19. **Guided tour.** A checklist on each review ticks itself off as the visitor completes the journey.
-20. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
-21. **Engineering.**
-    - 28 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
+20. **Confidential drafts.** A writer can mark a draft confidential; it is then never sent to any AI service, only the code checks run, and the review says so.
+21. **Rules per content type.** A rule can apply to some content types only (for example, no shortened links on social posts and ads, but allowed in emails). The brief card shows the rules for the type being written.
+22. **Brand Kit export and import.** The whole kit (assets, rules with tests, facts) as one JSON file. Imported rules that are new or changed arrive as advisory and must pass their own tests before they can be enforced.
+23. **AI answer cache.** The same rule on the same text is answered from a cache, so many people reviewing the same sample do not use up the AI quota. The second, independent run of a rule and the accuracy measurement never use the cache.
+24. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
+25. **Engineering.**
+    - 33 automated tests, including six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
+    - A 19-step browser test of the whole journey (`npm run e2e`), run against the live site.
     - Functions run in Mumbai next to the database.
 
 ## Technology and implementation details
@@ -78,7 +83,7 @@ https://github.com/mahak867/Guide-wise
 | AI on Claude | One adapter: Groq first, Gemini as backup, Claude when a key is set. | Free tiers keep the AI checks available to judges at no cost. The schema, verifier and tests are the same for every provider. |
 | Supabase Auth with four roles | No sign-in. A private workspace per visitor and a role switcher; role rules are enforced on the server. | The Round 2 brief requires judges to use the link without signing in. Isolated workspaces stop judges interfering with each other. |
 | Image and asset review in Round 3 | A first version ships now: palette, contrast, alt text, and OCR text through every rule. | The brief names visual identity as part of the central workflow, so it could not wait. Round 3 deepens it instead (improvement 3). |
-| Results page with measured accuracy | Shipped, for the code checks. AI-mode numbers are not published yet. | The AI service was not connected in the deployed build when we measured. We publish only numbers we have measured. |
+| Results page with measured accuracy | Shipped. Code checks on all 40 held-out drafts; AI checks on 20 of them, one run. | A full AI run twice over would have used most of the free AI tier's daily allowance that judges need. |
 | alex, write-good, axe-core | Not used yet. Contrast and alt-text checks for images were built in instead. | Time went to the core workflow and image review. The brand's own term and tone rules cover the wording checks we needed for the demo. |
 | Eight findings on the demo caption | Ten on the caption, plus five on the sample creative. | The two superlatives are flagged separately, and the disclaimer rule was added from the regulation pack. |
 | Fixes withdrawn if they introduce any issue | Withdrawn only if the new issue has no automatic fix; otherwise it is shown as a follow-up. | Testing showed that fixing a guarantee claim correctly raises a disclaimer requirement, and withdrawing that fix was the wrong call. |

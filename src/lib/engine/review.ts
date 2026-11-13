@@ -83,11 +83,16 @@ export async function reviewDraft(
   rules: Rule[],
   facts: Fact[],
   kit: Kit,
-  opts: { useAI?: boolean; images?: DraftImage[] } = {},
+  opts: { useAI?: boolean; images?: DraftImage[]; contentType?: string; aiCache?: boolean } = {},
 ): Promise<{ findings: Finding[]; stats: ReviewStats }> {
   const started = Date.now();
   rules = applicableRules(rules, kit);
-  const useAI = (opts.useAI ?? true) && aiAvailable();
+  // A rule can be limited to some content types (for example social posts and ads only).
+  if (opts.contentType) rules = rules.filter((r) => !r.config.channels?.length || r.config.channels.includes(opts.contentType!));
+  // A confidential draft is never sent to an AI service, whatever the caller asked for.
+  const useAI = (opts.useAI ?? true) && !intent?.confidential && aiAvailable();
+  let aiCached = 0;
+  const call = (variant: number) => ({ cache: opts.aiCache, variant, onCacheHit: () => { aiCached++; } });
   const { text: safe, map } = redact(text);
   const dropped: Dropped[] = [];
   let aiCalls = 0;
@@ -98,14 +103,18 @@ export async function reviewDraft(
   if (useAI) {
     try {
       aiCalls++;
-      const ex = await extractClaims(safe);
+      const ex = await extractClaims(safe, call(1));
       claims = [];
       for (const c of ex) {
         const quote = restore(c.quote, map);
         const index = text.indexOf(quote);
         if (index < 0) { dropped.push({ reason: "quote is not in the draft", quote, rule_id: "claims" }); continue; }
-        // The AI only locates the figure. Its value is re-read from the quoted words by code.
+        // The AI only locates the figure. Its value is re-read from the quoted words by code,
+        // and a bare small number, time or date it picked up ("4 pm") is ignored as code would.
         const value = parseNumber(quote) ?? c.value;
+        const bare = /^\d+$/.test(quote);
+        const after = text.slice(index + quote.length, index + quote.length + 12).toLowerCase();
+        if (bare && (value < 10 || /^\s*(am|pm|st|nd|rd|th)\b|^:\d/.test(after) || (value >= 1990 && value <= 2100))) continue;
         claims.push({ quote, value, index, source: "ai" });
       }
       // Code extraction stays as a floor so a missed figure is still checked.
@@ -126,10 +135,10 @@ export async function reviewDraft(
     const results = await Promise.allSettled(
       judged.map(async (rule) => {
         aiCalls++;
-        const first = await judgeRule(rule, safe, intent);
+        const first = await judgeRule(rule, safe, intent, call(1));
         if (!first.length) return [] as Finding[];
         aiCalls++;
-        const second = await judgeRule(rule, safe, intent).catch(() => null);
+        const second = await judgeRule(rule, safe, intent, call(2)).catch(() => null);
         return first.map((j) => {
           const f = toFinding(rule, restore(j.quote, map), j.explanation, restore(j.fix, map));
           // Disagreement between the two runs downgrades the finding to a suggestion.
@@ -178,6 +187,8 @@ export async function reviewDraft(
       droppedByVerifier: dropped,
       fixesWithdrawn,
       aiCalls,
+      aiCached,
+      confidential: !!intent?.confidential,
       redactions: map.length,
       aiError,
     },

@@ -11,7 +11,8 @@
     "predev": "node scripts/copy-ocr.mjs",
     "test": "vitest run",
     "eval": "tsx scripts/eval.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "node e2e/journey.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
