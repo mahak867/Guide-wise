@@ -53,15 +53,15 @@ export function Shell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="ml-auto flex flex-wrap items-center gap-2 text-sm">
+          <div className="ml-auto flex items-center gap-2 text-sm">
             {state && (
               <span title={state.ai.available ? `AI checks on (${state.ai.model})` : "AI service is off. Code checks and the full workflow still run."}>
                 <Badge tone={state.ai.available ? "green" : "major"}>{state.ai.available ? "AI checks on" : "Rules-only mode"}</Badge>
               </span>
             )}
-            {state && <Badge>{state.kit.name} · Kit v{state.kit.version}</Badge>}
+            {state && <span className="hidden xl:inline"><Badge>{state.kit.name} · Kit v{state.kit.version}</Badge></span>}
             <label className="flex items-center gap-1.5">
-              <span className="text-muted">Acting as</span>
+              <span className="hidden text-muted md:inline">Acting as</span>
               <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="rounded-md border border-line bg-white px-2 py-1.5 font-medium">
                 {(Object.keys(ROLES) as Role[]).map((r) => (
                   <option key={r} value={r}>

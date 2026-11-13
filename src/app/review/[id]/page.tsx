@@ -107,7 +107,7 @@ export default function ReviewPage() {
 
   const pick = useCallback((fid: string) => {
     setActive(fid);
-    document.getElementById(`f-${fid}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => document.getElementById(`f-${fid}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   }, []);
   const show = (f: Finding) => {
     setActive(f.id!);
@@ -118,7 +118,8 @@ export default function ReviewPage() {
   if (!data) return <p className="text-sm text-muted">Loading the review…</p>;
 
   const { draft, findings, events, versions, receipt } = data;
-  const open = findings.filter((f) => f.state === "open");
+  const sevOrder = { critical: 0, major: 1, minor: 2 } as const;
+  const open = findings.filter((f) => f.state === "open").sort((x, y) => sevOrder[x.severity] - sevOrder[y.severity] || (x.location ?? "").localeCompare(y.location ?? ""));
   const closed = findings.filter((f) => f.state !== "open");
   const openViolations = open.filter((f) => f.level === "violation");
   const st = draft.stats;
@@ -342,24 +343,34 @@ export default function ReviewPage() {
           </Card>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2>{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
             {canEdit && role === "creator" && fixable.length > 1 && <Button disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
           </div>
           {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : "No findings. This draft follows the rules in force."}</Card>}
+          {open.length > 0 && <Card className="divide-y divide-line overflow-hidden">
           {open.map((f) => {
             const rule = state?.rules.find((r) => r.id === f.rule_id);
+            // One finding is open at a time; the rest stay as one-line rows.
+            const expanded = active === "" ? null : open.some((x) => x.id === active) ? active : open[0]?.id;
+            const isOpen = expanded === f.id;
             return (
-              <Card key={f.id} className={`border-l-[3px] p-4 text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${active === f.id ? "ring-1 ring-ink" : ""}`}>
-                <div id={`f-${f.id}`} className="flex flex-wrap items-center gap-1.5">
+              <div key={f.id} id={`f-${f.id}`} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
+                <button className="flex w-full items-baseline gap-2 px-4 py-2.5 text-left" aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
+                  <span className="font-serif text-[15.5px] font-medium leading-snug">{rule?.title ?? f.rule_id}</span>
+                  {!isOpen && <span className="min-w-0 flex-1 truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
+                  <span className="ml-auto shrink-0 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)} · ` : ""}{f.severity}{f.fix != null ? " · fix ready" : ""}</span>
+                  <span aria-hidden className="shrink-0 text-muted">{isOpen ? "–" : "+"}</span>
+                </button>
+                {isOpen && (<div className="px-4 pb-4">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Badge tone={f.severity}>{f.severity[0].toUpperCase() + f.severity.slice(1)}</Badge>
                   <Badge>{CHECK[f.check_type]}</Badge>
                   {f.level === "suggestion" && <Badge>Suggestion</Badge>}
                   {f.location?.startsWith("image:") && <Badge tone="ink">Image {f.location.slice(6)}</Badge>}
                   <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
                 </div>
-                <p className="mt-2 font-serif text-[17px] font-medium leading-snug">{rule?.title ?? f.rule_id}</p>
                 <blockquote className="mt-1 flex items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
                 <p className="mt-2">{f.message}</p>
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
@@ -395,9 +406,11 @@ export default function ReviewPage() {
                     </div>
                   )
                 )}
-              </Card>
+                </div>)}
+              </div>
             );
           })}
+          </Card>}
           {closed.length > 0 && (
             <div>
               <button className="text-sm text-muted underline-offset-2 hover:underline" aria-expanded={showResolved} onClick={() => setShowResolved(!showResolved)}>
