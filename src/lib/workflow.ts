@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { db, loadKit, must } from "./db";
+import { BadInput, db, loadKit, must } from "./db";
 import { reviewDraft, riskTier } from "./engine/review";
 import type { Finding, Intent } from "./types";
 import type { DraftImage } from "./engine/visual";
@@ -108,7 +108,7 @@ function cleanLogo(l: unknown): DraftImage["logo"] {
 export function cleanImages(input: unknown): DraftImage[] {
   return (Array.isArray(input) ? input : []).slice(0, 4).map((i: Record<string, unknown>, n: number) => {
     const dataUrl = String(i.dataUrl ?? "");
-    if (!dataUrl.startsWith("data:image/") || dataUrl.length > 900_000) throw new Error(`Image ${n + 1} is missing or too large.`);
+    if (!dataUrl.startsWith("data:image/") || dataUrl.length > 900_000) throw new BadInput(`Image ${n + 1} is missing, is not an image, or is too large.`);
     return {
       name: String(i.name ?? `Image ${n + 1}`).slice(0, 120),
       alt: String(i.alt ?? "").slice(0, 600),

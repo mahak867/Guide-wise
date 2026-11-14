@@ -1,6 +1,6 @@
 import mammoth from "mammoth";
 import { extractText, getDocumentProxy } from "unpdf";
-import { fail } from "@/lib/db";
+import { BadInput, fail } from "@/lib/db";
 
 export const maxDuration = 30;
 
@@ -16,13 +16,17 @@ export async function POST(req: Request) {
     const buf = Buffer.from(await file.arrayBuffer());
     let raw: string;
     let pages: number | null = null;
-    if (name.endsWith(".pdf")) {
-      const pdf = await getDocumentProxy(new Uint8Array(buf));
-      const out = await extractText(pdf, { mergePages: true });
-      raw = out.text;
-      pages = out.totalPages;
-    } else {
-      raw = (await mammoth.extractRawText({ buffer: buf })).value;
+    try {
+      if (name.endsWith(".pdf")) {
+        const pdf = await getDocumentProxy(new Uint8Array(buf));
+        const out = await extractText(pdf, { mergePages: true });
+        raw = Array.isArray(out.text) ? out.text.join("\n") : out.text;
+        pages = out.totalPages;
+      } else {
+        raw = (await mammoth.extractRawText({ buffer: buf })).value;
+      }
+    } catch {
+      throw new BadInput(`That ${name.endsWith(".pdf") ? "PDF" : "Word document"} could not be read. It may be damaged or password-protected; open it, save a fresh copy and try again, or paste the text.`);
     }
     const text = raw.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
     if (!text) return fail(name.endsWith(".pdf") ? "No text was found in that PDF. If it is a scanned image, add it as an image instead so its text can be read." : "No text was found in that document.");

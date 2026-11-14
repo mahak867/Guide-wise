@@ -73,7 +73,13 @@ export async function log(req: Request, draft_id: string | null, action: string,
   must(await db().from("events").insert({ ws: wsOf(req), draft_id, actor: a.name, role: a.role, action, detail }));
 }
 
+/** A problem with what the caller sent. Reported as 400 with its message, never as a server error. */
+export class BadInput extends Error {}
+
 export function fail(e: unknown, status = 400): Response {
+  // A body that is not JSON, or input a helper rejected, is the caller's mistake, not ours.
+  if (e instanceof SyntaxError) return Response.json({ error: "The request body is not valid JSON." }, { status: 400 });
+  if (e instanceof BadInput) status = 400;
   if (status >= 500) console.error("[guidewise]", e);
   return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status });
 }

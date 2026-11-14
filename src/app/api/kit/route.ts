@@ -1,4 +1,5 @@
 import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
+import { Contacts, Disclaimers, Palette, firstIssue } from "@/lib/schemas";
 
 // Assets: palette, approved disclaimers, approved contacts, the logo.
 export async function POST(req: Request) {
@@ -6,7 +7,12 @@ export async function POST(req: Request) {
     if (actor(req).role !== "manager") return fail("Only the brand manager can change assets. Switch role to Meera.", 403);
     const b = await req.json();
     const patch: Record<string, unknown> = {};
-    for (const k of ["palette", "disclaimers", "contacts"]) if (Array.isArray(b[k])) patch[k] = b[k];
+    for (const [k, schema] of [["palette", Palette], ["disclaimers", Disclaimers], ["contacts", Contacts]] as const) {
+      if (b[k] === undefined) continue;
+      const parsed = schema.safeParse(b[k]);
+      if (!parsed.success) return fail(`That ${k} can't be saved (${firstIssue(parsed.error)}).`);
+      patch[k] = parsed.data;
+    }
     if ("logo" in b) {
       const l = b.logo;
       if (l === null || l === "") patch.logo = null;

@@ -1,28 +1,14 @@
 import { z } from "zod";
 import { actor, bumpKit, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
+import { Contacts, Disclaimers, FactIn, Palette, RuleIn, firstIssue } from "@/lib/schemas";
 
-const id = z.string().regex(/^[A-Z0-9-]{1,24}$/);
-const RuleIn = z.object({
-  id, kind: z.enum(["code", "judgment"]), category: z.string().max(40), title: z.string().min(1).max(200), description: z.string().max(1000).default(""),
-  severity: z.enum(["critical", "major", "minor"]).default("major"), status: z.enum(["advisory", "enforced"]).default("advisory"),
-  source: z.string().max(300).default("Imported"), risk: z.enum(["low", "high"]).default("low"),
-  config: z.record(z.string(), z.unknown()).default({}),
-  tests: z.array(z.object({ text: z.string().max(600), expect: z.enum(["flag", "pass"]) })).max(20).default([]),
-  precedent: z.object({ order: z.string(), note: z.string(), source: z.string() }).nullable().default(null),
-});
-const FactIn = z.object({
-  id, kind: z.enum(["fact", "student"]).default("fact"), statement: z.string().min(1).max(600), value: z.number().nullable().default(null),
-  keywords: z.array(z.string()).max(30).default([]), evidence: z.string().max(600).default(""), owner: z.string().max(200).default(""),
-  valid_from: z.string().nullable().default(null), valid_until: z.string().nullable().default(null),
-  disclosure: z.string().max(600).default(""), disclosure_keywords: z.array(z.string()).max(30).default([]), meta: z.record(z.string(), z.unknown()).default({}),
-});
 const KitFile = z.object({
   format: z.literal("guidewise-brand-kit"),
   kit: z.object({
     name: z.string().max(120).optional(),
-    palette: z.array(z.object({ name: z.string(), hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/) })).max(24).optional(),
-    disclaimers: z.array(z.object({ id: z.string(), text: z.string(), when: z.string() })).max(40).optional(),
-    contacts: z.array(z.object({ label: z.string(), value: z.string() })).max(20).optional(),
+    palette: Palette.optional(),
+    disclaimers: Disclaimers.optional(),
+    contacts: Contacts.optional(),
     profile: z.record(z.string(), z.unknown()).optional(),
     logo: z.string().max(400_000).regex(/^(data:image\/(png|webp);base64,|\/brand\/[\w.-]+\.png$)/).nullable().optional(),
   }).default({}),
@@ -45,8 +31,7 @@ export async function POST(req: Request) {
     if (actor(req).role !== "manager") return fail("Only the brand manager can import a Brand Kit. Switch role to Meera.", 403);
     const parsed = KitFile.safeParse(await req.json());
     if (!parsed.success) {
-      const first = parsed.error.issues[0];
-      return fail(`That file is not a valid Guidewise Brand Kit (${first.path.join(".") || "file"}: ${first.message}).`);
+      return fail(`That file is not a valid Guidewise Brand Kit (${firstIssue(parsed.error)}).`);
     }
     const file = parsed.data;
     const ws = wsOf(req);
