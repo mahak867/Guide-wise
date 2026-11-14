@@ -54,7 +54,7 @@ export const FactIn = z.object({
   valid_from: isoDate.nullable().default(null), valid_until: isoDate.nullable().default(null),
   disclosure: z.string().max(600).default(""), disclosure_keywords: z.array(z.string().max(80)).max(30).default([]),
   meta: z.record(z.string(), z.unknown()).default({}),
-}).refine((f) => !f.valid_from || !f.valid_until || f.valid_from <= f.valid_until, { message: "valid from must be on or before valid until", path: ["valid_until"] });
+}).refine((f) => !f.valid_from || !f.valid_until || f.valid_from <= f.valid_until, { message: "the end date is before the start date" });
 
 export const Palette = z.array(z.object({ name: z.string().min(1).max(60), hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "use a colour like #0F6B5F") })).max(24);
 export const Disclaimers = z.array(z.object({ id: z.string().min(1).max(24), text: z.string().min(1).max(600), when: z.string().max(300) })).max(40)
@@ -64,5 +64,6 @@ export const Contacts = z.array(z.object({ label: z.string().min(1).max(80), val
 /** First problem in a Zod error, as one readable sentence. */
 export function firstIssue(e: z.ZodError): string {
   const i = e.issues[0];
-  return `${i.path.join(".") || "input"}: ${i.message}`;
+  const where = i.path.join(".").replace(/_/g, " ");
+  return where ? `${where}: ${i.message}` : i.message;
 }

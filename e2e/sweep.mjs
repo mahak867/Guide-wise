@@ -53,7 +53,7 @@ async function go(path, ready) {
   await page.waitForTimeout(300);
 }
 /** The rule card on the Brand Kit page that carries this rule ID. */
-const ruleCard = (id) => page.getByText(id, { exact: true }).locator("xpath=ancestor::div[.//button[normalize-space()='Run tests']][1]");
+const ruleCard = (id) => page.getByText(id, { exact: true }).locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' p-3.5 ')][1]");
 
 let rid = "";
 await step(page, "sample review created", async () => {
@@ -138,7 +138,7 @@ await step(page, "facts: add a dated fact, refuse a bad one, delete it", async (
   if (await dates.count() >= 2) { await dates.nth(0).fill("2026-06-01"); await dates.nth(1).fill("2026-01-01"); }
   await f.getByRole("button", { name: "Save fact" }).click();
   if (await dates.count() >= 2) {
-    await page.getByText(/valid from must be on or before valid until/).first().waitFor({ timeout: 15000 });
+    await page.getByText(/end date is before the start date/).first().waitFor({ timeout: 15000 });
     await dates.nth(1).fill("2026-12-31");
     await f.getByRole("button", { name: "Save fact" }).click();
   }
@@ -180,16 +180,20 @@ await step(page, "kit: every rule passes its own tests", async () => {
   await go("/kit", "Enforced rules"); await role("manager");
   const btns = page.getByRole("button", { name: "Run tests" });
   const n = await btns.count();
-  for (let i = 0; i < n; i++) { await btns.nth(i).click(); await page.waitForTimeout(150); }
-  await page.waitForFunction(() => !document.body.innerText.includes("Running…"), null, { timeout: 120000 });
-  await page.waitForTimeout(1500);
+  for (let i = 0; i < n; i++) {
+    await btns.nth(i).click();
+    await page.waitForFunction(() => !document.body.innerText.includes("Running…"), null, { timeout: 60000 });
+    await page.waitForTimeout(400);
+  }
+  await page.waitForTimeout(1000);
   const fails = await page.getByText("Tests fail").count();
   const passes = await page.getByText("Tests pass").count();
   must(fails === 0, `${fails} rule(s) fail their own tests`);
+  must(passes === n, `only ${passes} of ${n} rules show a passing test run`);
   return `${passes} of ${n} rules pass`;
 });
 for (const [type, param, flag, pass] of [
-  ["brand-name", "Guidewise", "Try guide wise today.", "Try Guidewise today."],
+  ["brand-name", "GuideWise", "Try Guidewise today.", "Try GuideWise today."],
   ["caps", "NEET", "This is HUGE news.", "This is big news for NEET aspirants."],
   ["length", "40", "This sentence is much longer than forty characters in total.", "Short and sweet."],
   ["readability", "8", "This sentence has far more than eight words in it, clearly.", "Short sentence here."],
@@ -322,7 +326,7 @@ await step(page, "review: request changes sends it back, then approve and downlo
   await msg(/Approved|approved/, 30000);
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download JSON" }).click()]);
   const j = JSON.parse(readFileSync(await dl.path(), "utf8"));
-  must(j.sha256 || j.fingerprint || j.hash, "receipt has no fingerprint");
+  must(/^[0-9a-f]{64}$/.test(j.text_hash ?? ""), "receipt has no SHA-256 fingerprint");
   await page.goto(L + `/review/${rid2}/record`);
   await msg(/Approval record|approval record/);
 });
@@ -356,7 +360,7 @@ await step(page, "reset demo restores the sample kit", async () => {
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.waitForTimeout(4000);
   await go("/kit", "Enforced rules");
-  must((await page.getByRole("button", { name: "Run tests" }).count()) >= 22, "rules not restored");
+  must((await page.getByRole("button", { name: "Run tests" }).count()) === 21, "rules not restored to the 21 in the demo kit");
   await go("/facts", "Facts Register");
   must(await page.getByText("Fees are subject to the published fee policy").count(), "disclaimers not restored");
 });
