@@ -23,11 +23,11 @@ https://github.com/mahak867/Guide-wise
 3. **Image checks.** Text inside each image is read (OCR in the browser) and goes through every rule and fact check. Dominant colours are checked against the brand palette (CIELAB colour difference), along with colour contrast (WCAG) and alt text. The Brand Kit logo is searched for in each creative at many sizes (plain code in the browser, no AI), then checked for a minimum size and clear space around it.
 4. **Facts Register with dates.** Each fact has evidence, an owner, a valid-from and valid-until date, and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated. A figure used for the wrong subject is flagged as a contradiction.
 5. **"No source, no flag" verifier.** Plain code drops any finding whose quoted words are not in the draft, or whose rule or fact does not exist.
-6. **Cited findings.** Each finding quotes the exact words and cites its rule and the rule's source. Regulation findings show a real CCPA penalty order as precedent, as reported in the linked press coverage.
+6. **Cited findings.** Each finding quotes the exact words and cites its rule and the rule's source. Regulation findings cite a penalty order by India's Central Consumer Protection Authority (CCPA) as precedent, as reported in the linked press coverage. We have not read the orders themselves.
 7. **Re-tested fixes.** Every suggested fix is applied and re-checked before it is offered. A fix that would introduce an issue with no automatic fix is withdrawn. Accepting a fix re-runs the checks on the new text, and "Accept all" works through follow-ups.
 8. **Brand Kit with rule tests.** Every rule carries test sentences. A rule starts as advisory and can only be enforced when its own check passes those tests. Every change creates a new Brand Kit version.
 9. **Brand-guide compiler.** Paste guide text and get proposed rules with test sentences, plus warnings about vague or contradictory passages. The manager confirms each rule. This needs the AI service.
-10. **Regulation pack.** CCPA coaching guidelines (2024): guarantee claims, student results, and the results disclaimer, with an applicability gate. The guidelines apply above 50 students; at 50 or fewer, those rules show as suggestions.
+10. **Regulation pack.** Central Consumer Protection Authority (CCPA, India) guidelines for the coaching sector (2024): guarantee claims, student results, and the results disclaimer, with an applicability gate. The guidelines apply above 50 students; at 50 or fewer, those rules show as suggestions.
 11. **Approval workflow.**
     - Four roles: creator, brand reviewer, compliance reviewer, brand manager. Role rules are enforced on the server.
     - Accept, dismiss with a reason, or reopen findings. Only compliance can dismiss a critical finding.
@@ -50,9 +50,9 @@ https://github.com/mahak867/Guide-wise
 24. **Writing-style rules.** Code rule types a manager can create: exact brand-name spelling ("Preppath" becomes "PrepPath", web addresses left alone), capitals used for emphasis (exam acronyms allowed), a length limit per content type (ad text past 125 characters, where "See more" cuts it off), a sentence-length limit, and inclusive wording. Each has test sentences and a fix where one is safe.
 25. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
 26. **Engineering.**
-    - 49 automated tests, including logo matching on the real sample creatives, and six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
+    - 49 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
-    - A 20-step browser test of the whole journey (`npm run e2e`), a 44-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 61-check probe that sends every API route bad input and the wrong role (`npm run e2e:api`). All three pass against the live site.
+    - A 20-step browser test of the whole journey (`npm run e2e`), a 44-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 67-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
     - Every input is validated: malformed requests, corrupt files, impossible dates and unsafe patterns get a clear message, never a server error.
     - Functions run in Mumbai next to the database.
 
@@ -82,12 +82,12 @@ https://github.com/mahak867/Guide-wise
 
 | Plan | What we did | Why |
 | --- | --- | --- |
-| AI on Claude | One adapter: Groq first, Gemini as backup, Claude when a key is set. | Free tiers keep the AI checks available to judges at no cost. The schema, verifier and tests are the same for every provider. |
-| Supabase Auth with four roles | No sign-in. A private workspace per visitor and a role switcher; role rules are enforced on the server. | The Round 2 brief requires judges to use the link without signing in. Isolated workspaces stop judges interfering with each other. |
+| AI on Claude | One adapter tries Claude, Groq and Gemini in that order, whichever keys are set. The live site runs on Groq, with Gemini as backup. | Free tiers keep the AI checks available to judges at no cost. The schema, verifier and tests are the same for every provider. |
+| Supabase Auth with four roles | No sign-in. A private workspace per visitor and a role switcher; role rules are enforced on the server, and browsers never receive database credentials. | Judges must be able to open the link directly, and isolated workspaces stop judges interfering with each other. Sign-in and per-organisation database security come with a production deployment. |
 | Image and asset review in Round 3 | A first version ships now: palette, contrast, alt text, logo presence, size and clear space, and OCR text through every rule. | The brief names visual identity as part of the central workflow, so it could not wait. Round 3 deepens it instead (improvement 3). |
 | Results page with measured accuracy | Shipped. Code checks on all 40 held-out drafts; AI checks on 20 of them, one run. | A full AI run twice over would have used most of the free AI tier's daily allowance that judges need. |
 | alex, write-good, axe-core | Replaced by our own code rules: brand-name spelling, capitals, length per content type, sentence length, inclusive wording; contrast and alt text for images. | As Brand Kit rules they have test sentences, can be edited by the manager, and cite their source. The libraries' fixed word lists could not. |
-| Eight findings on the demo caption | Ten on the caption, plus five on the sample creative. | The two superlatives are flagged separately, and the disclaimer rule was added from the regulation pack. |
+| Eight findings on the demo caption | About 20 across the caption and the sample creative. | The two superlatives are flagged separately, and the disclaimer rule was added from the regulation pack. |
 | Fixes withdrawn if they introduce any issue | Withdrawn only if the new issue has no automatic fix; otherwise it is shown as a follow-up. | Testing showed that fixing a guarantee claim correctly raises a disclaimer requirement, and withdrawing that fix was the wrong call. |
 | Hands-on tests with fellow students in Round 2 | Not done yet. Moved to the start of Round 3. | Build time went into the image review and the measured evaluation. |
 | Round 1 figure: CCPA maximum penalty "up to ₹10 lakh / ₹50 lakh" | **Withdrawn.** | We could not confirm these amounts against the Act and should not have stated them as fact. |

@@ -69,7 +69,7 @@ figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
 <h2>Where Round 2 stands</h2>
 <div class="grid2">
 <div class="box"><b>The central workflow runs end to end.</b><p>Paste copy or upload a DOCX, PDF or images → cited findings with re-tested fixes → accept, edit or dismiss with a reason → a fixed rule table routes to the brand or compliance reviewer → approval with a fingerprinted record. Tested end to end on the live site with the AI checks on.</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>On 40 held-out drafts with planted errors, code checks alone reach ${pct(code.precision)} precision and ${pct(code.recall)} recall${ai.measured ? `; with the AI checks, ${pct(ai.precision)} precision and ${pct(ai.recall)} recall` : ""}. ${tests} automated tests and CI run on every push.</p></div>
+<div class="box"><b>Measured on our own test set.</b><p>On 40 held-out drafts with planted errors, code checks alone reach ${pct(code.precision)} precision and ${pct(code.recall)} recall${ai.measured ? `; with the AI checks, ${pct(ai.precision)} precision and ${pct(ai.recall)} recall` : ""}. ${tests} automated tests and CI run on every push.</p></div>
 </div>
 
 <h2>The product</h2>
@@ -88,14 +88,14 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><th style="width:32mm">Area</th><th>What a judge can do with it</th></tr>
 <tr><td>Review</td><td>Paste copy, or upload DOCX, PDF and up to four images; state goal, audience, call to action and locked phrases no fix may remove.</td></tr>
 <tr><td>Code checks</td><td>Preferred terms, banned phrases, approved contacts, student results (course and consent record), the results disclaimer (with a same-language check for Hindi claims), and every figure against the Facts Register.</td></tr>
-<tr><td>AI checks</td><td>Claims and voice rules judged one rule per call, run twice when they find something; disagreement becomes a suggestion. Groq, then Gemini, with a 20-second cap per call; the app keeps working in rules-only mode if both are down.</td></tr>
+<tr><td>AI checks</td><td>Claims and voice rules judged one rule per call, run twice when they find something; disagreement becomes a suggestion. One adapter tries Claude, Groq and Gemini in that order, whichever keys are set (the live site runs on Groq, with Gemini as backup), with a 20-second cap per call; the app keeps working in rules-only mode if none answers.</td></tr>
 <tr><td>Verifier</td><td>Plain code drops any finding whose quoted words, rule or fact does not exist ("no source, no flag").</td></tr>
 <tr><td>Images</td><td>OCR in the browser (served from our own site), palette check in CIELAB, WCAG contrast, alt text; image text runs through every rule and fact. Logo check: the Brand Kit logo is searched for at many sizes (masked normalised cross-correlation, no AI), then checked for minimum size and clear space.</td></tr>
 <tr><td>Writing style</td><td>Code rule types for exact brand-name spelling, capitals used for emphasis, maximum length per content type (ad text cut off at "See more"), maximum sentence length, and inclusive wording, each with a fix where one is safe.</td></tr>
 <tr><td>Facts Register</td><td>Facts with evidence, owner, valid-from, valid-until and required disclosure; embargoed, expired and wrong-subject figures are each flagged.</td></tr>
 <tr><td>Fixes</td><td>Each fix is applied and re-checked before it is offered; AI-written fixes may not introduce any violation; edit a fix before accepting; "Accept all" works through follow-ups.</td></tr>
 <tr><td>Brand Kit</td><td>Rules with test sentences, an enforce gate, versioning, and a guide compiler that drops any proposed rule whose quoted passage is not in the guide.</td></tr>
-<tr><td>Regulation pack</td><td>CCPA coaching guidelines (2024) with a real penalty order shown on each regulation finding, and the "more than 50 students" applicability gate.</td></tr>
+<tr><td>Regulation pack</td><td>Central Consumer Protection Authority (CCPA, India) guidelines for the coaching sector (2024), with a penalty order shown on each regulation finding as reported in the press, and the "more than 50 students" applicability gate.</td></tr>
 <tr><td>Workflow</td><td>Four roles enforced on the server; risk routing by a fixed rule table; comments, version history with word-level diffs, activity log, approval record (save as PDF).</td></tr>
 <tr><td>Insights</td><td>Most-flagged rules, dismissal reasons, rules two or more people call unclear, fact expiry watch.</td></tr>
 <tr><td>Privacy</td><td>Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call. A draft marked confidential is never sent to AI at all.</td></tr>
@@ -121,14 +121,14 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><td>Data</td><td>Supabase Postgres; every table scoped by a workspace ID so each visitor's demo is isolated.</td></tr>
 <tr><td>AI</td><td>One adapter for Groq (openai/gpt-oss-120b), Gemini and Claude with automatic fallback; every answer must pass a Zod schema.</td></tr>
 <tr><td>Documents and images</td><td>mammoth (DOCX), unpdf (PDF), tesseract.js (OCR) — read in memory, never stored.</td></tr>
-<tr><td>Quality</td><td>${tests} Vitest tests, including six that swap in a deliberately wrong AI (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data); CI runs lint, type-check, tests, evaluation and build on every push.</td></tr>
+<tr><td>Quality</td><td>${tests} Vitest tests, including eight that swap in a deliberately wrong AI (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases); CI runs lint, type-check, tests, evaluation and build on every push.</td></tr>
 </table>
 
 <h2>Measured results</h2>
 <p>60 short drafts for PrepPath with errors planted in known places (20 used while building, <b>40 held out</b>). A finding counts as correct when it cites the planted error's rule and quotes overlapping words; anything else is a false flag. Intervals are 95% Wilson intervals. Test-set fingerprint <code>${code.fingerprint}</code>.</p>
 <table>
 <tr><th>Held-out set</th><th>Precision</th><th>Recall</th><th>Critical recall</th><th>Hard phrasings</th><th>Repeat-run agreement</th></tr>
-<tr><td>Code checks only <span>(40 drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${pct(code.criticalRecall)}</td><td>${code.hardCaught} of ${code.hardPlanted}</td><td>100% <span>(deterministic)</span></td></tr>
+<tr><td>Code checks only <span>(40 drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${pct(code.criticalRecall)}</td><td>${code.hardCaught} of ${code.hardPlanted}</td><td>n/a <span>(no randomness)</span></td></tr>
 ${aiBlock}
 </table>
 <div style="width:70%">${img("07-results.png", "Results page", "The live Results page: the code checks re-run on every visit; the AI checks were measured on the live site.")}</div>
@@ -138,9 +138,9 @@ ${aiBlock}
 <section style="break-inside: avoid"><h2>Changes from the Round 1 plan</h2>
 <table>
 <tr><th style="width:42mm">Plan</th><th style="width:52mm">What we did</th><th>Why</th></tr>
-<tr><td>Supabase Auth with four roles</td><td>No sign-in; a private workspace per visitor and a role switcher, role rules enforced on the server</td><td>The Round 2 brief requires judges to use the link without signing in.</td></tr>
+<tr><td>Supabase Auth with four roles</td><td>No sign-in; a private workspace per visitor and a role switcher, role rules enforced on the server; browsers never receive database credentials</td><td>Judges must be able to open the link directly. Sign-in and per-organisation database security come with a production deployment.</td></tr>
 <tr><td>Image review in Round 3</td><td>A first version ships now (palette, contrast, alt text, logo presence, size and clear space, OCR text through every rule)</td><td>The brief names visual identity as part of the central workflow. Round 3 deepens it.</td></tr>
-<tr><td>AI on Claude</td><td>One adapter: Groq, then Gemini, Claude when a key is set</td><td>Free tiers make the AI checks available to judges at no cost; the schema and verifier are the same for all.</td></tr>
+<tr><td>AI on Claude</td><td>One adapter: Claude, Groq, Gemini in that order, whichever keys are set; the live site runs on Groq with Gemini as backup</td><td>Free tiers make the AI checks available to judges at no cost; the schema and verifier are the same for all.</td></tr>
 <tr><td>Fixes withdrawn on any new issue</td><td>Withdrawn only when the new issue has no automatic fix (AI-written fixes: any new issue)</td><td>Fixing a guarantee correctly raises a disclaimer requirement; withdrawing that fix was wrong.</td></tr>
 <tr><td>alex, write-good, axe-core</td><td>Replaced by our own code rules: brand-name spelling, capitals, length, sentence length, inclusive wording; contrast and alt text for images</td><td>As Brand Kit rules they carry test sentences, can be edited by the manager and cite their source, which the libraries' fixed word lists could not.</td></tr>
 <tr><td>Hands-on tests with students</td><td>Moved to the start of Round 3</td><td>Build time went into image review and the measured evaluation.</td></tr>

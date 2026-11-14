@@ -83,6 +83,23 @@ expect("dismiss without reason", await call("POST", `/api/drafts/${id}`, { role:
 expect("empty comment", await call("POST", `/api/drafts/${id}`, { body: { action: "comment", text: "  " } }), is4xx);
 expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { action: "edit", text: "" } }), is4xx);
 
+// Workspace isolation: a second visitor cannot see or touch the first visitor's work
+{
+  const other = { "x-workspace": "probe-" + randomUUID().slice(0, 12) };
+  const as2 = async (method, path, body, role = "creator") => {
+    const r = await fetch(L + path, { method, headers: { ...other, "x-role": role, "content-type": "application/json" }, body: body && JSON.stringify(body) });
+    let j = null; try { j = await r.json(); } catch { /* not JSON */ }
+    return { s: r.status, j };
+  };
+  expect("other workspace cannot read the draft", await as2("GET", `/api/drafts/${id}`), (r) => r.s === 404);
+  expect("other workspace cannot act on the draft", await as2("POST", `/api/drafts/${id}`, { action: "comment", text: "intrusion" }), (r) => r.s === 404);
+  expect("other workspace cannot approve the draft", await as2("POST", `/api/drafts/${id}`, { action: "approve" }, "compliance"), (r) => r.s === 404);
+  expect("other workspace's list does not include it", await as2("GET", "/api/drafts"), (r) => r.s === 200 && !r.j.drafts.some((d) => d.id === id));
+  await call("POST", "/api/rules", { role: "manager", body: { id: "ISO-1", kind: "code", category: "term", title: "Isolation probe", description: "d", config: { avoid: ["zzz"], prefer: "y" }, tests: [] } });
+  expect("other workspace's kit does not include the new rule", await as2("GET", "/api/state"), (r) => r.s === 200 && !r.j.rules.some((x) => x.id === "ISO-1"));
+  expect("other workspace's export does not include it", await as2("GET", "/api/kit/export"), (r) => r.s === 200 && !r.j.rules.some((x) => x.id === "ISO-1"));
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));

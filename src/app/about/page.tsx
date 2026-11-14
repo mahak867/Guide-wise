@@ -15,7 +15,7 @@ export default function About() {
   const { state } = useApp();
   return (
     <>
-      <PageHead title="How Guidewise works" sub="Only one step uses AI. Everything around it is code that can reject what the AI returns." />
+      <PageHead title="How Guidewise works" sub="Only one step of the review uses AI. Everything around it is code that can reject what the AI returns. (The brand-guide compiler also uses AI, and the manager confirms every rule it proposes.)" />
       <ol className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {STEPS.map(([t, d], i) => (
           <li key={t}><Card className={`h-full p-4 ${i === 2 ? "border-brand" : ""}`}><div className="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}{i === 2 ? " · the only AI step" : ""}</div><h2 className="mt-1">{t}</h2><p className="mt-1 text-sm text-muted">{d}</p></Card></li>
