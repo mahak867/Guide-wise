@@ -4,7 +4,7 @@
 
 **Brand rules that run.** Guidewise checks marketing copy and creatives against a team's approved brand rules and dated facts before they are published. Every finding quotes the exact words and the rule it breaks, every suggested fix is re-tested before it is offered, risky content is routed to the right reviewer, and a person approves the final version.
 
-**Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace
+**Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace · [90-second captioned walkthrough](https://guidewise-kohl.vercel.app/demo.webm) recorded on the live site
 
 Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026, Round 2. All product code was written inside the official build window, which opened on 13 November 2026 at 10:00 IST (see the commit history).
 

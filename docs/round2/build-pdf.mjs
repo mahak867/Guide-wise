@@ -61,6 +61,7 @@ figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
 
 <table class="links" style="margin-top:12pt">
 <tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · no sign-in; each visitor gets a private demo workspace</td></tr>
+<tr><td>Walkthrough video</td><td>https://guidewise-kohl.vercel.app/demo.webm · 90 seconds, captioned, recorded on the live site</td></tr>
 <tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise</td></tr>
 <tr><td>Demo brand</td><td>PrepPath Academy, a fictional JEE/NEET coaching brand written by the team</td></tr>
 <tr><td>Team</td><td>Mahak Fahad (team leader, Backend + AI/ML) · Roshini R (Frontend + Design/UI-UX) · Chennai Institute of Technology</td></tr>
