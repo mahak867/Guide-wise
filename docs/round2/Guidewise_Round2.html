@@ -48,7 +48,7 @@ figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
 <h2>Where Round 2 stands</h2>
 <div class="grid2">
 <div class="box"><b>The central workflow runs end to end.</b><p>Paste copy or upload a DOCX, PDF or images → cited findings with re-tested fixes → accept, edit or dismiss with a reason → a fixed rule table routes to the brand or compliance reviewer → approval with a fingerprinted record. Tested end to end on the live site with the AI checks on.</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>On 40 held-out drafts with planted errors, code checks alone reach 100% precision and 74% recall; with the AI checks, 96% precision and 100% recall. 46 automated tests and CI run on every push.</p></div>
+<div class="box"><b>Measured, not claimed.</b><p>On 40 held-out drafts with planted errors, code checks alone reach 100% precision and 74% recall; with the AI checks, 96% precision and 100% recall. 49 automated tests and CI run on every push.</p></div>
 </div>
 
 <h2>The product</h2>
@@ -100,7 +100,7 @@ figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
 <tr><td>Data</td><td>Supabase Postgres; every table scoped by a workspace ID so each visitor's demo is isolated.</td></tr>
 <tr><td>AI</td><td>One adapter for Groq (openai/gpt-oss-120b), Gemini and Claude with automatic fallback; every answer must pass a Zod schema.</td></tr>
 <tr><td>Documents and images</td><td>mammoth (DOCX), unpdf (PDF), tesseract.js (OCR) — read in memory, never stored.</td></tr>
-<tr><td>Quality</td><td>46 Vitest tests, including six that swap in a deliberately wrong AI (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data); CI runs lint, type-check, tests, evaluation and build on every push.</td></tr>
+<tr><td>Quality</td><td>49 Vitest tests, including six that swap in a deliberately wrong AI (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data); CI runs lint, type-check, tests, evaluation and build on every push.</td></tr>
 </table>
 
 <h2>Measured results</h2>
