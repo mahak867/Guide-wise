@@ -50,9 +50,10 @@ https://github.com/mahak867/Guide-wise
 24. **Writing-style rules.** Code rule types a manager can create: exact brand-name spelling ("Preppath" becomes "PrepPath", web addresses left alone), capitals used for emphasis (exam acronyms allowed), a length limit per content type (ad text past 125 characters, where "See more" cuts it off), a sentence-length limit, and inclusive wording. Each has test sentences and a fix where one is safe.
 25. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
 26. **Engineering.**
-    - 46 automated tests, including logo matching on the real sample creatives, and six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
+    - 49 automated tests, including logo matching on the real sample creatives, and six that replace the AI with a deliberately wrong one (invented quotes, forbidden fixes, wrong numbers, prompt injection, personal data) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
-    - A 20-step browser test of the whole journey (`npm run e2e`), run against the live site.
+    - A 20-step browser test of the whole journey (`npm run e2e`), a 44-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 61-check probe that sends every API route bad input and the wrong role (`npm run e2e:api`). All three pass against the live site.
+    - Every input is validated: malformed requests, corrupt files, impossible dates and unsafe patterns get a clear message, never a server error.
     - Functions run in Mumbai next to the database.
 
 ## Technology and implementation details

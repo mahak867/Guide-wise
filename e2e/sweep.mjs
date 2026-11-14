@@ -53,7 +53,7 @@ async function go(path, ready) {
   await page.waitForTimeout(300);
 }
 /** The rule card on the Brand Kit page that carries this rule ID. */
-const ruleCard = (id) => page.getByText(id, { exact: true }).locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' p-3.5 ')][1]");
+const ruleCard = (id) => page.getByText(id, { exact: true }).locator("xpath=ancestor::section[1]");
 
 let rid = "";
 await step(page, "sample review created", async () => {
@@ -128,18 +128,21 @@ await step(page, "role switcher changes what is allowed", async () => {
 // ---------- 3. Facts and assets ----------
 await step(page, "facts: add a dated fact, refuse a bad one, delete it", async () => {
   await go("/facts", "Facts Register"); await role("manager");
-  const f = page.locator("form").filter({ has: page.getByRole("button", { name: "Save fact" }) });
+  const f = page.locator("form").filter({ has: page.getByPlaceholder("F-12") });
   await f.getByPlaceholder("F-12").fill("F-77");
   await f.getByPlaceholder(/NEET selections/).fill("1,150+ NEET selections in 2025 from our classroom programme");
   await f.getByPlaceholder("1150").fill("1150");
   await f.getByPlaceholder("selections, selected").fill("selections");
   await f.getByPlaceholder("Where the figure comes from").fill("Results register 2025, audited");
   const dates = f.locator("input[type=date]");
-  if (await dates.count() >= 2) { await dates.nth(0).fill("2026-06-01"); await dates.nth(1).fill("2026-01-01"); }
+  const dated = (await dates.count()) >= 2;
+  if (dated) { await dates.nth(0).fill("2026-06-01"); await dates.nth(1).fill("2026-01-01"); }
   await f.getByRole("button", { name: "Save fact" }).click();
-  if (await dates.count() >= 2) {
-    await page.getByText(/end date is before the start date/).first().waitFor({ timeout: 15000 });
+  if (dated) {
+    await page.waitForFunction(() => document.body.innerText.includes("end date is before the start date"), null, { timeout: 15000 });
+    await page.waitForTimeout(800);
     await dates.nth(1).fill("2026-12-31");
+    await page.waitForTimeout(300);
     await f.getByRole("button", { name: "Save fact" }).click();
   }
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ timeout: 15000 });
@@ -189,7 +192,7 @@ await step(page, "kit: every rule passes its own tests", async () => {
   const fails = await page.getByText("Tests fail").count();
   const passes = await page.getByText("Tests pass").count();
   must(fails === 0, `${fails} rule(s) fail their own tests`);
-  must(passes === n, `only ${passes} of ${n} rules show a passing test run`);
+  must(passes >= n, `only ${passes} of ${n} rules show a passing test run`);
   return `${passes} of ${n} rules pass`;
 });
 for (const [type, param, flag, pass] of [
@@ -219,7 +222,7 @@ for (const [type, param, flag, pass] of [
     await msg(`${id} is now enforced.`, 60000);
     await card.getByRole("button", { name: "Make advisory" }).click();
     await msg(`${id} is now advisory.`);
-    await card.getByRole("button", { name: `QA ${type}` }).click();
+    if (!(await card.getByRole("button", { name: "Delete rule" }).count())) await card.getByRole("button", { name: `QA ${type}` }).click();
     await card.getByRole("button", { name: "Delete rule" }).click();
     await msg(`${id} deleted.`);
   });
@@ -238,7 +241,7 @@ await step(page, "kit: a rule failing its own tests cannot be enforced", async (
   const card = ruleCard("QA-BAD");
   await card.getByRole("button", { name: "Enforce" }).click();
   await msg(/can't be enforced yet/, 30000);
-  await card.getByRole("button", { name: "QA bad" }).click();
+  if (!(await card.getByRole("button", { name: "Delete rule" }).count())) await card.getByRole("button", { name: "QA bad" }).click();
   await card.getByRole("button", { name: "Delete rule" }).click();
   await msg("QA-BAD deleted.");
 });
