@@ -209,7 +209,7 @@ export default function FactsPage() {
               ))}
             </ul>
             {manager && (
-              <form className="mt-2 space-y-2" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/kit", { disclaimers: [...kit.disclaimers, { id: `D-${kit.disclaimers.length + 1}`, ...disc }] }), "Disclaimers updated.")) setDisc({ text: "", when: "" }); }}>
+              <form className="mt-2 space-y-2" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/kit", { disclaimers: [...kit.disclaimers, { id: `D-${Math.max(0, ...kit.disclaimers.map((x) => Number(x.id.replace(/\D/g, "")) || 0)) + 1}`, ...disc }] }), "Disclaimers updated.")) setDisc({ text: "", when: "" }); }}>
                 <Field label="Disclaimer text"><input required className={inputCls} value={disc.text} onChange={(e) => setDisc({ ...disc, text: e.target.value })} /></Field>
                 <Field label="When to use it"><input required className={inputCls} value={disc.when} onChange={(e) => setDisc({ ...disc, when: e.target.value })} /></Field>
                 <Button type="submit" disabled={busy}>Add disclaimer</Button>

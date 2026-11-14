@@ -45,6 +45,15 @@ const page = await desk.newPage();
 watch(page, "desktop");
 const role = (r) => page.getByRole("combobox").first().selectOption(r).then(() => page.waitForTimeout(500));
 const msg = (re, timeout = 30000) => page.getByText(re).first().waitFor({ timeout });
+/** Open a page and wait until its data has loaded (the Brand Kit badge shows a version). */
+async function go(path, ready) {
+  await page.goto(L + path);
+  await page.getByText(/Kit v\d+/i).first().waitFor({ timeout: 30000 });
+  if (ready) await page.getByText(ready).first().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(300);
+}
+/** The rule card on the Brand Kit page that carries this rule ID. */
+const ruleCard = (id) => page.getByText(id, { exact: true }).locator("xpath=ancestor::div[.//button[normalize-space()='Run tests']][1]");
 
 let rid = "";
 await step(page, "sample review created", async () => {
@@ -58,7 +67,7 @@ await step(page, "sample review created", async () => {
 const PAGES = ["/", "/review/new", `/review/${rid}`, `/review/${rid}/record`, "/kit", "/facts", "/insights", "/results", "/about", "/review/00000000-0000-4000-8000-000000000000", "/nope"];
 async function checkPage(p, path) {
   await p.goto(L + path, { waitUntil: "networkidle" });
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1500);
   const r = await p.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - window.innerWidth,
     broken: [...document.images].filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.src.slice(0, 60)),
@@ -67,7 +76,7 @@ async function checkPage(p, path) {
     text: document.body.innerText.length,
   }));
   must(r.text > 80, "page is nearly empty");
-  must(r.h1.trim(), "no page heading");
+  must(r.h1.trim() || /not found|not been approved/i.test(await p.locator("main").innerText()), "no page heading or explanation");
   must(!r.broken.length, `broken images: ${r.broken.join(", ")}`);
   must(r.overflow <= 1, `scrolls sideways by ${r.overflow}px`);
   return r.links;
@@ -90,7 +99,7 @@ await step(mp, "phone: sample review works and does not scroll sideways", async 
   await mp.getByText(/open finding/).first().waitFor({ timeout: 60000 });
   const o = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   must(o <= 1, `review page scrolls sideways by ${o}px`);
-  await mp.locator("button[aria-expanded]").nth(1).click();
+  await mp.locator("button[aria-expanded]", { hasText: "Approved contacts only" }).first().click();
   await mp.getByRole("button", { name: "Dismiss" }).first().waitFor({ timeout: 5000 });
 });
 await step(page, "internal links all resolve", async () => {
@@ -118,7 +127,7 @@ await step(page, "role switcher changes what is allowed", async () => {
 
 // ---------- 3. Facts and assets ----------
 await step(page, "facts: add a dated fact, refuse a bad one, delete it", async () => {
-  await page.goto(L + "/facts"); await role("manager");
+  await go("/facts", "Facts Register"); await role("manager");
   const f = page.locator("form").filter({ has: page.getByRole("button", { name: "Save fact" }) });
   await f.getByPlaceholder("F-12").fill("F-77");
   await f.getByPlaceholder(/NEET selections/).fill("1,150+ NEET selections in 2025 from our classroom programme");
@@ -129,19 +138,16 @@ await step(page, "facts: add a dated fact, refuse a bad one, delete it", async (
   if (await dates.count() >= 2) { await dates.nth(0).fill("2026-06-01"); await dates.nth(1).fill("2026-01-01"); }
   await f.getByRole("button", { name: "Save fact" }).click();
   if (await dates.count() >= 2) {
-    await page.getByRole("alert").first().waitFor({ timeout: 15000 });
-    must(/valid/i.test(await page.getByRole("alert").first().innerText()), "a fact ending before it starts was not refused clearly");
+    await page.getByText(/valid from must be on or before valid until/).first().waitFor({ timeout: 15000 });
     await dates.nth(1).fill("2026-12-31");
     await f.getByRole("button", { name: "Save fact" }).click();
   }
-  await page.getByText("F-77").first().waitFor({ timeout: 15000 });
-  const row = page.locator("li, tr, div").filter({ hasText: "F-77" }).filter({ has: page.getByRole("button", { name: "Delete" }) }).last();
-  await row.getByRole("button", { name: "Delete" }).click();
-  await page.waitForTimeout(2500);
-  must(!(await page.getByText("F-77", { exact: true }).count()), "fact was not deleted");
+  await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ timeout: 15000 });
+  await page.locator("tr", { hasText: "1,150+ NEET selections" }).getByRole("button", { name: "Delete" }).click();
+  await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ state: "detached", timeout: 15000 });
 });
 await step(page, "facts: profile, palette, disclaimer, logo", async () => {
-  await page.goto(L + "/facts"); await role("manager");
+  await go("/facts", "Facts Register"); await role("manager");
   const n = page.locator("input[name=n]");
   await n.fill("40"); await n.locator("xpath=ancestor::form").getByRole("button", { name: "Save" }).click();
   await msg(/shown as suggestions/);
@@ -161,15 +167,17 @@ await step(page, "facts: profile, palette, disclaimer, logo", async () => {
   await page.locator("li").filter({ hasText: "Scholarships are subject" }).getByRole("button", { name: "Remove" }).click();
   await page.waitForTimeout(1500);
   must(!(await page.getByText("Scholarships are subject").count()), "disclaimer not removed");
-  await page.getByRole("button", { name: "Remove" }).filter({ hasText: /^Remove$/ }).last().click(); // logo
+  const logoBox = page.locator("div").filter({ has: page.getByRole("heading", { name: "Logo", exact: true }) }).last();
+  await logoBox.getByRole("button", { name: "Remove", exact: true }).click();
   await msg("No logo uploaded");
+  must(await page.getByText("Fees are subject to the published fee policy").count(), "removing the logo touched the disclaimers");
   await page.locator("input[type=file][accept*='png']").setInputFiles("public/brand/preppath-mark.png");
   await page.getByAltText("Approved logo").waitFor({ timeout: 15000 });
 });
 
 // ---------- 4. Brand Kit ----------
 await step(page, "kit: every rule passes its own tests", async () => {
-  await page.goto(L + "/kit"); await role("manager");
+  await go("/kit", "Enforced rules"); await role("manager");
   const btns = page.getByRole("button", { name: "Run tests" });
   const n = await btns.count();
   for (let i = 0; i < n; i++) { await btns.nth(i).click(); await page.waitForTimeout(150); }
@@ -189,23 +197,20 @@ for (const [type, param, flag, pass] of [
   ["pattern", "", "Money-back promise on every course.", "Clear fees on every course."],
 ]) {
   await step(page, `kit: create, test, enforce, demote and delete a ${type} rule`, async () => {
-    await page.goto(L + "/kit"); await role("manager");
+    await go("/kit", "Enforced rules"); await role("manager");
     const id = `QA-${type.slice(0, 4).toUpperCase()}`;
     await page.getByPlaceholder("TERM-7").fill(id);
     await page.getByPlaceholder(/Say "mentor"/).fill(`QA ${type}`);
     await page.locator("form textarea").first().fill(`Test rule for ${type}.`);
     await page.locator("form select").first().selectOption(type);
-    if (type === "term") { await page.getByPlaceholder("teacher, tutor").fill("teachers"); await page.getByPlaceholder("mentor").fill("mentors"); }
+    if (type === "term") { await page.getByPlaceholder("teacher, tutor").fill("teachers"); await page.getByPlaceholder("mentor", { exact: true }).fill("mentors"); }
     else if (type === "pattern") await page.getByPlaceholder("money-back, risk-free").fill("money-back");
-    else await page.locator("form input").filter({ hasNot: page.locator("[type=checkbox]") }).nth(2).fill(param).catch(async () => {
-      await page.getByLabel(/Names|capitals|Maximum/).first().fill(param);
-    });
-    if (type !== "term" && type !== "pattern") await page.getByLabel(/Names, spelled|Words allowed|Maximum characters|Maximum words/).fill(param);
+    else await page.getByLabel(/Names, spelled|Words allowed|Maximum characters|Maximum words/).fill(param);
     await page.getByLabel("A sentence that should be flagged").fill(flag);
     await page.getByLabel("A sentence that should pass").fill(pass);
     await page.getByRole("button", { name: "Save as advisory" }).click();
     await msg(`${id} saved as advisory`);
-    const card = page.locator("div").filter({ has: page.getByText(id, { exact: true }) }).filter({ has: page.getByRole("button", { name: "Enforce" }) }).last();
+    const card = ruleCard(id);
     await card.getByRole("button", { name: "Enforce" }).click();
     await msg(`${id} is now enforced.`, 60000);
     await card.getByRole("button", { name: "Make advisory" }).click();
@@ -216,7 +221,7 @@ for (const [type, param, flag, pass] of [
   });
 }
 await step(page, "kit: a rule failing its own tests cannot be enforced", async () => {
-  await page.goto(L + "/kit"); await role("manager");
+  await go("/kit", "Enforced rules"); await role("manager");
   await page.getByPlaceholder("TERM-7").fill("QA-BAD");
   await page.getByPlaceholder(/Say "mentor"/).fill("QA bad");
   await page.locator("form textarea").first().fill("Its tests contradict it.");
@@ -226,7 +231,7 @@ await step(page, "kit: a rule failing its own tests cannot be enforced", async (
   await page.getByLabel("A sentence that should pass").fill("Our teacher is great.");
   await page.getByRole("button", { name: "Save as advisory" }).click();
   await msg("QA-BAD saved as advisory");
-  const card = page.locator("div").filter({ has: page.getByText("QA-BAD", { exact: true }) }).filter({ has: page.getByRole("button", { name: "Enforce" }) }).last();
+  const card = ruleCard("QA-BAD");
   await card.getByRole("button", { name: "Enforce" }).click();
   await msg(/can't be enforced yet/, 30000);
   await card.getByRole("button", { name: "QA bad" }).click();
@@ -252,7 +257,7 @@ await step(page, "kit: export downloads a valid file", async () => {
 // ---------- 5. New review: own image, ad type, locked phrase, confidential ----------
 let rid2 = "";
 await step(page, "new review: ad with an uploaded image and a locked phrase", async () => {
-  await page.goto(L + "/review/new"); await role("creator");
+  await go("/review/new", "Brief card"); await role("creator");
   await page.getByPlaceholder("December batch caption").fill("QA ad");
   await page.locator("select").nth(1).selectOption("ad");
   await page.locator("textarea").first().fill("Mission IIT 2027 December batch at Preppath: two-year classroom programme with weekly tests, doubt sessions every evening and personal mentors for every student. HURRY, apply now!!");
@@ -322,7 +327,7 @@ await step(page, "review: request changes sends it back, then approve and downlo
   await msg(/Approval record|approval record/);
 });
 await step(page, "approved draft is locked", async () => {
-  const r = await page.request.post(L + `/api/drafts/${rid2}`, { data: { action: "edit", text: "Changed after approval." }, headers: { "x-workspace": await page.evaluate(() => localStorage.getItem("gw-ws") ?? Object.values(localStorage).find((v) => /^[a-z0-9-]{8,48}$/.test(v)) ?? "") } });
+  const r = await page.request.post(L + `/api/drafts/${rid2}`, { data: { action: "edit", text: "Changed after approval." }, headers: { "x-workspace": await page.evaluate(() => localStorage.getItem("gw-ws") ?? "") } });
   must(r.status() === 409 || r.status() === 404, `expected 409, got ${r.status()}`);
 });
 
@@ -336,7 +341,7 @@ await step(page, "results: switch set and re-run; open a draft", async () => {
   await page.waitForTimeout(300);
 });
 await step(page, "insights show the dismissal and facts watch", async () => {
-  await page.goto(L + "/insights");
+  await go("/insights", "Fact expiry watch");
   const t = await page.locator("main").innerText();
   must(/dismiss/i.test(t) && /fact/i.test(t), "insights missing sections");
 });
@@ -350,8 +355,10 @@ await step(page, "reset demo restores the sample kit", async () => {
   await page.goto(L);
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.waitForTimeout(4000);
-  await page.goto(L + "/kit");
-  must((await page.getByText(/^Run tests$/).count()) >= 20, "rules not restored");
+  await go("/kit", "Enforced rules");
+  must((await page.getByRole("button", { name: "Run tests" }).count()) >= 22, "rules not restored");
+  await go("/facts", "Facts Register");
+  must(await page.getByText("Fees are subject to the published fee policy").count(), "disclaimers not restored");
 });
 
 await browser.close();

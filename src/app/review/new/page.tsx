@@ -135,7 +135,7 @@ export default function NewReview() {
                 </div>
               )}
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Rules in force for a {TYPES.find((t) => t.v === type)?.l.toLowerCase()} ({brief.rules.length})</h3>
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Rules in force: {TYPES.find((t) => t.v === type)?.l.toLowerCase()} ({brief.rules.length})</h3>
                 <ul className="mt-1.5 space-y-1">
                   {brief.rules.map((r) => <li key={r.id}><span className="font-mono text-xs text-muted">{r.id}</span> {r.title}</li>)}
                 </ul>

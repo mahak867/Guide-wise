@@ -57,7 +57,8 @@ export const FactIn = z.object({
 }).refine((f) => !f.valid_from || !f.valid_until || f.valid_from <= f.valid_until, { message: "valid from must be on or before valid until", path: ["valid_until"] });
 
 export const Palette = z.array(z.object({ name: z.string().min(1).max(60), hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "use a colour like #0F6B5F") })).max(24);
-export const Disclaimers = z.array(z.object({ id: z.string().min(1).max(24), text: z.string().min(1).max(600), when: z.string().max(300) })).max(40);
+export const Disclaimers = z.array(z.object({ id: z.string().min(1).max(24), text: z.string().min(1).max(600), when: z.string().max(300) })).max(40)
+  .refine((d) => new Set(d.map((x) => x.id)).size === d.length, "two disclaimers have the same ID");
 export const Contacts = z.array(z.object({ label: z.string().min(1).max(80), value: z.string().min(3).max(200) })).max(20);
 
 /** First problem in a Zod error, as one readable sentence. */

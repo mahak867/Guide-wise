@@ -274,7 +274,7 @@ export default function ReviewPage() {
               <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
               <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>
               <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
-              <li>Checked against Brand Kit <b className="text-ink">v{draft.kit_version}</b>{st.ms !== undefined ? ` in ${(st.ms / 1000).toFixed(1)}s` : ""}</li>
+              <li>Checked against Brand Kit <b className="text-ink">v{draft.kit_version}</b>{st.ms !== undefined ? (st.ms < 100 ? " in under 0.1s" : ` in ${(st.ms / 1000).toFixed(1)}s`) : ""}</li>
             </ul>
             {!!st.droppedByVerifier?.length && (
               <details className="mt-2 text-muted"><summary className="cursor-pointer">What the verifier dropped</summary>
