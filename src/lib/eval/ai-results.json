@@ -1,80 +1,112 @@
 {
   "measured": true,
   "mode": "AI checks (Groq (openai/gpt-oss-120b))",
-  "at": "2026-11-13T19:30:55.287Z",
-  "docs": 20,
+  "at": "2026-11-14T06:09:51.244Z",
+  "docs": 40,
   "split": "test",
   "fingerprint": "4d33aae3cdaa2051",
-  "planted": 24,
-  "caught": 24,
-  "predicted": 25,
-  "correct": 24,
-  "precision": 0.96,
+  "planted": 66,
+  "caught": 65,
+  "predicted": 71,
+  "correct": 65,
+  "precision": 0.9154929577464789,
   "precisionCI": [
-    0.8045552759497747,
-    0.9929039496133009
+    0.82763759540867,
+    0.9606940276458881
   ],
-  "recall": 1,
+  "recall": 0.9848484848484849,
   "recallCI": [
-    0.8620194241710247,
-    1
+    0.9190388760177447,
+    0.9973204284655433
   ],
   "criticalRecall": 1,
   "criticalCI": [
-    0.7411599827511859,
+    0.889740999265246,
     1
   ],
-  "criticalPlanted": 11,
-  "hardPlanted": 10,
-  "hardCaught": 10,
-  "violationPrecision": 0.96,
-  "violationPredicted": 25,
+  "criticalPlanted": 31,
+  "hardPlanted": 17,
+  "hardCaught": 17,
+  "violationPrecision": 0.9558823529411765,
+  "violationPredicted": 68,
   "perRule": [
     {
       "rule": "R-08",
-      "planted": 4,
-      "caught": 4,
-      "falsePositives": 0
+      "planted": 10,
+      "caught": 10,
+      "falsePositives": 4
     },
     {
       "rule": "R-10",
-      "planted": 4,
-      "caught": 4,
+      "planted": 9,
+      "caught": 8,
       "falsePositives": 0
     },
     {
       "rule": "R-12",
+      "planted": 18,
+      "caught": 18,
+      "falsePositives": 0
+    },
+    {
+      "rule": "R-15",
       "planted": 8,
       "caught": 8,
       "falsePositives": 0
     },
     {
-      "rule": "R-15",
-      "planted": 4,
-      "caught": 4,
+      "rule": "R-CLAIM",
+      "planted": 10,
+      "caught": 10,
+      "falsePositives": 1
+    },
+    {
+      "rule": "R-STU",
+      "planted": 3,
+      "caught": 3,
       "falsePositives": 0
     },
     {
-      "rule": "R-CLAIM",
+      "rule": "T-2",
       "planted": 3,
       "caught": 3,
       "falsePositives": 1
     },
     {
+      "rule": "TERM-2",
+      "planted": 3,
+      "caught": 3,
+      "falsePositives": 0
+    },
+    {
       "rule": "TERM-4",
-      "planted": 1,
-      "caught": 1,
+      "planted": 2,
+      "caught": 2,
       "falsePositives": 0
     }
   ],
   "ms": 0,
-  "aiDocs": 20,
+  "agreement": 0.825,
+  "aiDocs": 40,
   "results": [
     {
       "id": "D21",
       "split": "test",
       "text": "A free demo class runs every Sunday. Write to admissions@preppath.in or call +91 80000 12345.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D22",
+      "split": "test",
+      "text": "Trusted JEE coaching, taught by IIT-alumni faculty. Download the 2025 JEE Advanced paper with solutions. WhatsApp 98450 12345 for details.",
+      "planted": [
+        {
+          "rule": "R-15",
+          "quote": "98450 12345",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -85,11 +117,35 @@
         {
           "rule": "R-10",
           "quote": "Last chance",
-          "caught": true
+          "caught": false
         },
         {
           "rule": "R-12",
           "quote": "100% selection guaranteed",
+          "caught": true
+        }
+      ],
+      "extra": [
+        {
+          "rule": "T-2",
+          "quote": "Last chance to enrol!",
+          "level": "suggestion"
+        }
+      ]
+    },
+    {
+      "id": "D24",
+      "split": "test",
+      "text": "Best of luck to everyone writing JEE Main in January. Download the 2025 JEE Advanced paper with solutions. Parents get a progress report every month. Last chance to enrol! India's No. 1 JEE institute.",
+      "planted": [
+        {
+          "rule": "R-08",
+          "quote": "India's No. 1 JEE institute",
+          "caught": true
+        },
+        {
+          "rule": "R-10",
+          "quote": "Last chance",
           "caught": true
         }
       ],
@@ -100,6 +156,30 @@
       "split": "test",
       "text": "Write to admissions@preppath.in or call +91 80000 12345. Parents get a progress report every month. 4,200+ JEE selections in 2025 from our two-year classroom programme.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D26",
+      "split": "test",
+      "text": "Unmatched teaching anywhere in the country. Trusted JEE coaching, taught by IIT-alumni faculty. Congratulations Kabir, AIR 57! Write to rahul.k@preppath.in for the fee sheet. Meet Diya (AIR 340, one-year dropper programme).",
+      "planted": [
+        {
+          "rule": "R-STU",
+          "quote": "Kabir, AIR 57",
+          "caught": true
+        },
+        {
+          "rule": "R-15",
+          "quote": "rahul.k@preppath.in",
+          "caught": true
+        },
+        {
+          "rule": "R-08",
+          "quote": "Unmatched teaching anywhere in the country",
+          "hard": true,
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -116,10 +196,43 @@
       "extra": []
     },
     {
+      "id": "D28",
+      "split": "test",
+      "text": "Your IIT seat is assured with us. Meet Diya (AIR 340, one-year dropper programme). The next batch starts 1 December.",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "Your IIT seat is assured",
+          "hard": true,
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D29",
       "split": "test",
       "text": "4,200+ JEE selections in 2025 from our two-year classroom programme. 50,000+ students have prepared for JEE with PrepPath. Batches are kept small so every question gets answered.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D30",
+      "split": "test",
+      "text": "You will definitely clear JEE with PrepPath. Join 60,000+ students who prepared with us. Trusted JEE coaching, taught by IIT-alumni faculty. Fees are affordable, and scholarships are available.",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "You will definitely clear JEE",
+          "hard": true,
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "60,000+",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -147,11 +260,68 @@
       "extra": []
     },
     {
+      "id": "D32",
+      "split": "test",
+      "text": "Parents get a progress report every month. 100% selection guaranteed. Our adaptive practice tests adjust to your pace. Join 60,000+ students who prepared with us. Meet Diya (AIR 340, one-year dropper programme). Congratulations Kabir, AIR 57!",
+      "planted": [
+        {
+          "rule": "R-CLAIM",
+          "quote": "60,000+",
+          "caught": true
+        },
+        {
+          "rule": "R-STU",
+          "quote": "Kabir, AIR 57",
+          "caught": true
+        },
+        {
+          "rule": "R-12",
+          "quote": "100% selection guaranteed",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D33",
       "split": "test",
       "text": "The next batch starts 1 December. Trusted JEE coaching, taught by IIT-alumni faculty. Classes run Monday to Saturday, 4 pm to 7 pm.",
       "planted": [],
       "extra": []
+    },
+    {
+      "id": "D34",
+      "split": "test",
+      "text": "Batches are kept small so every question gets answered. Best of luck to everyone writing JEE Main in January. Join 60,000+ students who prepared with us. Write to admissions@preppath.in or call +91 80000 12345. 100% result in NEET this year. The cheapest test series in Chennai.",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "100% result",
+          "caught": true
+        },
+        {
+          "rule": "TERM-2",
+          "quote": "cheapest",
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "60,000+",
+          "caught": true
+        }
+      ],
+      "extra": [
+        {
+          "rule": "R-08",
+          "quote": "Best",
+          "level": "suggestion"
+        },
+        {
+          "rule": "R-08",
+          "quote": "cheapest",
+          "level": "suggestion"
+        }
+      ]
     },
     {
       "id": "D35",
@@ -179,10 +349,52 @@
       "extra": []
     },
     {
+      "id": "D36",
+      "split": "test",
+      "text": "The cheapest test series in Chennai. Mentors hold doubt sessions after every class. Guaranteed selection in JEE Main. Trusted JEE coaching, taught by IIT-alumni faculty. Our faculty is the best in India.",
+      "planted": [
+        {
+          "rule": "R-08",
+          "quote": "is the best in India",
+          "caught": true
+        },
+        {
+          "rule": "TERM-2",
+          "quote": "cheapest",
+          "caught": true
+        },
+        {
+          "rule": "R-12",
+          "quote": "Guaranteed selection",
+          "caught": true
+        }
+      ],
+      "extra": [
+        {
+          "rule": "R-08",
+          "quote": "cheapest test series in Chennai",
+          "level": "violation"
+        }
+      ]
+    },
+    {
       "id": "D37",
       "split": "test",
       "text": "4,200+ JEE selections in 2025 from our two-year classroom programme. Trusted JEE coaching, taught by IIT-alumni faculty. The next batch starts 1 December.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D38",
+      "split": "test",
+      "text": "Batches are kept small so every question gets answered. Results are out!! Meet Diya (AIR 340, one-year dropper programme).",
+      "planted": [
+        {
+          "rule": "T-2",
+          "quote": "!!",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -205,10 +417,36 @@
       "extra": []
     },
     {
+      "id": "D40",
+      "split": "test",
+      "text": "Write to admissions@preppath.in or call +91 80000 12345. Our faculty is the best in India. Our adaptive practice tests adjust to your pace. Batches are kept small so every question gets answered.",
+      "planted": [
+        {
+          "rule": "R-08",
+          "quote": "is the best in India",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D41",
       "split": "test",
       "text": "4,200+ JEE selections in 2025 from our two-year classroom programme. A free demo class runs every Sunday.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D42",
+      "split": "test",
+      "text": "Guaranteed selection in JEE Main. Trusted JEE coaching, taught by IIT-alumni faculty. Meet Diya (AIR 340, one-year dropper programme).",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "Guaranteed selection",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -236,7 +474,31 @@
       "extra": [
         {
           "rule": "R-CLAIM",
-          "quote": "4",
+          "quote": "4 stars",
+          "level": "violation"
+        }
+      ]
+    },
+    {
+      "id": "D44",
+      "split": "test",
+      "text": "50,000+ students have prepared for JEE with PrepPath. Results are out!! Write to admissions@preppath.in or call +91 80000 12345. The cheapest test series in Chennai. A free demo class runs every Sunday.",
+      "planted": [
+        {
+          "rule": "TERM-2",
+          "quote": "cheapest",
+          "caught": true
+        },
+        {
+          "rule": "T-2",
+          "quote": "!!",
+          "caught": true
+        }
+      ],
+      "extra": [
+        {
+          "rule": "R-08",
+          "quote": "cheapest",
           "level": "violation"
         }
       ]
@@ -246,6 +508,31 @@
       "split": "test",
       "text": "Trusted JEE coaching, taught by IIT-alumni faculty. 50,000+ students have prepared for JEE with PrepPath.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D46",
+      "split": "test",
+      "text": "Unmatched teaching anywhere in the country. Your IIT seat is assured with us. Trusted JEE coaching, taught by IIT-alumni faculty. Mentors hold doubt sessions after every class. 92% of students rated our faculty 4 stars or more.",
+      "planted": [
+        {
+          "rule": "R-08",
+          "quote": "Unmatched teaching anywhere in the country",
+          "hard": true,
+          "caught": true
+        },
+        {
+          "rule": "R-12",
+          "quote": "Your IIT seat is assured",
+          "hard": true,
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "92%",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -267,10 +554,51 @@
       "extra": []
     },
     {
+      "id": "D48",
+      "split": "test",
+      "text": "Write to admissions@preppath.in or call +91 80000 12345. The best coaching in Chennai. Hurry, seats are filling up. Our adaptive practice tests adjust to your pace. Fees are affordable, and scholarships are available.",
+      "planted": [
+        {
+          "rule": "R-08",
+          "quote": "best coaching",
+          "caught": true
+        },
+        {
+          "rule": "R-10",
+          "quote": "Hurry",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D49",
       "split": "test",
       "text": "Our adaptive practice tests adjust to your pace. Best of luck to everyone writing JEE Main in January.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D50",
+      "split": "test",
+      "text": "WhatsApp 98450 12345 for details. Meet Aarav, AIR 112. Batches are kept small so every question gets answered. Classes run Monday to Saturday, 4 pm to 7 pm. Join 60,000+ students who prepared with us.",
+      "planted": [
+        {
+          "rule": "R-15",
+          "quote": "98450 12345",
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "60,000+",
+          "caught": true
+        },
+        {
+          "rule": "R-STU",
+          "quote": "Aarav, AIR 112",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -294,10 +622,46 @@
       "extra": []
     },
     {
+      "id": "D52",
+      "split": "test",
+      "text": "Download the 2025 JEE Advanced paper with solutions. 5,000+ JEE selections in 2025. A free demo class runs every Sunday. Guaranteed selection in JEE Main.",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "Guaranteed selection",
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "5,000+",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D53",
       "split": "test",
       "text": "Mentors hold doubt sessions after every class. Write to admissions@preppath.in or call +91 80000 12345. Download the 2025 JEE Advanced paper with solutions.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D54",
+      "split": "test",
+      "text": "WhatsApp 98450 12345 for details. Trusted JEE coaching, taught by IIT-alumni faculty. Results are out!! Mentors hold doubt sessions after every class. Download the 2025 JEE Advanced paper with solutions.",
+      "planted": [
+        {
+          "rule": "T-2",
+          "quote": "!!",
+          "caught": true
+        },
+        {
+          "rule": "R-15",
+          "quote": "98450 12345",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -325,10 +689,46 @@
       "extra": []
     },
     {
+      "id": "D56",
+      "split": "test",
+      "text": "Only a few seats left. Join 60,000+ students who prepared with us. 100% result in NEET this year. Meet Diya (AIR 340, one-year dropper programme). Download the 2025 JEE Advanced paper with solutions.",
+      "planted": [
+        {
+          "rule": "R-10",
+          "quote": "Only a few seats left",
+          "caught": true
+        },
+        {
+          "rule": "R-CLAIM",
+          "quote": "60,000+",
+          "caught": true
+        },
+        {
+          "rule": "R-12",
+          "quote": "100% result",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
       "id": "D57",
       "split": "test",
       "text": "The next batch starts 1 December. 50,000+ students have prepared for JEE with PrepPath. Our adaptive practice tests adjust to your pace.",
       "planted": [],
+      "extra": []
+    },
+    {
+      "id": "D58",
+      "split": "test",
+      "text": "Our adaptive practice tests adjust to your pace. Last chance to enrol! Parents get a progress report every month.",
+      "planted": [
+        {
+          "rule": "R-10",
+          "quote": "Last chance",
+          "caught": true
+        }
+      ],
       "extra": []
     },
     {
@@ -351,6 +751,31 @@
         {
           "rule": "R-15",
           "quote": "98450 12345",
+          "caught": true
+        }
+      ],
+      "extra": []
+    },
+    {
+      "id": "D60",
+      "split": "test",
+      "text": "Best of luck to everyone writing JEE Main in January. The next batch starts 1 December. Don't miss out, the offer ends tonight. Your IIT seat is assured with us. Try our AI-powered doubt solver.",
+      "planted": [
+        {
+          "rule": "R-12",
+          "quote": "Your IIT seat is assured",
+          "hard": true,
+          "caught": true
+        },
+        {
+          "rule": "R-10",
+          "quote": "Don't miss out, the offer ends tonight",
+          "hard": true,
+          "caught": true
+        },
+        {
+          "rule": "TERM-4",
+          "quote": "AI-powered",
           "caught": true
         }
       ],

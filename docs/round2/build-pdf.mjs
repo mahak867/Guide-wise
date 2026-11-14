@@ -17,7 +17,7 @@ const img = (f, alt, cap) => existsSync(`${dir}/img/${f}`)
 const aiBlock = ai.measured
   ? `<tr><td>Code and AI checks <span>(${ai.docs} drafts)</span></td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${pct(ai.criticalRecall)}</td><td>${ai.hardCaught} of ${ai.hardPlanted}</td><td>${ai.agreement !== undefined ? pct(ai.agreement) : "not measured"}</td></tr>`
   : `<tr><td>Code and AI checks</td><td colspan="5">Not measured yet.</td></tr>`;
-const aiNote = ai.measured ? `The AI row is measured on ${ai.docs} of the 40 held-out drafts (every second one), one run each, on the live site; repeat-run agreement was not measured because a second run would have used most of the free AI tier's daily allowance. Its one false flag (a time, "4 pm", read as a figure) was fixed afterwards and is covered by a test.` : "";
+const aiNote = ai.measured ? `The AI row is measured on all ${ai.docs} held-out drafts on the live site, run twice with the answer cache off; the first run is reported, and the two runs agree on ${pct(ai.agreement)} of drafts. ${"Of its false flags, four are the AI calling \"cheapest\" or \"Best\" an unsupported superlative (R-08) where the answer key planted only the \"cheap\" term rule; we count them as false rather than change the key after seeing the results. One flagged \"Last chance\" under the tone rule instead of the urgency rule, which is also its one miss. One read a rating (\"4 stars\") as a figure; code now discards rating-scale values the AI picks up, with a test, but that fix came after this run, which is shown as measured."}` : "";
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Guidewise · Round 2</title>
 <style>

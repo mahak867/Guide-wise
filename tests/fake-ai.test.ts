@@ -58,6 +58,12 @@ describe("a deliberately wrong AI", () => {
     expect(findings.filter((f) => f.rule_id === "R-CLAIM")).toEqual([]);
   });
 
+  it("ignores a point on a rating scale the AI mistakes for a claim", async () => {
+    bad.claims = [{ quote: "4 stars", value: 4, subject: "faculty rating" }];
+    const { findings } = await run("Students rated our faculty 4 stars or higher.");
+    expect(findings.filter((f) => f.rule_id === "R-CLAIM" && /4 stars/.test(f.quote))).toEqual([]);
+  });
+
   it("never sees personal data", async () => {
     await run("Write to priya.sharma@preppath.in or 98765 43210. Aadhaar 2345 6789 0123, PAN ABCDE1234F, card 4111 1111 1111 1111.");
     const sent = bad.seen.join("\n");

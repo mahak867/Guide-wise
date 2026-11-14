@@ -10,14 +10,14 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 ## Measured on our own test set
 
-| | Precision | Recall | Hard phrasings caught |
-| --- | --- | --- | --- |
-| Code checks only (40 held-out drafts) | 100% (93–100%) | 74% (63–83%) | 0 of 17 |
-| Code + AI checks (20 held-out drafts, live) | 96% (81–99%) | 100% (86–100%) | 10 of 10 |
+| 40 held-out drafts | Precision | Recall | Critical errors caught | Hard phrasings caught | Same result on a second run |
+| --- | --- | --- | --- | --- | --- |
+| Code checks only | 100% (93–100%) | 74% (63–83%) | 68% | 0 of 17 | n/a (no randomness) |
+| Code + AI checks (live, Groq) | 92% (83–96%) | 98% (92–100%) | 100% | 17 of 17 | 83% |
 
-95% Wilson intervals. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
+95% Wilson intervals. The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 49 unit tests, a 20-step browser test of the whole journey, a 44-step sweep that clicks every page and control at desktop and phone sizes, and a 67-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
+**Tests:** 50 unit tests, a 20-step browser test of the whole journey, a 44-step sweep that clicks every page and control at desktop and phone sizes, and a 67-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
 
 ## Try it in two minutes
 
@@ -76,7 +76,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 49 unit tests, including a deliberately wrong AI
+npm test                                                     # 50 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone

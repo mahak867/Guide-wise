@@ -115,6 +115,8 @@ export async function reviewDraft(
         const bare = /^\d+$/.test(quote);
         const after = text.slice(index + quote.length, index + quote.length + 12).toLowerCase();
         if (bare && (value < 10 || /^\s*(am|pm|st|nd|rd|th)\b|^:\d/.test(after) || (value >= 1990 && value <= 2100))) continue;
+        // A point on a rating scale ("4 stars", "4.5/5", "4 out of 5") describes the scale, not a claim to check.
+        if (/\bstars?\b|\/\s*(5|10)\b|out of (5|10)\b/i.test(quote) || /^\s*(stars?\b|\/\s*(5|10)\b|out of (5|10)\b)/i.test(after)) continue;
         claims.push({ quote, value, index, source: "ai" });
       }
       // Code extraction stays as a floor so a missed figure is still checked.

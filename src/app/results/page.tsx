@@ -80,9 +80,9 @@ export default function Results() {
                   <Metric label="Hard phrasings caught" value={`${ai.hardCaught} of ${ai.hardPlanted}`} sub="The code checks alone catch none of these." />
                 </div>
                 <p className="mt-3 text-muted">
-                  Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on {ai.docs} of the 40 held-out drafts (every second one), one run each, on the live deployment with {ai.mode}.
-                  {ai.agreement !== undefined ? ` Repeat-run agreement ${pct(ai.agreement)}.` : " Repeat-run agreement was not measured: a second full run would have used most of the free AI tier's daily allowance that judges need."}
-                  {" "}The one false flag was the AI reading the “4” in “4 pm” as a figure; code now discards times and small bare numbers the AI picks up, and a test covers it. That fix came after this measurement, which is shown as measured.
+                  Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on all {ai.docs} held-out drafts, run twice with the answer cache off, on the live deployment with {ai.mode}. The first run is reported.
+                  {ai.agreement !== undefined ? ` Both runs gave the same result on ${pct(ai.agreement)} of drafts; where they differ, the double-run design shows the finding as a suggestion.` : " Repeat-run agreement was not measured."}
+                  {" "}Of its false flags, four are the AI calling “cheapest” or “Best” an unsupported superlative (R-08) where the answer key planted only the “cheap” term rule; we count them as false rather than change the key after seeing the results. One flagged “Last chance” under the tone rule instead of the urgency rule, which is also its one miss. One read a rating (“4 stars”) as a figure; code now discards rating-scale values the AI picks up, with a test, but that fix came after this run, which is shown as measured.
                 </p>
               </>
             ) : (
