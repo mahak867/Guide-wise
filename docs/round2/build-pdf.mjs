@@ -157,7 +157,7 @@ ${aiBlock}
 <p>A REST API with scoped keys and an MCP server exposing <code>get_brief</code> and <code>check_draft</code>, so AI writing tools fetch the rules and the facts valid today and check a draft before handing it over. An in-app playground and a per-key audit trail.</p>
 <p class="note"><b>Test:</b> call <code>check_draft</code> from the playground and from an MCP client with a key → the same cited findings as the app, and a new audit entry.</p></div>
 <div class="box" style="margin-top:8pt"><b>3. Campaign and creative review with AI vision</b>
-<p>Review a whole campaign together (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets: prices, dates, claims, promo codes. AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, stylised claims.</p>
+<p>Review a whole campaign together (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets: prices, dates, claims, promo codes. AI vision checks what OCR cannot see: text in stylised type, and photos of people, which are flagged for a consent check against the student records.</p>
 <p class="note"><b>Test:</b> upload a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p></div>
 
 <section style="break-inside: avoid"><h2>Team and disclosures</h2>

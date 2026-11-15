@@ -2,7 +2,7 @@
 
 Team **Guide Wise** · CodeNova India 2026 · Round 2, The Build
 
-Ready to paste into the form. Your role line is the one part you must write yourself.
+Background for the form. The exact field-by-field answers are in `FORM.md`.
 
 ---
 
@@ -109,7 +109,7 @@ https://github.com/mahak867/Guide-wise
    - **Test:** call `check_draft` from the playground and from an MCP client with a key, get the same cited findings as the app, and see a new audit entry.
 3. **Campaign and creative review with AI vision.**
    - Review a whole campaign (caption, creatives, landing-page copy, PDF brochure) together, and flag inconsistencies across assets: prices, dates, claims, promo codes.
-   - Round 2 already compares figures between a caption and its creatives; Round 3 extends this across separate documents. AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, and claims set in stylised type.
+   - Round 2 already compares figures between a caption and its creatives; Round 3 extends this across separate documents. AI vision reads what OCR cannot: text in stylised type, and photos of people, which are flagged for a consent check against the student records.
    - **Test:** upload a three-asset campaign with a price mismatch between the creative and the brochure and an unconsented student photo. Both are found, cited, and routed to compliance.
 
 We will also measure the AI checks on the same test set, and add real, anonymised drafts from coaching-centre marketers to it.

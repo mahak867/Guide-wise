@@ -64,7 +64,7 @@ Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md
 
 1. **Change impact.** Changing a fact or amending a rule lists every draft and approved piece that used it, re-checks them, and marks approved pieces that no longer pass for re-approval; each amended rule shows its dismissal rate before and after.
 2. **Governance at the source.** A REST API and an MCP server (`get_brief`, `check_draft`) so AI writing tools fetch today's rules and facts and check drafts before handing them over.
-3. **Campaign and creative review with AI vision.** A whole campaign checked together for mismatched prices, dates and claims; AI vision for what OCR cannot see, such as an unconsented student photo or a recoloured logo.
+3. **Campaign and creative review with AI vision.** A whole campaign checked together for mismatched prices, dates and claims; AI vision for what OCR cannot read: stylised type, and photos of people, flagged for a consent check.
 
 ## Team
 
