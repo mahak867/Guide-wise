@@ -222,7 +222,11 @@ for (const [type, param, flag, pass] of [
     await msg(`${id} is now enforced.`, 60000);
     await card.getByRole("button", { name: "Make advisory" }).click();
     await msg(`${id} is now advisory.`);
-    if (!(await card.getByRole("button", { name: "Delete rule" }).count())) await card.getByRole("button", { name: `QA ${type}` }).click();
+    await page.waitForTimeout(800);
+    for (let k = 0; k < 4 && !(await card.getByRole("button", { name: "Delete rule" }).isVisible().catch(() => false)); k++) {
+      await card.getByRole("button", { name: `QA ${type}`, exact: true }).click();
+      await page.waitForTimeout(600);
+    }
     await card.getByRole("button", { name: "Delete rule" }).click();
     await msg(`${id} deleted.`);
   });
@@ -241,7 +245,11 @@ await step(page, "kit: a rule failing its own tests cannot be enforced", async (
   const card = ruleCard("QA-BAD");
   await card.getByRole("button", { name: "Enforce" }).click();
   await msg(/can't be enforced yet/, 30000);
-  if (!(await card.getByRole("button", { name: "Delete rule" }).count())) await card.getByRole("button", { name: "QA bad" }).click();
+  await page.waitForTimeout(800);
+    for (let k = 0; k < 4 && !(await card.getByRole("button", { name: "Delete rule" }).isVisible().catch(() => false)); k++) {
+      await card.getByRole("button", { name: "QA bad", exact: true }).click();
+      await page.waitForTimeout(600);
+    }
   await card.getByRole("button", { name: "Delete rule" }).click();
   await msg("QA-BAD deleted.");
 });
