@@ -297,6 +297,17 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
   {
+    id: "HID-1", kind: "code", category: "hidden", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "No invisible characters",
+    description: "Text must not contain zero-width spaces, direction overrides or soft hyphens. They can hide a banned phrase from review.",
+    config: {},
+    tests: [
+      { text: "100% selection guaran\u200Bteed.", expect: "flag" },
+      { text: "Join the December batch at PrepPath.", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
     id: "NAME-1", kind: "code", category: "brand-name", severity: "minor", status: "enforced", source: "PrepPath brand guide", risk: "low",
     title: "Write \"PrepPath\" exactly",
     description: "One word, capital P twice. Web and email addresses keep their lower case.",

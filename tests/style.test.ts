@@ -98,3 +98,15 @@ describe("cross-asset consistency", () => {
     expect(await run("Fee ₹39,999 for the batch.", [""])).toHaveLength(0);
   });
 });
+
+describe("hidden characters", () => {
+  it("flags a word that hides a zero-width space, and the cleaned text is then caught by the real rule", async () => {
+    const text = "100% selection guaran\u200Bteed for every student.";
+    const first = await review(text);
+    const hid = first.findings.find((f) => f.rule_id === "HID-1")!;
+    expect(hid.fix).toBe("guaranteed");
+    const after = await review(text.replace(hid.quote, hid.fix!));
+    expect(after.findings.some((f) => f.rule_id === "R-12")).toBe(true);
+    expect(after.findings.some((f) => f.rule_id === "HID-1")).toBe(false);
+  });
+});

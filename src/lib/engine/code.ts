@@ -433,8 +433,30 @@ function readabilityHits(rule: Rule, text: string): Finding[] {
   return out;
 }
 
+const HIDDEN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/;
+/** Invisible characters (zero-width spaces, direction overrides, soft hyphens) can hide a banned phrase from every other check. */
+function hiddenHits(rule: Rule, text: string): Finding[] {
+  const out: Finding[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/\S+/g)) {
+    if (!HIDDEN.test(m[0]) || seen.has(m[0])) continue;
+    seen.add(m[0]);
+    const clean = m[0].replace(new RegExp(HIDDEN.source, "g"), "");
+    const n = m[0].length - clean.length;
+    out.push({
+      ...base(rule, "code"), quote: m[0],
+      message: clean
+        ? `"${clean}" contains ${n} invisible character${n > 1 ? "s" : ""}. They do not show on screen but can hide a word from the checks, or change how text is read aloud.`
+        : `${n} invisible character${n > 1 ? "s" : ""} here. They do not show on screen but can hide words from the checks.`,
+      fix: clean, fix_note: "Same text with the invisible characters removed. The checks run again on the result.",
+    });
+  }
+  return out;
+}
+
 export function runCodeRule(rule: Rule, text: string, facts: Fact[], kit: Kit, claims?: NumberClaim[], skipQuotes: string[] = []): Finding[] {
   switch (rule.category) {
+    case "hidden": return hiddenHits(rule, text);
     case "brand-name": return brandNameHits(rule, text);
     case "caps": return capsHits(rule, text);
     case "length": return lengthHits(rule, text);
