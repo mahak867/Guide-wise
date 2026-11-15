@@ -37,7 +37,7 @@ https://github.com/mahak867/Guide-wise
 12. **Risk routing.** A fixed rule table, not a model, sends outcome claims and regulated content to compliance and everything else to the brand reviewer.
 13. **Approval receipt and record.** A SHA-256 fingerprint of the exact approved text, the Brand Kit version, every finding and how it was resolved, and the approver. Downloadable as JSON, or as a printable approval record (save as PDF).
 14. **Writer control.** Locked phrases that no fix may remove, editing a suggested fix before accepting it (the checks run again on the edit), and version history with word-level changes.
-15. **Insights.** Which rules fire most, which are dismissed and why (a rule two or more people call unclear is flagged), and a watch on facts that have expired, are embargoed, or expire within 60 days.
+15. **Insights and Guideline Health.** Which rules fire most, which are dismissed and why (a rule two or more people call unclear is flagged), and a watch on facts that have expired, are embargoed, or expire within 60 days. For any rule with dismissals, Guidewise drafts clearer wording and new test sentences from what people dismissed. Code re-runs every test on the amended rule, a failing amendment cannot be saved, and the manager's approval creates a new Brand Kit version.
 16. **Brief card.** Before writing, the creator sees the rules in force and the facts that are safe to use today.
 17. **Measured results page.**
     - 60 planted-error drafts (40 held out), with precision, recall and 95% Wilson intervals, re-run live.
@@ -52,7 +52,7 @@ https://github.com/mahak867/Guide-wise
 24. **Writing-style rules.** Code rule types a manager can create: exact brand-name spelling ("Preppath" becomes "PrepPath", web addresses left alone), capitals used for emphasis (exam acronyms allowed), a length limit per content type (ad text past 125 characters, where "See more" cuts it off), a sentence-length limit, and inclusive wording. Each has test sentences and a fix where one is safe.
 25. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
 26. **Engineering.**
-    - 50 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
+    - 51 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
     - A 20-step browser test of the whole journey (`npm run e2e`), a 44-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 67-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
     - Every input is validated: malformed requests, corrupt files, impossible dates and unsafe patterns get a clear message, never a server error.
@@ -91,16 +91,17 @@ https://github.com/mahak867/Guide-wise
 | alex, write-good, axe-core | Replaced by our own code rules: brand-name spelling, capitals, length per content type, sentence length, inclusive wording; contrast and alt text for images. | As Brand Kit rules they have test sentences, can be edited by the manager, and cite their source. The libraries' fixed word lists could not. |
 | Eight findings on the demo caption | About 20 across the caption and the sample creative. | The two superlatives are flagged separately, and the disclaimer rule was added from the regulation pack. |
 | Fixes withdrawn if they introduce any issue | Withdrawn only if the new issue has no automatic fix; otherwise it is shown as a follow-up. | Testing showed that fixing a guarantee claim correctly raises a disclaimer requirement, and withdrawing that fix was the wrong call. |
+| Guideline amendments drafted from dismissals: planned for Round 3 | Shipped now on the Insights page. | It was the natural next step once dismissal reasons were being recorded, and it reuses the rule-test gate. Round 3 improvement 1 now builds on it. |
 | Hands-on tests with fellow students in Round 2 | Not done yet. Moved to the start of Round 3. | Build time went into the image review and the measured evaluation. |
 | Round 1 figure: CCPA maximum penalty "up to ₹10 lakh / ₹50 lakh" | **Withdrawn.** | We could not confirm these amounts against the Act and should not have stated them as fact. |
 
 ## The three major improvements for Round 3
 
-1. **Guideline Health loop: the brand guide fixes itself.**
-   - Round 2 already shows which rules are dismissed and flags those two or more people call unclear. Round 3 closes the loop.
-   - Guidewise drafts an amendment with new test sentences. The manager approves it, which creates a new Brand Kit version that must pass its tests.
-   - Changing a fact lists every draft and approved piece that used it.
-   - **Test:** dismiss one rule as three different creators and see it marked unclear, with a drafted amendment that passes its tests. Change a fact and see every affected piece listed.
+1. **Change impact: every rule or fact change shows what it touches.**
+   - Round 2 already closes the first half of the loop: Guidewise drafts a clearer rule from dismissed findings, re-tests it, and the manager approves it.
+   - Round 3 adds the second half. Changing or expiring a fact, or amending a rule, lists every open draft and every approved piece that used it, re-checks them, and marks approved pieces that no longer pass as needing re-approval.
+   - Each amended rule shows its dismissal rate before and after, so the manager can see whether the new wording worked.
+   - **Test:** change the value of fact F-3 and see every draft and approved piece that cited it listed, with the approved ones marked for re-approval. Amend a rule and see its dismissal rate before and after.
 2. **Governance at the source: an API and an MCP server for AI writing tools.**
    - A REST API with scoped keys, and an MCP server (TypeScript SDK) exposing `get_brief` and `check_draft`.
    - AI writing tools then fetch the rules and the facts valid today, and check a draft before handing it over. An AI tool never sees an expired or embargoed fact.

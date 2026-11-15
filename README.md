@@ -17,7 +17,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 95% Wilson intervals. The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 50 unit tests, a 20-step browser test of the whole journey, a 44-step sweep that clicks every page and control at desktop and phone sizes, and a 67-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
+**Tests:** 51 unit tests, a 20-step browser test of the whole journey, a 44-step sweep that clicks every page and control at desktop and phone sizes, and a 67-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
 
 ## Try it in two minutes
 
@@ -42,7 +42,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Brand Kit | Every rule carries test sentences. It starts as advisory and can only be enforced when its own check passes them. Rules can apply to some content types only. Every change creates a new version. The whole kit exports and imports as one JSON file |
 | Guide compiler | Paste brand-guide text; get proposed rules with test sentences, and warnings about vague or contradictory passages. The manager confirms each one |
 | Workflow | Four roles enforced on the server; accept, edit a fix before accepting, dismiss with a reason, reopen; locked phrases no fix may remove; comments, versions with word-level changes, request changes, audit log |
-| Insights | Rules that fire and get dismissed most, rules two or more people call unclear, and facts that are expired, embargoed or expiring within 60 days |
+| Insights and Guideline Health | Rules that fire and get dismissed most, rules two or more people call unclear, and facts that are expired, embargoed or expiring within 60 days. For a rule with dismissals, Guidewise drafts clearer wording and new tests; code re-runs every test and the manager approves |
 | Privacy | Emails, phone numbers, Aadhaar, PAN and card numbers are masked before any AI call. A draft marked confidential is never sent to AI |
 | Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 20-second cap per call and automatic fallback; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
 
@@ -60,7 +60,7 @@ Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md
 
 ## Round 3: three improvements, each with a test
 
-1. **Guideline Health loop.** Rules that people dismiss as unclear get a drafted amendment with new test sentences for the manager to approve; changing a fact lists every piece that used it.
+1. **Change impact.** Changing a fact or amending a rule lists every draft and approved piece that used it, re-checks them, and marks approved pieces that no longer pass for re-approval; each amended rule shows its dismissal rate before and after.
 2. **Governance at the source.** A REST API and an MCP server (`get_brief`, `check_draft`) so AI writing tools fetch today's rules and facts and check drafts before handing them over.
 3. **Campaign and creative review with AI vision.** A whole campaign checked together for mismatched prices, dates and claims; AI vision for what OCR cannot see, such as an unconsented student photo or a recoloured logo.
 
@@ -76,7 +76,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 50 unit tests, including a deliberately wrong AI
+npm test                                                     # 51 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone

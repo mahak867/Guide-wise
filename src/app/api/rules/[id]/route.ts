@@ -29,7 +29,8 @@ export async function POST(req: Request, ctx: Ctx) {
     // Guideline Health. "amend_draft" proposes clearer wording from the findings people dismissed and tests it; nothing is saved.
     // "amend_apply" saves the wording the manager approved, only if the rule's check still passes every test.
     if (action === "amend_draft" || action === "amend_apply") {
-      const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
+      // Plain punctuation only: models like to return curly quotes and non-breaking hyphens.
+      const clip = (v: unknown, n: number) => String(v ?? "").replace(/[\u2010-\u2013]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\u00A0/g, " ").trim().slice(0, n);
       let p: { description: string; guidance: string; flag_example: string; pass_example: string; what_changed: string };
       if (action === "amend_draft") {
         if (!aiAvailable()) return fail("Drafting an amendment needs the AI service, which is off. Edit the rule by hand instead.", 503);

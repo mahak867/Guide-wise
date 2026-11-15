@@ -35,6 +35,12 @@ describe("writing-style rules", () => {
     expect(f[0].level).toBe("suggestion");
   });
 
+  it("catches a term written with a look-alike hyphen", async () => {
+    const f = await by("Our AI\u2011powered classes adjust to you.", "TERM-4");
+    expect(f).toHaveLength(1);
+    expect(f[0].fix).toBe("adaptive practice");
+  });
+
   it("offers respectful wording", async () => {
     const f = await by("Special batch for weak students.", "INC-1");
     expect(f[0].fix).toBe("students who need more support");

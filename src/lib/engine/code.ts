@@ -82,7 +82,9 @@ export function patternHits(rule: Rule, text: string, facts: Fact[]): Finding[] 
 function termHits(rule: Rule, text: string): Finding[] {
   const out: Finding[] = [];
   for (const term of rule.config.avoid ?? []) {
-    const re = new RegExp(`(?<![A-Za-z])${esc(term)}(?![A-Za-z])`, "gi");
+    // A hyphen or space in the term also matches the look-alike hyphens and spaces that editors insert.
+    const loose = esc(term).replace(/\\?-/g, "[-\u2010\u2011\u2012\u2013]").replace(/ /g, "[ \u00A0]");
+    const re = new RegExp(`(?<![A-Za-z])${loose}(?![A-Za-z])`, "gi");
     const seen = new Set<string>();
     for (const m of text.matchAll(re)) {
       if (seen.has(m[0])) continue;

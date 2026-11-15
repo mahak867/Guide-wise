@@ -98,7 +98,7 @@ ${img("08-insights.png", "Insights", "Insights: which rules fire most, which are
 <tr><td>Brand Kit</td><td>Rules with test sentences, an enforce gate, versioning, and a guide compiler that drops any proposed rule whose quoted passage is not in the guide.</td></tr>
 <tr><td>Regulation pack</td><td>Central Consumer Protection Authority (CCPA, India) guidelines for the coaching sector (2024), with a penalty order shown on each regulation finding as reported in the press, and the "more than 50 students" applicability gate.</td></tr>
 <tr><td>Workflow</td><td>Four roles enforced on the server; risk routing by a fixed rule table; comments, version history with word-level diffs, activity log, approval record (save as PDF).</td></tr>
-<tr><td>Insights</td><td>Most-flagged rules, dismissal reasons, rules two or more people call unclear, fact expiry watch.</td></tr>
+<tr><td>Insights and Guideline Health</td><td>Most-flagged rules, dismissal reasons, rules two or more people call unclear, fact expiry watch. For a rule with dismissals, Guidewise drafts clearer wording and new test sentences; code re-runs every test, a failing amendment cannot be saved, and the manager approves.</td></tr>
 <tr><td>Privacy</td><td>Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call. A draft marked confidential is never sent to AI at all.</td></tr>
 <tr><td>Channels</td><td>A rule can apply to some content types only (for example, no shortened links on social posts and ads); the brief card shows the rules for the type being written.</td></tr>
 <tr><td>Portability</td><td>The Brand Kit exports and imports as one JSON file; imported new or changed rules arrive as advisory until they pass their tests.</td></tr>
@@ -149,9 +149,9 @@ ${aiBlock}
 <p class="corr"><b>Correction to Round 1.</b> The Round 1 PDF stated CCPA maximum penalties of "up to ₹10 lakh / ₹50 lakh" on pages 2 and 14. We could not confirm these amounts against the Act and withdraw them. The penalty orders shown in the product are cited as reported in the linked press coverage.</p></section>
 
 <h2>The three major improvements for Round 3</h2>
-<div class="box"><b>1. Guideline Health loop — the brand guide fixes itself</b>
-<p>Round 2 already flags rules that two or more people dismiss as unclear. Round 3 closes the loop: Guidewise drafts an amendment with new test sentences, the manager approves it, and a new Brand Kit version must pass its tests. Changing a fact lists every draft and approved piece that used it.</p>
-<p class="note"><b>Test:</b> dismiss one rule as three different creators → it is marked unclear with a drafted amendment that passes its tests; change a fact → every affected piece is listed.</p></div>
+<div class="box"><b>1. Change impact — every rule or fact change shows what it touches</b>
+<p>Round 2 already drafts a clearer rule from dismissed findings, re-tests it and has the manager approve it. Round 3 adds the second half: changing or expiring a fact, or amending a rule, lists every open draft and approved piece that used it, re-checks them, and marks approved pieces that no longer pass as needing re-approval. Each amended rule shows its dismissal rate before and after.</p>
+<p class="note"><b>Test:</b> change the value of fact F-3 → every draft and approved piece that cited it is listed, approved ones marked for re-approval; amend a rule → its dismissal rate before and after is shown.</p></div>
 <div class="box" style="margin-top:8pt"><b>2. Governance at the source — an API and MCP server for AI writing tools</b>
 <p>A REST API with scoped keys and an MCP server exposing <code>get_brief</code> and <code>check_draft</code>, so AI writing tools fetch the rules and the facts valid today and check a draft before handing it over. An in-app playground and a per-key audit trail.</p>
 <p class="note"><b>Test:</b> call <code>check_draft</code> from the playground and from an MCP client with a key → the same cited findings as the app, and a new audit entry.</p></div>
