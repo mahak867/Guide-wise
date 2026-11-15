@@ -299,6 +299,24 @@ await step(page, "new review: ad with an uploaded image and a locked phrase", as
   must(!titles.includes("The PrepPath mark on every creative"), "logo flagged although the creative carries it");
   return `${titles.length} findings`;
 });
+await step(page, "hard cases: each fills the draft; hidden characters are caught, then the guarantee", async () => {
+  await go("/review/new", "Brief card"); await role("creator");
+  const labels = ["Prompt injection", "Right number, wrong subject", "Hindi claim, English disclaimer", "Personal data", "Paraphrase only AI catches", "Ad cut off at", "Hidden characters"];
+  for (const l of labels) {
+    await page.getByRole("button", { name: new RegExp(l) }).click();
+    await msg(/What to look for:/);
+    must((await page.locator("textarea").first().inputValue()).length > 40, `${l} did not fill the draft`);
+  }
+  await page.getByRole("button", { name: "Run review" }).click();
+  await page.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
+  await msg(/open finding/, 60000);
+  const back = page.url();
+  await page.locator("button[aria-expanded]", { hasText: "No invisible characters" }).first().click();
+  await page.getByRole("button", { name: "Accept fix" }).first().click();
+  await page.locator("button[aria-expanded]", { hasText: "No guaranteed outcomes" }).first().waitFor({ timeout: 30000 });
+  await page.goto(back.replace(/\/review\/.*/, "/review/" + rid2));
+  await msg(/open finding|No findings/, 60000);
+});
 await step(page, "review: fix the brand name, dismiss and reopen, comment, edit text", async () => {
   await page.locator("button[aria-expanded]", { hasText: 'Write "PrepPath" exactly' }).first().click();
   await page.getByRole("button", { name: "Accept fix" }).first().click();

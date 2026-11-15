@@ -5,6 +5,7 @@ import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/compon
 import { ImagePicker } from "@/components/ImagePicker";
 import { api, useApp } from "@/lib/client";
 import type { ImageInput } from "@/lib/image";
+import { HARD_CASES } from "@/lib/hardcases";
 import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
 import { CONTENT_TYPES } from "@/lib/types";
 
@@ -16,6 +17,7 @@ export default function NewReview() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("social");
   const [text, setText] = useState("");
+  const [hard, setHard] = useState<string | null>(null);
   const [intent, setIntent] = useState({ goal: "", audience: "", cta: "", locked: "" });
   const [images, setImages] = useState<ImageInput[]>([]);
   const [confidential, setConfidential] = useState(false);
@@ -89,6 +91,19 @@ export default function NewReview() {
                 Use the sample caption
               </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>
+            </div>
+            <div className="rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
+              <span className="font-medium">Try a hard case</span> <span className="text-muted">Drafts built to get past a checker. Pick one, then run the review.</span>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {HARD_CASES.map((c) => (
+                  <button key={c.id} type="button" aria-pressed={hard === c.id}
+                    className={`rounded-full border px-2.5 py-1 text-xs ${hard === c.id ? "border-ink bg-ink text-white" : "border-line bg-white hover:bg-mist"}`}
+                    onClick={() => { setHard(c.id); setText(c.text); setType(c.type); setTitle(`Hard case: ${c.label}`); setIntent({ goal: "", audience: "", cta: "", locked: "" }); }}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              {hard && <p className="mt-2 text-muted" role="status"><b className="text-ink">What to look for:</b> {HARD_CASES.find((c) => c.id === hard)?.expect}</p>}
             </div>
             <ImagePicker images={images} onChange={setImages} />
             <fieldset className="rounded-md border border-line p-3">
