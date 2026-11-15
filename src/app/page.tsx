@@ -75,7 +75,7 @@ export default function Home() {
           <Button variant="primary" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
           <Link href="/review/new"><Button>Check your own draft</Button></Link>
           <Link href="/review/new"><Button>Try a hard case</Button></Link>
-          <a href="/demo.webm" target="_blank" rel="noreferrer" className="self-center px-1 text-sm text-muted underline underline-offset-2 hover:text-ink">Watch a 90-second walkthrough</a>
+          <a href="/demo.webm" target="_blank" rel="noreferrer" className="self-center px-1 text-sm text-muted underline underline-offset-2 hover:text-ink">Watch a 100-second walkthrough</a>
         </div>
         <ol className="mt-8 grid gap-x-6 gap-y-3 border-t border-line pt-5 text-[13px] leading-relaxed text-muted sm:grid-cols-4">
           <li><b className="text-ink">1. Review.</b> The sample is an Instagram post from a fictional coaching brand: a caption and a creative, with problems in both.</li>

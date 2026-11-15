@@ -12,7 +12,7 @@ https://guidewise-kohl.vercel.app
 
 No sign-in. Each visitor gets a private demo workspace, so judges never see or reset each other's work.
 
-A 90-second captioned walkthrough, recorded on the live site: https://guidewise-kohl.vercel.app/demo.webm
+A 100-second captioned walkthrough, recorded on the live site: https://guidewise-kohl.vercel.app/demo.webm
 
 ## Source-code repository
 

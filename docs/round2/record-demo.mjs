@@ -1,5 +1,5 @@
 // Records a captioned walkthrough of the whole journey on the live site, as a video judges can watch.
-//   BASE_URL=https://guidewise-kohl.vercel.app node docs/round2/record-demo.mjs   → public/demo.webm
+//   BASE_URL=https://guidewise-kohl.vercel.app node docs/round2/record-demo.mjs   → public/demo.webm (about 100 seconds)
 import { createRequire } from "node:module";
 import { mkdtempSync, readdirSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -78,6 +78,18 @@ await page.getByRole("button", { name: "Approve", exact: true }).click();
 await page.getByText("Approval receipt").waitFor({ timeout: 30000 });
 await page.getByText("Approval receipt").scrollIntoViewIfNeeded();
 await say("Approved. The receipt holds a SHA-256 fingerprint of the exact text, the Brand Kit version, every finding and the approver.", 4600);
+await page.goto(L + "/review/new");
+await page.getByText("Brief card").first().waitFor();
+await role("creator");
+await page.getByText("Try a hard case").first().scrollIntoViewIfNeeded();
+await say("Try to break it: seven hard cases built to get past a checker.", 3000);
+await page.getByRole("button", { name: "Hidden characters" }).click();
+await say("This draft hides “guaranteed” behind an invisible zero-width space.", 3600);
+await page.getByRole("button", { name: "Run review" }).click();
+await page.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
+await page.getByText(/open finding/).first().waitFor({ timeout: 60000 });
+await page.locator("button[aria-expanded]", { hasText: "No invisible characters" }).first().click();
+await say("The invisible character is flagged, and the guarantee claim behind it is caught too.", 4200);
 await page.goto(L + "/results");
 await page.getByText(/Kit v\d+/i).first().waitFor();
 await say("The Results page re-runs the evaluation live: 60 planted-error drafts, 40 held out, with 95% intervals.", 4600);
