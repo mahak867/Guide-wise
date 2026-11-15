@@ -100,6 +100,18 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("other workspace's export does not include it", await as2("GET", "/api/kit/export"), (r) => r.s === 200 && !r.j.rules.some((x) => x.id === "ISO-1"));
 }
 
+// Cross-asset consistency: a fee in the creative that differs from the caption is flagged on the creative
+{
+  const px = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  const mk = async (ocr) => {
+    const { j } = await call("POST", "/api/drafts", { body: { title: "Consistency probe", content_type: "social", text: "December batch fee ₹39,999. Classes start 1 December.", useAI: false, images: [{ name: "c.png", alt: "Creative with the batch fee", dataUrl: px, colours: [], ocr }] } });
+    return (await call("GET", `/api/drafts/${j.id}`)).j.findings.filter((f) => f.rule_id === "CONS-1");
+  };
+  const bad = await mk("December batch\nFee ₹34,999");
+  expect("mismatched fee is flagged on the image", { s: 200, j: bad }, (r) => r.j.length === 1 && r.j[0].location === "image:1" && r.j[0].quote === "₹34,999");
+  expect("matching fee is not flagged", { s: 200, j: await mk("December batch\nFee ₹39,999") }, (r) => r.j.length === 0);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));

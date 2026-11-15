@@ -253,6 +253,17 @@ await step(page, "kit: guide compiler proposes rules (AI)", async () => {
   await page.getByRole("button", { name: "Propose rules" }).click();
   await page.getByText(/proposed|Proposed|Add as advisory|Save/).first().waitFor({ timeout: 60000 });
 });
+await step(page, "kit: a brand guide uploaded as PDF fills the compiler", async () => {
+  await go("/kit", "Enforced rules"); await role("manager");
+  const pdfPage = await desk.newPage();
+  await pdfPage.setContent("<h1>Brand guide</h1><p>Always call our teachers mentors, never tutors. Never promise a rank or a guaranteed seat. Keep the tone calm and confident.</p>");
+  const file = join(tmp, "guide.pdf");
+  await pdfPage.pdf({ path: file });
+  await pdfPage.close();
+  await page.locator('input[type=file][accept=".pdf,.docx"]').setInputFiles(file);
+  await msg(/Read \d[\d,]* characters from guide\.pdf/);
+  must((await page.locator("#guide").inputValue()).includes("never tutors"), "guide text not filled from the PDF");
+});
 await step(page, "kit: export downloads a valid file", async () => {
   await page.goto(L + "/kit");
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export Brand Kit" }).click()]);

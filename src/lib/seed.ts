@@ -285,6 +285,18 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
   {
+    id: "CONS-1", kind: "code", category: "consistency", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",
+    title: "Figures match across the caption and creatives",
+    description: "A fee, percentage or count stated in a creative must be the same figure stated in the caption and in the other creatives.",
+    config: { guidance: "Compared by code: figures of the same kind that count the same thing. Test format: caption: … | image: …" },
+    tests: [
+      { text: "caption: Dropper batch fee ₹39,999. | image: Dropper batch fee ₹34,999", expect: "flag" },
+      { text: "caption: 4,200+ JEE selections in 2025. | image: 5,000+ JEE selections in 2025", expect: "flag" },
+      { text: "caption: 4,200+ JEE selections in 2025. 50,000+ students have prepared with us. | image: 4,200+ JEE selections in 2025", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
     id: "NAME-1", kind: "code", category: "brand-name", severity: "minor", status: "enforced", source: "PrepPath brand guide", risk: "low",
     title: "Write \"PrepPath\" exactly",
     description: "One word, capital P twice. Web and email addresses keep their lower case.",

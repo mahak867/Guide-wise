@@ -22,13 +22,13 @@ https://github.com/mahak867/Guide-wise
 
 1. **Review of text and images before publication.** Paste copy, or upload a DOCX or PDF, and add up to four images. State the goal, audience and call to action.
 2. **Code checks.** These cover preferred terms, banned phrases, approved contact details, student results (course and consent record), the results disclaimer (including a same-language check for Hindi claims), and every figure compared with the Facts Register.
-3. **Image checks.** Text inside each image is read (OCR in the browser) and goes through every rule and fact check. Dominant colours are checked against the brand palette (CIELAB colour difference), along with colour contrast (WCAG) and alt text. The Brand Kit logo is searched for in each creative at many sizes (plain code in the browser, no AI), then checked for a minimum size and clear space around it.
+3. **Image checks.** Text inside each image is read (OCR in the browser) and goes through every rule and fact check. Dominant colours are checked against the brand palette (CIELAB colour difference), along with colour contrast (WCAG) and alt text. The Brand Kit logo is searched for in each creative at many sizes (plain code in the browser, no AI), then checked for a minimum size and clear space around it. Figures are compared across the caption and every creative: a fee, percentage or count that differs for the same thing is flagged on the creative.
 4. **Facts Register with dates.** Each fact has evidence, an owner, a valid-from and valid-until date, and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated. A figure used for the wrong subject is flagged as a contradiction.
 5. **"No source, no flag" verifier.** Plain code drops any finding whose quoted words are not in the draft, or whose rule or fact does not exist.
 6. **Cited findings.** Each finding quotes the exact words and cites its rule and the rule's source. Regulation findings cite a penalty order by India's Central Consumer Protection Authority (CCPA) as precedent, as reported in the linked press coverage. We have not read the orders themselves.
 7. **Re-tested fixes.** Every suggested fix is applied and re-checked before it is offered. A fix that would introduce an issue with no automatic fix is withdrawn. Accepting a fix re-runs the checks on the new text, and "Accept all" works through follow-ups.
 8. **Brand Kit with rule tests.** Every rule carries test sentences. A rule starts as advisory and can only be enforced when its own check passes those tests. Every change creates a new Brand Kit version.
-9. **Brand-guide compiler.** Paste guide text and get proposed rules with test sentences, plus warnings about vague or contradictory passages. The manager confirms each rule. This needs the AI service.
+9. **Brand-guide compiler.** Paste guide text, or upload the guide as a PDF or Word file, and get proposed rules with test sentences, plus warnings about vague or contradictory passages. The manager confirms each rule. This needs the AI service.
 10. **Regulation pack.** Central Consumer Protection Authority (CCPA, India) guidelines for the coaching sector (2024): guarantee claims, student results, and the results disclaimer, with an applicability gate. The guidelines apply above 50 students; at 50 or fewer, those rules show as suggestions.
 11. **Approval workflow.**
     - Four roles: creator, brand reviewer, compliance reviewer, brand manager. Role rules are enforced on the server.
@@ -52,9 +52,9 @@ https://github.com/mahak867/Guide-wise
 24. **Writing-style rules.** Code rule types a manager can create: exact brand-name spelling ("Preppath" becomes "PrepPath", web addresses left alone), capitals used for emphasis (exam acronyms allowed), a length limit per content type (ad text past 125 characters, where "See more" cuts it off), a sentence-length limit, and inclusive wording. Each has test sentences and a fix where one is safe.
 25. **Personal data protection.** Emails, phone numbers, Aadhaar, PAN and card numbers are masked in code before any AI call.
 26. **Engineering.**
-    - 51 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
+    - 54 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
-    - A 20-step browser test of the whole journey (`npm run e2e`), a 44-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 67-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
+    - A 20-step browser test of the whole journey (`npm run e2e`), a 45-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 69-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
     - Every input is validated: malformed requests, corrupt files, impossible dates and unsafe patterns get a clear message, never a server error.
     - Functions run in Mumbai next to the database.
 
@@ -109,7 +109,7 @@ https://github.com/mahak867/Guide-wise
    - **Test:** call `check_draft` from the playground and from an MCP client with a key, get the same cited findings as the app, and see a new audit entry.
 3. **Campaign and creative review with AI vision.**
    - Review a whole campaign (caption, creatives, landing-page copy, PDF brochure) together, and flag inconsistencies across assets: prices, dates, claims, promo codes.
-   - AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, and claims set in stylised type.
+   - Round 2 already compares figures between a caption and its creatives; Round 3 extends this across separate documents. AI vision checks what OCR cannot see: a student photo with no consent record, a recoloured or redrawn logo, and claims set in stylised type.
    - **Test:** upload a three-asset campaign with a price mismatch between the creative and the brochure and an unconsented student photo. Both are found, cited, and routed to compliance.
 
 We will also measure the AI checks on the same test set, and add real, anonymised drafts from coaching-centre marketers to it.

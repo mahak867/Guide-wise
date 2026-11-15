@@ -3,6 +3,7 @@ import { aiAvailable, extractClaims, judgeRule } from "./ai";
 import { dedupe, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
+import { consistencyHits } from "./consistency";
 import { runVisualChecks, type DraftImage } from "./visual";
 
 /**
@@ -165,7 +166,8 @@ export async function reviewDraft(
   const vc = verify(text, code, rules, facts);
   dropped.push(...vc.dropped);
   const images = opts.images ?? [];
-  const vis = verify(text, runVisualChecks(images, rules, facts, kit), rules, facts, images);
+  const cross = rules.filter((r) => r.category === "consistency").flatMap((r) => consistencyHits(r, text, images));
+  const vis = verify(text, [...runVisualChecks(images, rules, facts, kit), ...cross], rules, facts, images);
   dropped.push(...vis.dropped);
   const seenVis = new Set<string>();
   const visual = vis.kept.filter((f) => (seenVis.has(key(f)) ? false : (seenVis.add(key(f)), true)));

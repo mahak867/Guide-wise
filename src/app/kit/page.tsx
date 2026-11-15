@@ -288,11 +288,28 @@ export default function KitPage() {
 
         <Card className="p-4">
           <h2>Compile rules from a brand guide</h2>
-          <p className="mt-1 text-sm text-muted">Paste guide text. Guidewise proposes rules with test sentences and points out passages too vague to check. You confirm each rule; nothing is saved until you do.</p>
+          <p className="mt-1 text-sm text-muted">Paste guide text, or upload the brand guide as a PDF or Word file. Guidewise proposes rules with test sentences and points out passages too vague to check. You confirm each rule; nothing is saved until you do.</p>
           <label className="sr-only" htmlFor="guide">Brand guide text</label>
           <textarea id="guide" rows={6} className={inputCls + " mt-3"} value={guide} onChange={(e) => setGuide(e.target.value)} placeholder={'Example: "Always call our teachers mentors. Never promise a rank. Keep the tone warm and engaging."'} />
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <Button variant="primary" disabled={!manager || busy || !state.ai.available} onClick={compile}>{busy ? "Working…" : "Propose rules"}</Button>
+            <label className={`cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-mist ${busy ? "pointer-events-none opacity-50" : ""}`}>
+              Upload PDF or DOCX
+              <input type="file" accept=".pdf,.docx" className="sr-only" onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                setBusy(true); setErr(null);
+                try {
+                  const fd = new FormData();
+                  fd.append("file", f);
+                  const out = await api<{ text: string; name: string }>("/api/extract", fd);
+                  setGuide(out.text);
+                  setMsg(`Read ${out.text.length.toLocaleString("en-IN")} characters from ${f.name}. Check the text, then propose rules.`);
+                } catch (x) { setErr(x instanceof Error ? x.message : String(x)); }
+                setBusy(false);
+              }} />
+            </label>
             {!state.ai.available ? <span className="text-sm text-muted">Needs the AI service, which is off. Add rules by hand.</span> : !manager ? <span className="text-sm text-muted">Only the brand manager can do this.</span> : null}
           </div>
           {warnings.length > 0 && (

@@ -72,3 +72,29 @@ describe("logo findings", () => {
     expect(f.some((x) => x.rule_id === "STY-AD" || x.rule_id === "STY-READ")).toBe(false);
   });
 });
+
+describe("cross-asset consistency", () => {
+  const img = (ocr: string) => ({ name: "a.png", alt: "A creative with the batch details", colours: [], ocr });
+  const run = async (text: string, ocrs: string[]) =>
+    (await reviewDraft(text, null, SEED_RULES, SEED_FACTS, SEED_KIT, { useAI: false, contentType: "social", images: ocrs.map(img) })).findings.filter((f) => f.rule_id === "CONS-1");
+
+  it("flags a fee that differs between the caption and the creative, on the creative", async () => {
+    const f = await run("New batch fee ₹39,999. Classes start 1 December.", ["December batch\nFee ₹34,999"]);
+    expect(f).toHaveLength(1);
+    expect(f[0].location).toBe("image:1");
+    expect(f[0].quote).toBe("₹34,999");
+    expect(f[0].message).toMatch(/the caption says "₹39,999"/);
+  });
+
+  it("flags a count that differs for the same subject, and between two creatives", async () => {
+    expect(await run("4,200+ JEE selections in 2025.", ["5,000+ JEE selections in 2025"])).toHaveLength(1);
+    const f = await run("Join the December batch at PrepPath.", ["92% students satisfied", "95% students satisfied"]);
+    expect(f.map((x) => x.location)).toEqual(["image:2"]);
+  });
+
+  it("stays quiet when figures agree or count different things", async () => {
+    expect(await run("4,200+ JEE selections in 2025. 50,000+ students have prepared with us.", ["4,200+ JEE selections in 2025"])).toHaveLength(0);
+    expect(await run("50,000+ students have prepared for JEE with PrepPath.", ["4,200+ JEE selections in 2025\nCall +91 80000 12345"])).toHaveLength(0);
+    expect(await run("Fee ₹39,999 for the batch.", [""])).toHaveLength(0);
+  });
+});
