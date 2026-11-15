@@ -44,11 +44,11 @@ process.env.GUIDEWISE_AI_CACHE = "off"; // provider behaviour is tested without 
 process.env.GEMINI_API_KEY = "test";
 delete process.env.ANTHROPIC_API_KEY;
 
-const { aiModel, judgeRule } = await import("../src/lib/engine/ai");
+const { aiModel, judgeRule, resetBreaker } = await import("../src/lib/engine/ai");
 const { SEED_RULES } = await import("../src/lib/seed");
 const rule = SEED_RULES.find((r) => r.id === "R-08")!;
 
-beforeEach(() => { calls.length = 0; });
+beforeEach(() => { calls.length = 0; resetBreaker(); });
 
 describe("provider chain", () => {
   it("lists Groq first, then Gemini", () => {
@@ -91,5 +91,14 @@ describe("provider chain", () => {
     await judgeRule(rule, text, null, { cache: false }); // accuracy measurement always asks the AI
     expect(calls).toEqual(["groq", "groq", "groq"]);
     process.env.GUIDEWISE_AI_CACHE = "off";
+  });
+
+  it("rests a rate-limited provider, so the next call skips it instead of waiting again", async () => {
+    groqBehaviour = "rate-limit";
+    await judgeRule(rule, "The best coaching in Chennai.", null);
+    calls.length = 0;
+    const out = await judgeRule(rule, "The best coaching in Chennai.", null);
+    expect(out[0].explanation).toBe("from gemini");
+    expect(calls).not.toContain("groq");
   });
 });

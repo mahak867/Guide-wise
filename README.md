@@ -17,7 +17,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 95% Wilson intervals. The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 55 unit tests, a 20-step browser test of the whole journey, a 45-step sweep that clicks every page and control at desktop and phone sizes, and a 69-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
+**Tests:** 63 unit tests, a 20-step browser test of the whole journey, a 46-step sweep that clicks every page and control at desktop and phone sizes, and a 69-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
 
 ## Try it in two minutes
 
@@ -27,6 +27,8 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 4. **Replace or edit images**, then **Use the corrected sample**. The new creative is read (OCR), its colours are measured and its logo is found, all in the browser.
 5. **Submit for review.** Outcome claims route the draft to compliance. Switch **Acting as** to Kavya (compliance), dismiss what remains with a reason, and **Approve**.
 6. Open the approval record: a SHA-256 fingerprint of the approved text, the Brand Kit version, every finding and how it was resolved, and the approver.
+
+Then try to break it: **New review → Try a hard case** offers seven drafts built to get past a checker (hidden characters, prompt injection, the right number for the wrong subject, and more), each with a note on what to look for.
 
 **Reset demo** starts again. A guided tour on each review ticks itself off as you go.
 
@@ -44,7 +46,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Workflow | Four roles enforced on the server; accept, edit a fix before accepting, dismiss with a reason, reopen; locked phrases no fix may remove; comments, versions with word-level changes, request changes, audit log |
 | Insights and Guideline Health | Rules that fire and get dismissed most, rules two or more people call unclear, and facts that are expired, embargoed or expiring within 60 days. For a rule with dismissals, Guidewise drafts clearer wording and new tests; code re-runs every test and the manager approves |
 | Privacy | Emails, phone numbers, Aadhaar, PAN and card numbers are masked before any AI call. A draft marked confidential is never sent to AI |
-| Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 20-second cap per call and automatic fallback; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
+| Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 12-second cap per call and automatic fallback; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
 
 
 ## Changes from the Round 1 plan (summary)
@@ -76,7 +78,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 55 unit tests, including a deliberately wrong AI
+npm test                                                     # 63 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone

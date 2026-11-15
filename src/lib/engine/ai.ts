@@ -15,7 +15,7 @@ import { cacheGet, cacheKey, cacheOn, cacheSet } from "./aicache";
  */
 
 // Each AI call is capped so a slow or overloaded provider cannot stall a review past the server limit.
-const CALL_TIMEOUT_MS = 20_000;
+const CALL_TIMEOUT_MS = 12_000;
 
 interface Task<T> { name: string; system: string; user: string; schema: z.ZodType<T>; maxTokens: number }
 interface Provider { id: string; label: string; run<T>(t: Task<T>): Promise<T> }
@@ -217,12 +217,22 @@ async function structured<T>(t: Task<T>, opts: CallOpts = {}): Promise<T> {
   return out;
 }
 
+// Circuit breaker. A provider that is rate-limited or too slow is skipped for a short while, so the calls
+// queued behind it (and the next reviews) fall back at once instead of each waiting out the same failure.
+const restingUntil = new Map<string, number>();
+const rest = (id: string, ms: number) => restingUntil.set(id, Date.now() + ms);
+/** For tests: forget which providers are resting. */
+export function resetBreaker() { restingUntil.clear(); }
+
 /** Run one structured task on the first provider that answers; rate limits get one short retry. */
 async function ask<T>(t: Task<T>): Promise<T> {
-  const c = chain();
-  if (!c.length) throw new Error("No AI service is configured.");
+  const all = chain();
+  if (!all.length) throw new Error("No AI service is configured.");
+  const c = all.filter((p) => (restingUntil.get(p.id) ?? 0) <= Date.now());
+  if (!c.length) throw new Error("The AI service is busy (rate limit on the free tier). Code checks ran; press Re-check in a minute for the AI checks.");
   let last: unknown;
   for (const p of c) {
+    if ((restingUntil.get(p.id) ?? 0) > Date.now()) continue; // another call found it down while this one waited
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const out = await slot(() => withTimeout(p.run(t), CALL_TIMEOUT_MS, p.label));
@@ -235,9 +245,11 @@ async function ask<T>(t: Task<T>): Promise<T> {
           // Wait as long as the provider asks (capped), then try once more before falling through.
           const h = (e as { headers?: Record<string, string> | Headers })?.headers;
           const ra = Number((h instanceof Headers ? h.get("retry-after") : h?.["retry-after"]) ?? 0);
-          await new Promise((r) => setTimeout(r, Math.min(8000, Math.max(2000, ra * 1000))));
+          await new Promise((r) => setTimeout(r, Math.min(4000, Math.max(1500, ra * 1000))));
           continue;
         }
+        if (isRateLimit(e)) rest(p.id, 30_000);
+        else if (/took longer than/.test(String((e as Error)?.message))) rest(p.id, 60_000);
         break;
       }
     }
