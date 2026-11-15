@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Badge, Card, Notice, PageHead } from "@/components/ui";
-import { api } from "@/lib/client";
+import { Badge, Button, Card, Notice, PageHead } from "@/components/ui";
+import { api, useApp } from "@/lib/client";
 
 interface Ins {
   totals: { drafts: number; approved: number; findings: number; dismissed: number };
@@ -10,11 +10,37 @@ interface Ins {
   watch: { id: string; statement: string; owner: string; valid_from: string | null; valid_until: string | null; state: string }[];
 }
 
+interface Proposal { description: string; guidance: string; flag_example: string; pass_example: string; what_changed: string }
+interface Draft { id: string; proposal: Proposal; before: { description: string; guidance: string }; run: { passed: boolean; results: { text: string; expect: string; got: string; ok: boolean }[] } }
+
 export default function Insights() {
+  const { role, setRole, refresh } = useApp();
   const [d, setD] = useState<Ins | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [amend, setAmend] = useState<Draft | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = () => api<Ins>("/api/insights").then(setD).catch((e) => setError(String(e.message ?? e)));
+  async function draft(id: string) {
+    setBusy(id); setError(null); setMsg(null); setAmend(null);
+    try {
+      const out = await api<Omit<Draft, "id">>(`/api/rules/${id}`, { action: "amend_draft" });
+      setAmend({ id, ...out });
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    setBusy(null);
+  }
+  async function apply() {
+    if (!amend) return;
+    setBusy("apply"); setError(null);
+    try {
+      const out = await api<{ kit_version: number }>(`/api/rules/${amend.id}`, { action: "amend_apply", proposal: amend.proposal });
+      setMsg(`${amend.id} amended. Brand Kit is now version ${out.kit_version}; new reviews use the new wording.`);
+      setAmend(null);
+      await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    setBusy(null);
+  }
   useEffect(() => {
-    const load = () => api<Ins>("/api/insights").then(setD).catch((e) => setError(String(e.message ?? e)));
     queueMicrotask(load);
     window.addEventListener("gw-reset", load);
     return () => window.removeEventListener("gw-reset", load);
@@ -22,7 +48,8 @@ export default function Insights() {
   return (
     <>
       <PageHead title="Insights" sub="What the brand manager learns from reviews in this workspace: which rules people break most, which rules they push back on, and which approved facts are about to stop being true." />
-      {error && <Notice tone="error">{error}</Notice>}
+      {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+      {msg && <div className="mb-4"><Notice tone="ok">{msg}</Notice></div>}
       {!d ? <p className="text-sm text-muted">Loading…</p> : (
         <>
           <dl className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-4">
@@ -47,12 +74,46 @@ export default function Insights() {
                         {r.unclearBy.length >= 2 ? <Badge tone="critical">Unclear to {r.unclearBy.length} people</Badge>
                           : r.dismissed > 0 && r.dismissed >= r.fixed ? <Badge tone="major">Often dismissed</Badge>
                           : r.raised >= 3 ? <Badge tone="minor">Common mistake</Badge> : <span className="text-muted">–</span>}
+                        {r.dismissed > 0 && (
+                          <div className="mt-1.5">
+                            {role === "manager"
+                              ? <Button disabled={!!busy} onClick={() => draft(r.id)}>{busy === r.id ? "Drafting…" : "Draft amendment"}</Button>
+                              : <button className="text-xs underline text-muted hover:text-ink" onClick={() => setRole("manager")}>Act as Meera to amend</button>}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="border-t border-line px-4 py-3 text-xs text-muted">A rule dismissed as “unclear” by two or more different people is flagged here. In Round 3, Guidewise drafts the amendment and its tests for the manager to approve.</p>
+              {amend && (
+                <div className="border-t border-line bg-mist/50 px-4 py-4 text-sm" role="region" aria-label={`Proposed amendment to ${amend.id}`}>
+                  <h3 className="font-medium">Proposed amendment to <span className="font-mono text-xs">{amend.id}</span></h3>
+                  <p className="mt-1 text-muted">{amend.proposal.what_changed}</p>
+                  <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div><dt className="text-[11px] uppercase tracking-wide text-muted">Current wording</dt><dd className="mt-0.5">{amend.before.description}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wide text-muted">Proposed wording</dt><dd className="mt-0.5">{amend.proposal.description}{amend.proposal.guidance && <span className="block text-muted">Still allowed: {amend.proposal.guidance}</span>}</dd></div>
+                  </dl>
+                  <table className="mt-3 w-full text-left">
+                    <caption className="pb-1 text-left text-[11px] uppercase tracking-wide text-muted">Every test sentence, run on the amended rule</caption>
+                    <tbody>
+                      {amend.run.results.map((t, i) => (
+                        <tr key={i} className="border-t border-line align-top">
+                          <td className="py-1.5 pr-2">{t.text}{(t.text === amend.proposal.flag_example || t.text === amend.proposal.pass_example) && <span className="ml-1 text-xs text-muted">(new)</span>}</td>
+                          <td className="w-24 py-1.5 pr-2 text-muted">should {t.expect}</td>
+                          <td className="w-32 py-1.5"><Badge tone={t.ok ? "green" : "critical"}>{t.ok ? "Correct" : `Got: ${t.got}`}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button variant="primary" disabled={!!busy || !amend.run.passed} onClick={apply}>{busy === "apply" ? "Saving…" : "Approve amendment"}</Button>
+                    <Button disabled={!!busy} onClick={() => setAmend(null)}>Discard</Button>
+                    {!amend.run.passed && <span className="text-crit">The amended rule fails a test, so it cannot be saved. Discard it or draft again.</span>}
+                  </div>
+                </div>
+              )}
+              <p className="border-t border-line px-4 py-3 text-xs text-muted">A rule dismissed as “unclear” by two or more different people is flagged here. For any rule with dismissals, Guidewise can draft clearer wording and new test sentences from what people dismissed. Code re-runs every test on the amended rule, the manager approves, and a new Brand Kit version is created.</p>
             </Card>
             <Card className="h-fit p-4 text-sm">
               <h2>Fact expiry watch</h2>
