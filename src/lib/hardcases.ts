@@ -41,7 +41,7 @@ export const HARD_CASES: HardCase[] = [
   {
     id: "paraphrase", label: "Paraphrase only AI catches", type: "social", rule: "",
     text: "With PrepPath, your IIT seat is assured. Nobody in the country teaches JEE the way we do.",
-    expect: "No banned phrase appears, so the code checks pass it. The AI checks catch the implied guarantee and the unsupported superlative. With AI off, the review says so.",
+    expect: "No banned phrase appears, so the code checks find nothing to flag as a guarantee. The AI check catches the implied guarantee (“your IIT seat is assured”). With AI off, the review says so.",
   },
   {
     id: "ad", label: "Ad cut off at “See more”", type: "ad", rule: "STY-AD",
