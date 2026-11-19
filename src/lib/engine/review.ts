@@ -185,8 +185,45 @@ export async function reviewDraft(
     ...f, location: `asset:${i + 1}`, message: `In the ${a.name}: ${f.message}`,
     fix_note: f.fix ? `Change the wording in the ${a.name} to: "${f.fix}"` : f.fix_note ?? null, fix: null,
   })));
+  // AI checks on the rest of the campaign: every document and the text read from each creative go in one request
+  // per rule (personal data masked first). Code then finds which source holds each quote; the verifier checks it.
+  const aiDocFindings: Finding[] = [];
+  const sources = [
+    ...assets.map((a, i) => ({ label: a.name, location: `asset:${i + 1}`, text: a.text })),
+    ...images.map((img, i) => ({ label: `image ${i + 1}`, location: `image:${i + 1}`, text: [img.ocr ?? "", img.vision?.text ?? ""].filter((x) => x.trim()).join("\n") })),
+  ].filter((x) => x.text.trim().length >= 10);
+  if (useAI && !aiError && sources.length) {
+    const { text: safeAll, map: allMap } = redact(sources.map((x) => `[${x.label}]\n${x.text}`).join("\n\n"));
+    const judgedDocs = rules.filter((r) => r.kind === "judgment" && !r.category.startsWith("visual-") && !["length", "readability", "consistency"].includes(r.category));
+    const results = await Promise.allSettled(judgedDocs.map(async (rule) => {
+      aiCalls++;
+      const first = await judgeRule(rule, safeAll, intent, call(1));
+      if (!first.length) return [] as Finding[];
+      aiCalls++;
+      const second = await judgeRule(rule, safeAll, intent, call(2)).catch(() => null);
+      return first.flatMap((j) => {
+        const quote = restore(j.quote, allMap);
+        const src = sources.find((x) => x.text.includes(quote));
+        if (!src) { dropped.push({ reason: "quote is not in any campaign document or image", quote, rule_id: rule.id }); return []; }
+        const f = toFinding(rule, quote, j.explanation, restore(j.fix, allMap));
+        if (second && !second.some((x) => overlaps(restore(x.quote, allMap), quote))) {
+          f.level = "suggestion";
+          f.message += " (The two AI runs disagreed, so this is shown as a suggestion.)";
+        }
+        const where = src.location.startsWith("image:") ? `the text of ${src.label}` : `the ${src.label}`;
+        return [{ ...f, location: src.location, message: `In ${where}: ${f.message}`, fix_note: f.fix ? `Change the wording in ${where} to: "${f.fix}"` : f.fix_note ?? null, fix: null }];
+      });
+    }));
+    for (const r of results) if (r.status === "fulfilled") aiDocFindings.push(...r.value);
+    // A code finding on the same words in the same place wins over the AI's.
+    const codeElsewhere = [...docFindings, ...runVisualChecks(images, rules, facts, kit)];
+    for (let i = aiDocFindings.length - 1; i >= 0; i--) {
+      const a = aiDocFindings[i];
+      if (codeElsewhere.some((c) => c.location === a.location && c.rule_id === a.rule_id && overlaps(c.quote, a.quote))) aiDocFindings.splice(i, 1);
+    }
+  }
   const cross = rules.filter((r) => r.category === "consistency").flatMap((r) => consistencyHits(r, text, images, assets));
-  const vis = verify(text, [...runVisualChecks(images, rules, facts, kit), ...cross, ...docFindings], rules, facts, images, assets);
+  const vis = verify(text, [...runVisualChecks(images, rules, facts, kit), ...cross, ...docFindings, ...aiDocFindings], rules, facts, images, assets);
   dropped.push(...vis.dropped);
   const seenVis = new Set<string>();
   const visual = vis.kept.filter((f) => (seenVis.has(key(f)) ? false : (seenVis.add(key(f)), true)));
@@ -210,7 +247,7 @@ export async function reviewDraft(
       visionRead,
       visionError,
       people: images.reduce((n, i) => n + (i.vision?.people?.length ?? 0), 0),
-      aiFindings: aiKept.length,
+      aiFindings: aiKept.length + visual.filter((f) => aiDocFindings.some((a) => key(a) === key(f))).length,
       droppedByVerifier: dropped,
       fixesWithdrawn,
       aiCalls,

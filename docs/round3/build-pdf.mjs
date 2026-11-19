@@ -68,7 +68,7 @@ ${img("05-api.png", "API page", "The API page: a scoped key, the playground call
 
 <h3>3. Campaign and creative review with AI vision <span class="done">Live</span></h3>
 <p class="promise"><b>Promised:</b> review a whole campaign (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets — prices, dates, claims, promo codes; AI vision for stylised text and for photos of people, flagged for a consent check. Test: a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p>
-<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every code check runs on every document (the AI checks run on the caption), and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
+<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every code check runs on every document, and the AI checks read all the documents and the text in each creative (one request per rule, personal data masked first; code places each finding in the document that holds its quote), and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
 <div class="grid2">
 ${img("06-campaign.png", "Campaign review", "The sample campaign: the brochure's ₹14,999 and the landing page's 12 January and EARLY10 contradict the caption.")}
 ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read and the person shown, flagged for a consent check.")}
@@ -83,7 +83,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>AI checks</td><td>Claims and voice rules, one rule per call, run twice when they find something; disagreement becomes a suggestion. Claude → Groq → Gemini with fallback, time caps and a circuit breaker; answers validated with Zod and cached.</td></tr>
 <tr><td>Verifier</td><td>Code drops any finding whose quote is not in the draft, image or document, or whose rule or fact does not exist: no source, no flag.</td></tr>
 <tr><td>Images</td><td>In the browser: OCR, palette (CIELAB), WCAG contrast, alt text, logo found by masked cross-correlation and checked for size and clear space. <b>New:</b> AI vision for stylised text and people shown.</td></tr>
-<tr><td>Campaigns <b>new</b></td><td>Every code check on every document; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
+<tr><td>Campaigns <b>new</b></td><td>Every code check and AI check on every document and on the text in each creative; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
 <tr><td>Facts Register</td><td>Evidence, owner, valid-from, valid-until, required disclosure; embargoed, expired and wrong-subject figures flagged. <b>New:</b> every change shows its impact.</td></tr>
 <tr><td>Fixes</td><td>Each fix applied and re-checked before it is offered; edit before accepting; Accept all works through follow-ups.</td></tr>
 <tr><td>Brand Kit</td><td>Rules with test sentences and an enforce gate, per-channel rules, versioning, JSON export and import, and a guide compiler for pasted text, PDF or Word.</td></tr>
@@ -102,13 +102,13 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <div><b>2 Code checks</b>Rules and every figure</div>
 <div class="ai"><b>3 AI checks</b>One rule per call, twice</div>
 <div class="ai"><b>4 AI vision</b>Text and people</div>
-<div><b>5 Documents</b>Code checks on each</div>
+<div class="ai"><b>5 Documents</b>Every check on each</div>
 <div><b>6 Consistency</b>Across all sources</div>
 <div><b>7 Verifier</b>No source, no flag</div>
 <div><b>8 Re-test fixes</b></div>
 <div><b>9 Route</b>Fixed table, human approves</div>
 </div>
-<p class="note">Only steps 3 and 4 use AI. Numbers are never compared by AI: it only locates claims; code re-reads each value and compares it.</p>
+<p class="note">Only steps 3, 4 and 5 use AI. Numbers are never compared by AI: it only locates claims; code re-reads each value and compares it.</p>
 <table>
 <tr><th style="width:34mm">Layer</th><th>Choice and reason</th></tr>
 <tr><td>App and API</td><td>Next.js 16 App Router (TypeScript), React 19, Tailwind CSS 4 on Vercel, functions in Mumbai next to the database.</td></tr>

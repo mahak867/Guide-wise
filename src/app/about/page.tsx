@@ -7,7 +7,7 @@ const STEPS: [string, string, boolean?][] = [
   ["Code checks", "Preferred terms, banned phrases, approved contacts, student records, disclaimers, spelling of the brand name, hidden characters, and every figure compared with the Facts Register. Instant, free and fully explainable."],
   ["AI checks", "Claims and voice. One rule per call, with that rule's test sentences as the boundary. A rule that returns a finding is run a second time; disagreement downgrades it to a suggestion.", true],
   ["AI vision", "Each creative is read once for text that OCR missed and for people shown. People are described, never named, and raise a consent check for compliance.", true],
-  ["Campaign documents", "Brochure, landing page or email text gets every code check, quoting the document it came from."],
+  ["Campaign documents", "Brochure, landing page or email text gets every code check and every AI check, quoting the document it came from. The AI reads all the documents in one request per rule; code finds which document holds each quote.", true],
   ["Consistency", "Prices, figures, dates and promo codes are compared across the caption, every creative and every document. A mismatch quotes both sides."],
   ["Verifier", "Plain code. A finding is dropped unless its quoted words are in the draft, image or document it cites, its rule exists and its cited fact exists. No source, no flag."],
   ["Fix and re-test", "Each suggested fix is applied and the checks are run again. A fix that would introduce a new issue is withdrawn."],
@@ -18,7 +18,7 @@ export default function About() {
   const { state } = useApp();
   return (
     <>
-      <PageHead title="How Guidewise works" sub="Two of the nine steps use AI. Everything around them is code that can reject what the AI returns, and numbers are always compared by code. (The brand-guide compiler also uses AI, and the manager confirms every rule it proposes.)" />
+      <PageHead title="How Guidewise works" sub="Three of the nine steps use AI. Everything around them is code that can reject what the AI returns, and numbers are always compared by code. (The brand-guide compiler also uses AI, and the manager confirms every rule it proposes.)" />
       <ol className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {STEPS.map(([t, d, ai], i) => (
           <li key={t}><Card className={`h-full p-4 ${ai ? "border-brand" : ""}`}><div className="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}{ai ? " · uses AI" : ""}</div><h2 className="mt-1">{t}</h2><p className="mt-1 text-sm text-muted">{d}</p></Card></li>
@@ -39,7 +39,7 @@ export default function About() {
           <h2>What this version does, and what it does not</h2>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>Reviews text (pasted, DOCX or PDF), up to four images and up to four campaign documents per draft. For images it checks the palette, contrast, alt text and the Brand Kit logo (present, large enough, clear space), runs every code check on the words read from the image, and uses AI vision to read stylised text and find people shown.</li>
-            <li>The AI checks run on the caption. Campaign documents and text read from images get the code checks, to keep a review inside free-tier limits.</li>
+            <li>The AI checks read the caption, every campaign document and the text in each creative. Pictures inside a PDF brochure are not extracted; upload them as creatives to check them.</li>
             <li>AI vision flags a person shown for a consent check; it does not recognise who they are. A reviewer confirms consent against the student records.</li>
             <li>The logo check matches the logo file itself. A redrawn, recoloured or heavily stretched logo is reported as missing, and a reviewer can dismiss that with a reason.</li>
             <li>The verifier confirms that a finding is grounded in a real rule and real words. It does not prove the judgment is right, which is why any finding can be dismissed with a reason and a person approves.</li>

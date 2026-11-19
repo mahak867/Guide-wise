@@ -17,7 +17,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 95% Wilson intervals. Images: 20 generated creatives with planted colour, contrast and logo errors, all 20 caught with no false alarms (`npm run eval:images`). Privacy: personal data planted in 24 drafts and canaries in 3 confidential ones, 0 leaks in 144 AI prompts (`npm run eval:privacy`). The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 81 unit tests, a 20-step browser test of the whole journey, a 51-step sweep that clicks every page and control at desktop and phone sizes, and a 93-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
+**Tests:** 86 unit tests, a 20-step browser test of the whole journey, a 51-step sweep that clicks every page and control at desktop and phone sizes, and a 93-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
 
 ## Try it in two minutes
 
@@ -64,7 +64,7 @@ Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md
 
 1. **Change impact.** Change, expire or delete a fact, or change a rule, and Guidewise re-checks every draft that used it. An approved piece that no longer passes goes back for re-approval with the reason; the Impact panel lists everything touched; Insights shows each amended rule's dismissal rate before and after. *Try it:* the demo starts with an approved WhatsApp post that cites fact F-3. On **Facts and assets**, act as Meera, click **Edit** on F-3, change the figure and save: the post goes back for re-approval.
 2. **API and MCP server.** Scoped keys (shown once, stored hashed, revocable), `get_brief` (rules in force and only facts valid today) and `check_draft` (the same cited findings as the app) over REST and MCP, a playground and an audit trail. *Try it:* **API** page → Create key → Call check_draft. Reference: [`docs/API.md`](docs/API.md).
-3. **Campaign review with AI vision.** A caption, up to 4 creatives and up to 4 documents (landing page, brochure, email) reviewed together: every code check on every document, and prices, figures, dates and promo codes compared across all of them. AI vision reads stylised text and flags people shown for a consent check, routed to compliance. *Try it:* **New review → Use the sample campaign → Run review**.
+3. **Campaign review with AI vision.** A caption, up to 4 creatives and up to 4 documents (landing page, brochure, email) reviewed together: every code check and AI check on every document, and prices, figures, dates and promo codes compared across all of them. AI vision reads stylised text and flags people shown for a consent check, routed to compliance. *Try it:* **New review → Use the sample campaign → Run review**.
 
 Each one is tested live against exactly what we promised at Round 2 ([`docs/TESTING.md`](docs/TESTING.md)).
 
@@ -84,7 +84,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 81 unit tests, including a deliberately wrong AI
+npm test                                                     # 86 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone
@@ -111,7 +111,7 @@ Apply the migrations in `supabase/migrations/` (001 to 008, in order) to a Supab
 ## Limits, stated plainly
 
 - The logo check matches the logo file itself. A redrawn, recoloured or heavily stretched logo is reported as missing, and a reviewer can dismiss that with a reason. AI vision flags people shown for a consent check but does not recognise who they are; a reviewer confirms consent against the student records.
-- The AI checks run on the caption; campaign documents and text read from images get the code checks.
+- A PDF brochure is read as text; pictures inside it are not checked.
 - Brand-name spelling catches case and spacing at capital letters ("Preppath", "Prep Path"), not every misspelling.
 - There is no sign-in, so judges can open the link directly. Browsers never receive database credentials (none of the JavaScript sent to visitors contains them); every read and write goes through our API, which enforces the role rules and scopes each query to the visitor's random workspace ID, and the API probe checks that one workspace cannot read another's drafts. A production deployment adds sign-in and per-organisation row-level security in the database.
 - The AI runs on free tiers, so heavy simultaneous use can hit rate limits. When that happens the review continues with code checks and says so.
