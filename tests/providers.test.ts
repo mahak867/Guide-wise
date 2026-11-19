@@ -42,6 +42,7 @@ vi.mock("@google/genai", () => ({
 process.env.GROQ_API_KEY = "test";
 process.env.GUIDEWISE_AI_CACHE = "off"; // provider behaviour is tested without the answer cache
 process.env.GEMINI_API_KEY = "test";
+process.env.GEMINI_MODEL = "gemini-2.5-flash"; // a retired model: the adapter must find another one
 delete process.env.ANTHROPIC_API_KEY;
 
 const { aiModel, judgeRule, resetBreaker } = await import("../src/lib/engine/ai");

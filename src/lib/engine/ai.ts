@@ -124,7 +124,7 @@ function gemini(): Provider | null {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!key) return null;
   // A stable model by default; if this key cannot use it, the newest Flash model it can use is found.
-  let model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  let model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
   const tried: string[] = [];
   let client: GoogleGenAI | null = null;
   const provider: Provider = {
