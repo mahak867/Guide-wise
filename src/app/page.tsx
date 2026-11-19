@@ -34,8 +34,12 @@ export default function Home() {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, []);
+  // A first visit creates the demo workspace while the app state loads, so the list is fetched once that is done.
+  const ready = state?.kit.ws;
   useEffect(() => {
-    queueMicrotask(load);
+    if (ready) queueMicrotask(load);
+  }, [ready, load]);
+  useEffect(() => {
     window.addEventListener("gw-reset", load);
     return () => window.removeEventListener("gw-reset", load);
   }, [load]);
