@@ -64,7 +64,7 @@ await step(page, "sample review created", async () => {
   rid = page.url().split("/review/")[1];
 });
 
-const PAGES = ["/", "/review/new", `/review/${rid}`, `/review/${rid}/record`, "/kit", "/facts", "/insights", "/results", "/about", "/review/00000000-0000-4000-8000-000000000000", "/nope"];
+const PAGES = ["/", "/review/new", `/review/${rid}`, `/review/${rid}/record`, "/kit", "/facts", "/insights", "/results", "/about", "/developers", "/review/00000000-0000-4000-8000-000000000000", "/nope"];
 async function checkPage(p, path) {
   await p.goto(L + path, { waitUntil: "networkidle" });
   await p.waitForTimeout(1500);
@@ -376,6 +376,23 @@ await step(page, "approved draft is locked", async () => {
 });
 
 // ---------- 6. Results, insights, tour, reset ----------
+await step(page, "developers: create a key, call check_draft via REST and MCP, see the audit trail", async () => {
+  await go("/developers", "Playground"); await role("manager");
+  await page.getByRole("button", { name: "Create key" }).click();
+  await msg(/Copy this key now/);
+  for (const via of ["REST API", "MCP server"]) {
+    await page.getByLabel("Call through").selectOption({ label: via });
+    await page.getByRole("button", { name: "Call check_draft" }).click();
+    await msg(/the same as the app would show/, 60000);
+  }
+  await page.getByLabel("Tool").selectOption("get_brief");
+  await page.getByRole("button", { name: "Call get_brief" }).click();
+  await msg(/rules in force and \d+ facts valid today/, 30000);
+  await page.waitForTimeout(1500);
+  must((await page.locator("table").last().locator("tbody tr").count()) >= 3, "audit trail missing calls");
+  await page.getByRole("button", { name: "Revoke" }).first().click();
+  await msg("Revoked");
+});
 await step(page, "results: switch set and re-run; open a draft", async () => {
   await page.goto(L + "/results");
   await page.locator("select").nth(1).selectOption({ index: 1 });

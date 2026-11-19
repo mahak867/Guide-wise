@@ -27,8 +27,9 @@ export default function Developers() {
   const [useAi, setUseAi] = useState(false);
   const [out, setOut] = useState<{ status: number; body: unknown; ms: number } | null>(null);
 
+  const [origin, setOrigin] = useState("https://guidewise-kohl.vercel.app");
   const load = useCallback(() => api<NonNullable<typeof data>>("/api/keys").then(setData).catch((e) => setErr(String(e.message ?? e))), []);
-  useEffect(() => { queueMicrotask(load); }, [load]);
+  useEffect(() => { queueMicrotask(() => { setOrigin(window.location.origin); load(); }); }, [load]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +70,7 @@ export default function Developers() {
   }
 
   const body = out?.body as { findings?: Finding[]; verdict?: string; rules?: unknown[]; facts?: unknown[]; error?: string } | string | null;
-  const mcpConfig = JSON.stringify({ mcpServers: { guidewise: { url: `${typeof window === "undefined" ? "" : window.location.origin}/api/mcp`, headers: { Authorization: `Bearer ${created ?? "gw_your_key"}` } } } }, null, 2);
+  const mcpConfig = JSON.stringify({ mcpServers: { guidewise: { url: `${origin}/api/mcp`, headers: { Authorization: `Bearer ${created ?? "gw_your_key"}` } } } }, null, 2);
 
   return (
     <>
