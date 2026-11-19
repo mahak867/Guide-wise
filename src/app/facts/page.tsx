@@ -4,12 +4,13 @@ import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/compon
 import { api, useApp } from "@/lib/client";
 import type { Fact } from "@/lib/types";
 
-const blank = { id: "", statement: "", value: "", keywords: "", evidence: "", valid_from: "", valid_until: "", disclosure: "", disclosure_keywords: "", owner: "" };
+const blank = { id: "", statement: "", value: "", keywords: "", evidence: "", valid_from: "", valid_until: "", disclosure: "", disclosure_keywords: "", owner: "", superseded_by: "" };
 
 // Editing keeps fields the form does not show (owner, holding lines) by sending the original meta back.
 const toForm = (f: Fact) => ({
   id: f.id, statement: f.statement, value: f.value === null ? "" : String(f.value), keywords: f.keywords.join(", "), evidence: f.evidence,
   valid_from: f.valid_from ?? "", valid_until: f.valid_until ?? "", disclosure: f.disclosure, disclosure_keywords: f.disclosure_keywords.join(", "), owner: f.owner,
+  superseded_by: f.meta?.superseded_by ?? "",
 });
 
 function validity(f: Fact, today: string): { label: string; tone: string } {
@@ -94,7 +95,7 @@ export default function FactsPage() {
                 <tr key={f.id} className="border-b border-line align-top last:border-0">
                   <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{f.id}</td>
                   <td className="px-4 py-2.5">{f.statement}{f.keywords.length > 0 && <div className="text-xs text-muted">Counts: {f.keywords.join(", ")}</div>}</td>
-                  <td className="px-4 py-2.5"><Badge tone={v.tone}>{v.label}</Badge>{f.valid_from && <div className="mt-0.5 text-xs text-muted">from {f.valid_from}</div>}</td>
+                  <td className="px-4 py-2.5"><Badge tone={v.tone}>{v.label}</Badge>{f.valid_from && <div className="mt-0.5 text-xs text-muted">from {f.valid_from}</div>}{f.meta?.superseded_by && <div className="mt-0.5 text-xs text-muted">Replaced by {f.meta.superseded_by}</div>}</td>
                   <td className="px-4 py-2.5 text-muted">{f.evidence}<div className="text-xs">{f.owner}</div></td>
                   <td className="px-4 py-2.5 text-muted">{f.disclosure || "–"}</td>
                   <td className="whitespace-nowrap px-4 py-2.5">{canEdit && <Button disabled={busy} onClick={() => { setForm(toForm(f)); setMsg(null); document.getElementById("fact-form")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Edit</Button>} {canEdit && <Button variant="danger" disabled={busy} onClick={() => window.confirm(`Delete fact ${f.id}?`) && call(() => api(`/api/facts/${f.id}`, undefined, "DELETE"), `${f.id} deleted.`)}>Delete</Button>}</td>
@@ -130,7 +131,7 @@ export default function FactsPage() {
           <h2 id="fact-form">{editing ? `Edit fact ${editing.id}` : "Add a fact"}</h2>
           {editing && <p className="mt-1 text-sm text-muted">Saving re-checks every draft that uses {editing.id}. An approved piece that no longer passes goes back for re-approval. <button type="button" className="underline hover:text-ink" onClick={() => setForm(blank)}>Cancel</button></p>}
           {!canEdit && <p className="mt-1 text-sm text-muted">Only the brand manager or compliance reviewer can add facts.</p>}
-          <form className="mt-3" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/facts", { ...form, meta: editing?.meta }), `${form.id.toUpperCase()} saved. Reviews now check against it.`)) setForm(blank); }}>
+          <form className="mt-3" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/facts", { ...form, meta: { ...editing?.meta, superseded_by: form.superseded_by.trim().toUpperCase() || undefined } }), `${form.id.toUpperCase()} saved. Reviews now check against it.`)) setForm(blank); }}>
             <fieldset disabled={!canEdit || busy} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[6rem_1fr]">
                 <Field label="ID"><input required className={inputCls} value={form.id} onChange={(e) => set("id", e.target.value)} placeholder="F-12" /></Field>
@@ -149,6 +150,7 @@ export default function FactsPage() {
                 <Field label="Must appear with" hint="(optional)"><input className={inputCls} value={form.disclosure} onChange={(e) => set("disclosure", e.target.value)} placeholder="Name the course" /></Field>
                 <Field label="Words that satisfy it"><input className={inputCls} value={form.disclosure_keywords} onChange={(e) => set("disclosure_keywords", e.target.value)} placeholder="classroom programme" /></Field>
               </div>
+              <Field label="Replaced by" hint="(optional: the fact ID to point to once this one expires)"><input className={inputCls + " sm:w-40"} value={form.superseded_by} onChange={(e) => set("superseded_by", e.target.value)} placeholder="F-14" /></Field>
               <Button variant="primary" type="submit">{busy ? "Saving…" : editing ? `Save ${editing.id}` : "Save fact"}</Button>
             </fieldset>
           </form>

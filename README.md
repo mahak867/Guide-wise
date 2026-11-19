@@ -17,7 +17,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 95% Wilson intervals. Images: 20 generated creatives with planted colour, contrast and logo errors, all 20 caught with no false alarms (`npm run eval:images`). Privacy: personal data planted in 24 drafts and canaries in 3 confidential ones, 0 leaks in 144 AI prompts (`npm run eval:privacy`). The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 95 unit tests, a 20-step browser test of the whole journey, a 52-step sweep that clicks every page and control at desktop and phone sizes, and a 102-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push, and the probe also runs against the live site every morning.
+**Tests:** 116 unit tests, a 20-step browser test of the whole journey, a 52-step sweep that clicks every page and control at desktop and phone sizes, and a 102-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push, and the probe also runs against the live site every morning.
 
 ## Try it in two minutes
 
@@ -39,7 +39,7 @@ The three Round 3 improvements each take under a minute from the home page: **Re
 | Area | What it does |
 | --- | --- |
 | Review pipeline | 1 personal data masked → 2 code checks → 3 AI checks, one rule per call, run twice when they find something → 4 AI vision on creatives → 5 code and AI checks on every campaign document and the text in each creative → 6 prices, dates and codes compared across everything → 7 verifier → 8 fixes re-tested → 9 risk routing by a fixed table → approval receipt |
-| Code checks | Preferred terms, banned phrases, approved contacts, student results (course and dated consent), results disclaimer (same-language check for Hindi), brand-name spelling, capitals for emphasis, length per content type, sentence length, inclusive wording, invisible characters that could hide a banned phrase, and every figure compared with the Facts Register by subject first, value second (lakh and crore understood) |
+| Code checks | Preferred terms, banned phrases, approved contacts, student results (course and dated consent), results disclaimer (same-language check for Hindi), brand-name spelling, capitals for emphasis, length per content type, sentence length, inclusive wording, invisible characters that could hide a banned phrase, paid-partnership labels (#ad), offers without an end date or T&C, competitor names, vague link text ("click here"), lower-case multi-word hashtags (with a CamelCase fix), stacked "!!" and emoji clutter, and every figure compared with the Facts Register by subject first, value second (lakh and crore understood); an expired fact with a successor points to it ("Use F-12 instead") |
 | Image checks | In the browser, with no AI: OCR (self-hosted tesseract.js) so every code check runs on the words in the image, dominant colours vs the palette (CIELAB colour difference), WCAG contrast, alt text, and the Brand Kit logo found by masked cross-correlation at many sizes, then checked for minimum size and clear space. Figures are compared across the caption and every creative, and a mismatch is flagged. AI vision then reads stylised text OCR missed and flags people shown for a consent check |
 | Verifier | Plain code drops any finding whose quote is not in the draft, image or document it cites, or whose rule or fact does not exist: "no source, no flag" |
 | Facts Register | Evidence, owner, valid-from, valid-until and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated; for the wrong subject, as a contradiction |
@@ -86,7 +86,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 95 unit tests, including a deliberately wrong AI
+npm test                                                     # 116 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 npm run eval:images                                          # 20 creatives with planted colour, contrast and logo errors
 npm run eval:privacy                                         # personal data and confidential canaries never reach the AI

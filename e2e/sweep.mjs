@@ -466,7 +466,7 @@ await step(page, "reset demo restores the sample kit", async () => {
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.waitForTimeout(4000);
   await go("/kit", "Enforced rules");
-  must((await page.getByRole("button", { name: "Run tests" }).count()) === 24, "rules not restored to the 24 in the demo kit");
+  must((await page.getByRole("button", { name: "Run tests" }).count()) === 30, "rules not restored to the 30 in the demo kit");
   await go("/facts", "Facts Register");
   must(await page.getByText("Fees are subject to the published fee policy").count(), "disclaimers not restored");
 });

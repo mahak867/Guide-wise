@@ -58,7 +58,9 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
         <div className="mt-3 space-y-2 border-t border-line pt-3">
           <p className="text-xs text-muted">Source: {rule.source}</p>
           {rule.config.avoid && <p>Flags: {rule.config.avoid.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)} Use instead: <code className="rounded bg-mist px-1">{rule.config.prefer || "(remove)"}</code></p>}
-          {rule.config.names && <p>Exact spelling: {rule.config.names.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
+          {rule.config.names && <p>{rule.category === "competitor" ? "Competitors named" : "Exact spelling"}: {rule.config.names.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
+          {rule.config.missing && <p>Needs, in the same text: {rule.config.missing}</p>}
+          {rule.config.maxEmoji !== undefined && <p>Limit: {rule.config.maxEmoji} emoji per post</p>}
           {rule.config.allow && <p>Allowed in capitals: {rule.config.allow.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
           {rule.config.maxChars && <p>Limit: {rule.config.maxChars} characters</p>}
           {rule.config.maxWords && <p>Limit: {rule.config.maxWords} words per sentence</p>}

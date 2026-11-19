@@ -25,6 +25,12 @@ export interface Precedent {
  *  length    { maxChars: number }   (text past the limit is hidden, e.g. behind "See more")
  *  readability { maxWords?: number } (sentences longer than this are hard to read on a phone)
  *  visual-logo { logo?: { minWidth?: number; clear?: number } } (the Brand Kit logo must appear, large enough, with clear space)
+ *  requires  { patterns: string[], requires: string[], missing: string, append?: string } (a trigger needs one of the required words in the same text,
+ *             e.g. paid content needs "#ad"; append is added after the sentence as the fix)
+ *  competitor { names: string[] }   (other coaching institutes; naming one is a comparison for the brand manager)
+ *  link-text {}                     ("click here", "tap here", "read more" that do not say what they lead to)
+ *  hashtag   { words?: string[] }   (multi-word hashtags in lower case; words extend the built-in dictionary used to split them)
+ *  excess    { maxEmoji?: number }  (stacked "!!" or "?!", and more emoji than the limit)
  * judgment rules may also carry { patterns, fixText, fixFactId, guidance } - patterns are
  * the code pre-filter that still works in rules-only mode.
  */
@@ -52,6 +58,16 @@ export interface Rule {
     maxChars?: number;
     maxWords?: number;
     logo?: { minWidth?: number; clear?: number };
+    /** requires: at least one of these patterns must appear in the same text as a trigger. */
+    requires?: string[];
+    /** requires: what the required words are, in plain words for the finding, e.g. '#ad, #sponsored or "Paid partnership"'. */
+    missing?: string;
+    /** requires: words added after the triggering sentence as the fix, e.g. "#ad". */
+    append?: string;
+    /** hashtag: extra words for splitting lower-case hashtags. */
+    words?: string[];
+    /** excess: the most emoji a post may carry. */
+    maxEmoji?: number;
     /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
     channels?: string[];
   };
@@ -72,7 +88,8 @@ export interface Fact {
   valid_until: string | null;
   disclosure: string;
   disclosure_keywords: string[];
-  meta: { name?: string; rank?: string; course?: string; consent_date?: string; result_date?: string; embargo_text?: string };
+  /** superseded_by: the fact that replaces this one once it expires, e.g. "F-12". Stored in meta, so no new column. */
+  meta: { name?: string; rank?: string; course?: string; consent_date?: string; result_date?: string; embargo_text?: string; superseded_by?: string };
 }
 
 export interface Kit {

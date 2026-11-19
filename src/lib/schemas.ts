@@ -33,6 +33,14 @@ export const RuleConfig = z.object({
   maxWords: z.number().int().min(3).max(500).optional(),
   logo: z.object({ minWidth: z.number().min(0).max(1).optional(), clear: z.number().min(0).max(2).optional() }).optional(),
   channels: z.array(z.string().max(20)).max(10).optional(),
+  requires: z.array(z.string().superRefine((src, ctx) => {
+    const why = patternProblem(src);
+    if (why) ctx.addIssue({ code: "custom", message: `the pattern "${src.slice(0, 40)}" ${why}` });
+  })).max(30).optional(),
+  missing: z.string().max(300).optional(),
+  append: z.string().max(200).optional(),
+  words: z.array(z.string().min(2).max(40)).max(500).optional(),
+  maxEmoji: z.number().int().min(0).max(100).optional(),
 }).passthrough();
 
 export const RuleId = z.string().regex(/^[A-Z0-9-]{1,24}$/, "use capital letters, digits and hyphens, up to 24 characters");
