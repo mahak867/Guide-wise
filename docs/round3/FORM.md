@@ -40,7 +40,7 @@ The three we promised, all live and tested against the exact tests written at Ro
 Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker). We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. Three new rules were added, and the documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
 
 ## Testing details
-- 74 unit tests (CI on every push).
+- 76 unit tests (CI on every push).
 - On the live site: a 20-step browser journey, a 51-step sweep of every page and control at desktop and phone sizes, and a 93-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only.
 - Images: 20 of 20 planted errors caught, with 0 false alarms.

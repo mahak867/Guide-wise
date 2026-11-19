@@ -124,7 +124,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <li><b>AI backup repaired.</b> Gemini 2.5 is not available to new keys and Gemini 3 models stalled while thinking; the adapter now uses 3.5 Flash Lite with thinking kept low (about 4 s per image) and a circuit breaker. The Groq vision model is discovered from the key instead of hard-coded.</li>
 <li><b>Two new evaluations.</b> Images (20 generated creatives) and privacy (personal data planted in 24 drafts, canaries in 3 confidential ones). The privacy evaluation found a real leak — landlines like 080-4123-5678 were not masked — fixed before publishing.</li>
 <li><b>Fewer false flags, fewer misses.</b> A number inside a promo code (EARLY10) and an offer cap ("the first 50 students") are no longer read as claims; a "$" that OCR reads in place of "₹" is treated as a price, so prices in creatives are still compared.</li>
-<li><b>Easier to try.</b> The home page links straight to the three new features; the sample campaign opens from one link; facts are edited in place, so change impact takes two clicks.</li>
+<li><b>Easier to try.</b> The home page links straight to the three new features; the sample campaign opens from one link; the demo starts with an approved post that cites F-3, and facts are edited in place, so change impact takes two clicks: Edit F-3, change the figure, save.</li>
 <li><b>New rules in the demo kit:</b> consistency across the campaign (high risk), people shown in a creative, hidden characters.</li>
 <li><b>Documentation:</b> architecture, testing, known issues with file references, dated and costed roadmap, API reference, changelog.</li>
 </ul>
