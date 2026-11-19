@@ -61,6 +61,11 @@ export default function NewReview() {
     setBusy(null);
   }
 
+  // /review/new#hard (the home page's "Try a hard case") goes straight to the hard cases.
+  useEffect(() => {
+    if (window.location.hash === "#hard") document.getElementById("hard")?.scrollIntoView({ block: "center" });
+  }, []);
+
   const autoLoaded = useRef(false);
   // /review/new?sample=campaign (linked from the home page) loads the sample campaign straight away.
   useEffect(() => {
@@ -127,7 +132,7 @@ export default function NewReview() {
               </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>
             </div>
-            <div className="rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
+            <div id="hard" className="scroll-mt-24 rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
               <span className="font-medium">Try a hard case</span> <span className="text-muted">Drafts built to get past a checker. Pick one, then run the review.</span>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {HARD_CASES.map((c) => (
