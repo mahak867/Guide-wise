@@ -66,14 +66,17 @@ function groq(): Provider | null {
   if (!process.env.GROQ_API_KEY) return null;
   const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
   let client: Groq | null = null;
+  let visionModel: string | undefined;
   return {
     id: "groq", label: `Groq (${model})`,
     async run<T>(t: Task<T>): Promise<T> {
       client ??= new Groq({ timeout: CALL_TIMEOUT_MS, maxRetries: 0 });
       if (t.image) {
-        // Vision runs on Groq's multimodal model; it answers in JSON mode and the schema is checked by Zod.
+        // Vision runs on a multimodal model this key can use (found once from Groq's model list); JSON mode, checked by Zod.
+        visionModel ??= process.env.GROQ_VISION_MODEL || (await client.models.list()).data.map((m) => m.id).find((id) => /llama-4|scout|maverick|vision/i.test(id)) || "";
+        if (!visionModel) throw new Error("No vision model is available on this Groq key.");
         const vision = await client.chat.completions.create({
-          model: process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct",
+          model: visionModel,
           max_completion_tokens: t.maxTokens,
           response_format: { type: "json_object" },
           messages: [
@@ -246,7 +249,8 @@ export function resetBreaker() { restingUntil.clear(); }
 
 /** Run one structured task on the first provider that answers; rate limits get one short retry. */
 async function ask<T>(t: Task<T>): Promise<T> {
-  const all = chain();
+  // Images go to Gemini before Groq: it reads creatives better and every Gemini Flash model takes images.
+  const all = t.image ? [...chain()].sort((a, b) => Number(a.id === "groq") - Number(b.id === "groq")) : chain();
   if (!all.length) throw new Error("No AI service is configured.");
   const c = all.filter((p) => (restingUntil.get(p.id) ?? 0) <= Date.now());
   if (!c.length) throw new Error("The AI service is busy (rate limit on the free tier). Code checks ran; press Re-check in a minute for the AI checks.");
