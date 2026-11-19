@@ -11,6 +11,7 @@
 - **Trust and security:** approval re-checks the draft if the Brand Kit changed since its last check, and anything new blocks it; every review lists what was checked and what was skipped (and why), marking a partial review, with a Re-check button when the AI was unavailable; security headers and a Content-Security-Policy; a threat model with a test for each threat (`docs/THREAT_MODEL.md`); a clear message and a health check for a local setup with no database.
 - **AI availability:** Groq limits each model separately, so its smaller model (gpt-oss-20b) now takes over text checks while the main one is rate-limited, before falling back to Gemini or to code checks only.
 - **Demo over the judging period:** the embargoed fee in the demo would have become valid on 1 December 2026, while judging may still be going on, removing the sample's embargo finding; it now lifts on 1 March 2027, and a test runs the sample at three future dates.
+- **Load test:** `npm run test:load` sends concurrent visitors, each with its own workspace, through the full creator journey on the live site (create, accept a fix, submit, insights, results, health, and the static pages), with AI off so the free quota is kept for judges. 20 and then 50 visitors at once: 980 requests, 0 failed, p95 2.9 s and 1.5 s (`docs/LOAD_TEST.md`).
 - **Robustness:** a fuzz test (26 hostile inputs) now runs in CI; it found that the email pattern took quadratic time on very long words (about 1 s), now bounded (25 ms).
 - **Docs:** architecture, testing, known issues, roadmap, API reference, contributions.
 
