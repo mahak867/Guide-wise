@@ -88,7 +88,7 @@ export default function Home() {
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {[
               { href: "/review/new?sample=campaign", title: "Review a whole campaign", body: "Caption, creative, brochure and landing page together. Prices, dates and promo codes that disagree are flagged, and AI vision checks the people shown." },
-              { href: "/facts", title: "See what a change touches", body: "Approve the sample post, then change fact F-3's figure. Every draft that used it is re-checked and the approved post goes back for re-approval." },
+              { href: "/facts", title: "See what a change touches", body: "The WhatsApp results post below is already approved. Edit fact F-3's figure: every draft that used it is re-checked and the approved post goes back for re-approval." },
               { href: "/developers", title: "Check drafts from AI tools", body: "Create an API key and call check_draft over REST or MCP: the same cited findings as the app, with an audit trail." },
             ].map((c) => (
               <Link key={c.href} href={c.href} className="group rounded-md border border-line bg-white p-4 transition-colors hover:border-brand">

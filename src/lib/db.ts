@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { SEED_FACTS, SEED_KIT, SEED_RULES } from "./seed";
+import { SEED_APPROVED, SEED_FACTS, SEED_KIT, SEED_RULES } from "./seed";
 import { ROLES, type Fact, type Kit, type Role, type Rule } from "./types";
 
 let _db: SupabaseClient | null = null;
@@ -42,6 +43,30 @@ export async function seed(ws: string, wipe: boolean): Promise<void> {
   must(await d.from("kit").upsert({ ...kit, ws, updated_at: new Date().toISOString() }));
   must(await d.from("rules").upsert(SEED_RULES.map((r) => ({ ...r, ws, last_test: null }))));
   must(await d.from("facts").upsert(SEED_FACTS.map((f) => ({ ...f, ws }))));
+  await seedApproved(ws);
+}
+
+/**
+ * One piece already approved, so change impact can be tried at once: it cites fact F-3, and changing F-3's figure
+ * sends it back for re-approval. It passes every code check as written (a unit test keeps it that way).
+ */
+async function seedApproved(ws: string): Promise<void> {
+  const d = db();
+  const existing = must(await d.from("drafts").select("id").eq("ws", ws).limit(1)) as unknown[];
+  if (existing.length) return;
+  const a = SEED_APPROVED;
+  const at = new Date(Date.now() - 3 * 864e5).toISOString();
+  const row = must(await d.from("drafts").insert({
+    ws, title: a.title, content_type: a.content_type, text: a.text, intent: a.intent, status: "approved", risk_tier: "high",
+    risk_reasons: ["Uses a results figure (F-3)"], author: "Riya", mode: "rules-only", created_at: at, updated_at: at,
+  }).select("id").single()) as { id: string };
+  must(await d.from("versions").insert({ draft_id: row.id, version: 1, text: a.text, note: "Submitted for review" }));
+  must(await d.from("receipts").insert({
+    draft_id: row.id, text_hash: createHash("sha256").update(a.text, "utf8").digest("hex"), approved_text: a.text, kit_version: 1,
+    approver: "Kavya", approver_role: "compliance", at,
+    findings_summary: { total: 0, fixed: 0, dismissed: 0, suggestions_left_open: 0, rules: [], dismissals: [], draft_version: 1, risk_tier: "high" },
+  }));
+  must(await d.from("events").insert({ ws, draft_id: row.id, actor: "Kavya", role: "compliance", action: "approved", detail: { version: 1, kit_version: 1, note: "Demo data: approved before you arrived" }, at }));
 }
 
 export async function loadKit(ws: string): Promise<{ kit: Kit; rules: Rule[]; facts: Fact[] }> {

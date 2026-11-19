@@ -410,3 +410,11 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
 ];
+
+/** A piece approved before the visitor arrives; it uses fact F-3, so changing F-3 shows change impact straight away. */
+export const SEED_APPROVED = {
+  title: "WhatsApp broadcast: 2025 JEE results",
+  content_type: "social",
+  text: "Our 2025 results: 4,200+ JEE selections from our two-year classroom programme. Past results do not guarantee future selection. Admissions for the 2026 batch are open: write to admissions@preppath.in.",
+  intent: { goal: "Announce 2025 results", audience: "Parents of Class 11 students", cta: "Write to admissions", confidential: false, locked: [] as string[] },
+};
