@@ -6,6 +6,9 @@ import { ROLES, type Fact, type Kit, type Role, type Rule } from "./types";
 let _db: SupabaseClient | null = null;
 export function db(): SupabaseClient {
   if (!_db) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_KEY) {
+      throw new Error("No database is configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY in .env.local to a Supabase project with the migrations in supabase/migrations applied (see README, Run locally), then restart.");
+    }
     _db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_KEY!, {
       auth: { persistSession: false },
     });

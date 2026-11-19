@@ -1,5 +1,6 @@
 import { aiAvailable, aiDiagnostics, aiModel, extractClaims, geminiLatency, geminiModels, judgeRule, probeProvider } from "@/lib/engine/ai";
 import { SEED_RULES } from "@/lib/seed";
+import { db } from "@/lib/db";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -7,6 +8,14 @@ export const dynamic = "force-dynamic";
 // Health check: with ?ai=1 it makes two small real AI calls and reports which provider answered.
 export async function GET(req: Request) {
   const out: Record<string, unknown> = { ai: { available: aiAvailable(), chain: aiModel() } };
+  // The database answers a one-row read, or says what is missing.
+  const t0 = Date.now();
+  try {
+    const { error } = await db().from("kit").select("ws").limit(1);
+    out.database = error ? { ok: false, error: error.message } : { ok: true, ms: Date.now() - t0 };
+  } catch (e) {
+    out.database = { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
   if (new URL(req.url).searchParams.get("ai") === "1" && aiAvailable()) {
     const t0 = Date.now();
     try {
