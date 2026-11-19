@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import type { Intent, Rule } from "../types";
@@ -98,6 +98,14 @@ function groq(): Provider | null {
   };
 }
 
+/**
+ * Least thinking each model generation allows. Our tasks are short classification and transcription,
+ * and thinking makes Gemini answers take tens of seconds. Gemini 2.x takes a budget; Gemini 3 takes a level.
+ */
+function quickThinking(model: string): { thinkingBudget: number } | { thinkingLevel: ThinkingLevel } {
+  return /^gemini-2/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: /lite/.test(model) ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW };
+}
+
 /** Flash models this key can call, newest first (lite models last). */
 export async function geminiModels(): Promise<string[]> {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -129,7 +137,7 @@ function gemini(): Provider | null {
         config: {
           systemInstruction: t.system, responseMimeType: "application/json", responseJsonSchema: jsonSchema(t.schema), maxOutputTokens: t.maxTokens,
           // Reading a creative needs no step-by-step reasoning; without it the answer comes in seconds, not tens of seconds.
-          ...(t.image ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          thinkingConfig: quickThinking(model),
         },
       });
       try {
@@ -453,7 +461,7 @@ export async function geminiLatency(): Promise<{ model: string; ms: number; ok: 
   return Promise.all(models.map(async (model) => {
     const t0 = Date.now();
     try {
-      await withTimeout(client.models.generateContent({ model, contents: 'Return {"ok": true}', config: { responseMimeType: "application/json", maxOutputTokens: 50, thinkingConfig: { thinkingBudget: 0 } } }), 20_000, model);
+      await withTimeout(client.models.generateContent({ model, contents: 'Return {"ok": true}', config: { responseMimeType: "application/json", maxOutputTokens: 50, thinkingConfig: quickThinking(model) } }), 20_000, model);
       return { model, ms: Date.now() - t0, ok: true };
     } catch (e) {
       return { model, ms: Date.now() - t0, ok: false, error: (e as Error)?.message?.slice(0, 120) };
