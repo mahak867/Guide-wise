@@ -23,7 +23,12 @@ export default function Record() {
   if (error) return <p className="text-sm text-crit">{error}</p>;
   if (!d) return <p className="text-sm text-muted">Preparing the record…</p>;
   const r = d.receipt;
-  if (!r) return <p className="text-sm text-muted">This draft has not been approved yet, so there is no record. <Link className="underline" href={`/review/${id}`}>Back to the review</Link></p>;
+  if (!r) return (
+    <div>
+      <h1>Approval record</h1>
+      <p className="mt-1 text-sm text-muted">This draft has not been approved yet, so there is no record. <Link className="underline" href={`/review/${id}`}>Back to the review</Link></p>
+    </div>
+  );
   return (
     <article className="mx-auto max-w-3xl bg-white p-10 text-[13px] leading-relaxed shadow-sm print:max-w-none print:p-0 print:shadow-none">
       <div className="mb-6 flex items-center justify-between print:hidden">

@@ -85,7 +85,7 @@ export default function FactsPage() {
         <table className="w-full text-left text-sm">
           <caption className="px-4 pt-3 text-left font-semibold">Facts Register</caption>
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
-            <tr><th className="px-4 py-2 font-medium">ID</th><th className="px-4 py-2 font-medium">Approved statement</th><th className="px-4 py-2 font-medium">Status today</th><th className="px-4 py-2 font-medium">Evidence and owner</th><th className="px-4 py-2 font-medium">Must appear with</th><th className="px-4 py-2" /></tr>
+            <tr><th className="px-4 py-2 font-medium">ID</th><th className="px-4 py-2 font-medium">Approved statement</th><th className="px-4 py-2 font-medium">Status today</th><th className="px-4 py-2 font-medium">Evidence and owner</th><th className="px-4 py-2 font-medium">Must appear with</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             {facts.map((f) => {
