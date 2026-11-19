@@ -1,7 +1,8 @@
 // Personal data is replaced with placeholders before any text leaves for an AI call.
 // Placeholders keep their position so quotes can be mapped back to the original text.
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-const PHONE = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b/g;
+// Mobile numbers (98765 43210, +91 99887 76655) and landlines with an STD code (080-4123-5678, 044 2345 6789, 01123456789).
+const PHONE = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|(?<![\d₹,.])\b0\d{2,4}[\s-]?\d{3,4}[\s-]?\d{4}\b/g;
 
 export interface Redaction {
   placeholder: string;

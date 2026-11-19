@@ -6,7 +6,7 @@
 
 **Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace · [100-second captioned walkthrough](https://guidewise-kohl.vercel.app/demo.webm) recorded on the live site
 
-Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026, Round 2. All product code was written inside the official build window, which opened on 13 November 2026 at 10:00 IST (see the commit history).
+Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026 finalist. Round 2 code was written in its window (13–16 November 2026); the Round 3 work in its window (from 18 November 2026, 11:59 PM IST). The commit history shows both.
 
 ## Measured on our own test set
 
