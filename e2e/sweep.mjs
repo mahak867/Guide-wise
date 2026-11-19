@@ -420,6 +420,18 @@ await step(page, "campaign: the sample campaign finds the price mismatch and the
   must(titles.includes("The campaign says the same thing everywhere"), "no cross-document finding");
   return titles.includes("People in a creative need consent on record") ? "person flagged by AI vision" : "AI vision unavailable this run";
 });
+await step(page, "campaign: read a live landing page by its address", async () => {
+  await go("/review/new", "Brief card"); await role("creator");
+  await page.locator("textarea").first().fill("JEE crash course for droppers. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol.");
+  await page.getByRole("button", { name: "Use our sample landing page" }).click();
+  await page.getByRole("button", { name: "Read page" }).click();
+  await msg(/Menus, headers and footers were left out/);
+  const doc = await page.locator("#doc-0").inputValue();
+  must(/₹14,999/.test(doc) && !/Courses|Privacy|Enrol now/.test(doc), "page text not read cleanly");
+  await page.locator("#doc-url").fill("http://169.254.169.254/latest/meta-data/");
+  await page.getByRole("button", { name: "Read page" }).click();
+  await msg(/not a public web page/);
+});
 await step(page, "results: switch set and re-run; open a draft", async () => {
   await page.goto(L + "/results");
   await page.locator("select").nth(1).selectOption({ index: 1 });
