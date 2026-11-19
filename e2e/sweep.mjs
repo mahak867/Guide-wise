@@ -393,6 +393,19 @@ await step(page, "developers: create a key, call check_draft via REST and MCP, s
   await page.getByRole("button", { name: "Revoke" }).first().click();
   await msg("Revoked");
 });
+await step(page, "campaign: the sample campaign finds the price mismatch and the person shown", async () => {
+  await go("/review/new", "Brief card"); await role("creator");
+  await page.getByRole("button", { name: "Use the sample campaign" }).click();
+  await page.getByText(/Logo found \(match/).first().waitFor({ timeout: 120000 });
+  must((await page.locator("textarea[id^='doc-']").count()) === 2, "sample documents not added");
+  await page.getByRole("button", { name: "Run review" }).click();
+  await page.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
+  await msg(/open finding/, 90000);
+  await msg("Campaign documents");
+  const titles = await page.locator("button[aria-expanded]").evaluateAll((els) => els.map((e) => e.innerText.split("\n")[0]));
+  must(titles.includes("The campaign says the same thing everywhere"), "no cross-document finding");
+  return titles.includes("People in a creative need consent on record") ? "person flagged by AI vision" : "AI vision unavailable this run";
+});
 await step(page, "results: switch set and re-run; open a draft", async () => {
   await page.goto(L + "/results");
   await page.locator("select").nth(1).selectOption({ index: 1 });
