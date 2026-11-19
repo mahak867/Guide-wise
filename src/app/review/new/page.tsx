@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { CampaignDocs, type Doc } from "@/components/CampaignDocs";
@@ -47,6 +47,26 @@ export default function NewReview() {
       expired: facts.filter((f) => f.valid_until && f.valid_until < today),
     };
   }, [state, today, type]);
+
+  async function loadCampaign() {
+    setTitle("Campaign: JEE crash course"); setType("social"); setHard(null);
+    setText(SAMPLE_CAMPAIGN.caption); setDocs(SAMPLE_CAMPAIGN.docs);
+    setIntent({ goal: "Fill the January crash course", audience: "JEE droppers", cta: "Enrol for the crash course", locked: "" });
+    setBusy("Reading the campaign creative…");
+    try {
+      const blob = await (await fetch("/sample-campaign-creative.png")).blob();
+      const img = await analyseImage(blob, "sample-campaign-creative.png", (m) => setBusy(`Campaign creative: ${m}`), logo);
+      setImages([{ ...img, alt: "PrepPath crash course creative: an illustrated student holding a trophy beside the text JEE Crash Course, Fee ₹12,999, Starts 5 January, Code EARLY20." }]);
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    setBusy(null);
+  }
+
+  const autoLoaded = useRef(false);
+  // /review/new?sample=campaign (linked from the home page) loads the sample campaign straight away.
+  useEffect(() => {
+    if (state && !autoLoaded.current && new URLSearchParams(window.location.search).get("sample") === "campaign" && !text) { autoLoaded.current = true; loadCampaign(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   async function upload(file: File) {
     setBusy("Reading the document…");
@@ -102,18 +122,7 @@ export default function NewReview() {
               <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent({ ...DEMO_INTENT, locked: "" }); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
                 Use the sample caption
               </Button>
-              <Button type="button" variant="ghost" disabled={!!busy} onClick={async () => {
-                setTitle("Campaign: JEE crash course"); setType("social"); setHard(null);
-                setText(SAMPLE_CAMPAIGN.caption); setDocs(SAMPLE_CAMPAIGN.docs);
-                setIntent({ goal: "Fill the January crash course", audience: "JEE droppers", cta: "Enrol for the crash course", locked: "" });
-                setBusy("Reading the campaign creative…");
-                try {
-                  const blob = await (await fetch("/sample-campaign-creative.png")).blob();
-                  const img = await analyseImage(blob, "sample-campaign-creative.png", (m) => setBusy(`Campaign creative: ${m}`), logo);
-                  setImages([{ ...img, alt: "PrepPath crash course creative: an illustrated student holding a trophy beside the text JEE Crash Course, Fee ₹12,999, Starts 5 January, Code EARLY20." }]);
-                } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-                setBusy(null);
-              }}>
+              <Button type="button" variant="ghost" disabled={!!busy} onClick={loadCampaign}>
                 Use the sample campaign
               </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>

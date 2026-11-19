@@ -83,6 +83,21 @@ export default function Home() {
           <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
           <li><b className="text-ink">4. Approve.</b> Switch to Kavya, dismiss what is left with a reason (or request changes), and approve to get the receipt.</li>
         </ol>
+        <div className="mt-6 border-t border-line pt-5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">New in the final round</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {[
+              { href: "/review/new?sample=campaign", title: "Review a whole campaign", body: "Caption, creative, brochure and landing page together. Prices, dates and promo codes that disagree are flagged, and AI vision checks the people shown." },
+              { href: "/facts", title: "See what a change touches", body: "Approve the sample post, then change fact F-3's figure. Every draft that used it is re-checked and the approved post goes back for re-approval." },
+              { href: "/developers", title: "Check drafts from AI tools", body: "Create an API key and call check_draft over REST or MCP: the same cited findings as the app, with an audit trail." },
+            ].map((c) => (
+              <Link key={c.href} href={c.href} className="group rounded-md border border-line bg-white p-4 transition-colors hover:border-brand">
+                <b className="font-serif text-[15px] font-medium text-ink group-hover:text-brand-dark">{c.title} →</b>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{c.body}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
       </section>
 
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
