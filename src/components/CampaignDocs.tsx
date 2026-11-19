@@ -11,6 +11,8 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
   const [kind, setKind] = useState(KINDS[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
+  const [note, setNote] = useState<string | null>(null);
   const set = (i: number, patch: Partial<Doc>) => onChange(docs.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   async function upload(file: File) {
     setBusy(true); setError(null);
@@ -22,9 +24,19 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     setBusy(false);
   }
+  async function readPage() {
+    setBusy(true); setError(null); setNote(null);
+    try {
+      const out = await api<{ text: string; url: string; truncated: boolean }>("/api/extract", { url });
+      onChange([...docs, { name: kind, text: out.text }]);
+      setNote(`Read ${out.url}${out.truncated ? " (the first 12,000 characters)" : ""}. Menus, headers and footers were left out; edit the text below if needed.`);
+      setUrl("");
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    setBusy(false);
+  }
   return (
     <fieldset className="rounded-md border border-line p-3">
-      <legend className="px-1 text-sm font-medium">Campaign documents <span className="font-normal text-muted">Optional, up to 4. Reviewed with the caption; prices, dates and promo codes are compared across all of them.</span></legend>
+      <legend className="px-1 text-sm font-medium">Campaign documents <span className="font-normal text-muted">Optional, up to 4: paste text, upload a PDF or Word file, or read a live web page. Reviewed with the caption; prices, dates and promo codes are compared across all of them.</span></legend>
       <div className="space-y-3">
         {docs.map((d, i) => (
           <div key={i} className="rounded-md border border-line p-2 text-sm">
@@ -48,8 +60,15 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
               {busy ? "Reading…" : "Upload PDF or DOCX"}
               <input type="file" accept=".pdf,.docx" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) upload(f); }} />
             </label>
+            <div className="flex min-w-0 flex-1 basis-64 items-center gap-2">
+              <label className="sr-only" htmlFor="doc-url">Web page address</label>
+              <input id="doc-url" type="text" inputMode="url" autoComplete="url" className={inputCls + " min-w-0 flex-1 py-1"} value={url} onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (url.trim() && !busy) readPage(); } }} placeholder="or a live page: https://…" />
+              <Button type="button" disabled={busy || !url.trim()} onClick={readPage}>{busy ? "Reading…" : "Read page"}</Button>
+            </div>
           </div>
         )}
+        {note && <p className="text-xs text-muted">{note}</p>}
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
     </fieldset>

@@ -1,12 +1,21 @@
 import mammoth from "mammoth";
 import { extractText, getDocumentProxy } from "unpdf";
 import { BadInput, fail } from "@/lib/db";
+import { fetchPage } from "@/lib/webpage";
 
 export const maxDuration = 30;
 
-// DOCX or PDF in, plain text out. The file is read in memory and not stored.
+// DOCX or PDF in, plain text out; or {"url": …} for a public web page. Nothing is stored.
 export async function POST(req: Request) {
   try {
+    if ((req.headers.get("content-type") ?? "").includes("application/json")) {
+      const { url } = (await req.json()) as { url?: unknown };
+      if (typeof url !== "string" || !url.trim() || url.length > 2000) return fail("Send the web page address as url.");
+      const page = await fetchPage(url);
+      if (page.text.length < 10) return fail("No readable text was found on that page. If it is built entirely in JavaScript, copy the text from your browser instead.");
+      const truncated = page.text.length > 12000;
+      return Response.json({ text: page.text.slice(0, 12000), name: page.title || new URL(page.url).hostname, url: page.url, truncated });
+    }
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return fail("No file was sent.");
