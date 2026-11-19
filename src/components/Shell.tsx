@@ -40,7 +40,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky print:hidden top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
+      <header className="print:hidden z-20 sm:sticky sm:top-0 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full border border-ink font-serif text-[15px] italic leading-none">g</span>
@@ -56,7 +56,7 @@ export function Shell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center gap-2 text-sm">
+          <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2 text-sm">
             {state && (
               <span title={state.ai.available ? `AI checks on (${state.ai.model})` : "AI service is off. Code checks and the full workflow still run."}>
                 <Badge tone={state.ai.available ? "green" : "major"}>{state.ai.available ? "AI checks on" : "Rules-only mode"}</Badge>
@@ -65,7 +65,7 @@ export function Shell({ children }: { children: ReactNode }) {
             {state && <span className="hidden xl:inline"><Badge>{state.kit.name} · Kit v{state.kit.version}</Badge></span>}
             <label className="flex items-center gap-1.5">
               <span className="hidden text-muted md:inline">Acting as</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="rounded-md border border-line bg-white px-2 py-1.5 font-medium">
+              <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="min-w-0 max-w-[60vw] rounded-md border border-line bg-white px-2 py-1.5 font-medium sm:max-w-none">
                 {(Object.keys(ROLES) as Role[]).map((r) => (
                   <option key={r} value={r}>
                     {ROLES[r].name} · {ROLES[r].title}
