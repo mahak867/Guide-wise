@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"], style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: "Guidewise",
+  title: { template: "%s · Guidewise", default: "Guidewise: brand rules that run" },
   description: "Brand rules that run. Check a draft against your approved rules and facts before it is published.",
 };
 
