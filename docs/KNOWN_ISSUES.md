@@ -3,7 +3,7 @@
 Stated plainly, with where each one lives in the code.
 
 1. **No sign-in.** Roles are switched with "Acting as" so judges can use the link directly. Roles are enforced on the server and each visitor gets a private workspace (`src/lib/db.ts:21`, `wsOf`), but a real deployment needs accounts and per-organisation row-level security.
-2. **Free AI tiers.** Heavy simultaneous use can hit rate limits. The review then finishes with code checks only and says so; "Re-check" brings the AI back about a minute later (`src/lib/engine/ai.ts:200`, three calls at a time).
+2. **Free AI tiers.** Heavy simultaneous use can hit rate limits. Groq's smaller model (`openai/gpt-oss-20b`, its own limit) takes over first; its accuracy has not been measured separately from the main model's. If every provider is limited, the review finishes with code checks only and says so; "Re-check" brings the AI back about a minute later (`src/lib/engine/ai.ts:200`, three calls at a time).
 3. **AI vision needs the AI service.** With no provider available, people in creatives are not detected and the review says so (`src/lib/engine/review.ts`, `visionError` in the stats).
 4. **Logo check matches the logo file itself.** A redrawn, recoloured or heavily stretched logo is reported as missing; a reviewer dismisses it with a reason (`src/lib/logo.ts:112`).
 5. **OCR reads English.** Hindi text inside an image is not read reliably by OCR; AI vision usually reads it. Hindi in the caption is checked (`src/lib/image.ts:85`).

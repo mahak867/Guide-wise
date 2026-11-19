@@ -37,10 +37,10 @@ The three we promised, all live and tested against the exact tests written at Ro
 2. API and MCP server. Scoped keys, get_brief (only the facts valid today) and check_draft (the same findings as the app), over REST and MCP, with a playground and an audit trail.
 3. Campaign review with AI vision. Caption, creatives and documents are reviewed together. Price, date and promo-code mismatches across them are found and cited. People shown in creatives are flagged for consent and routed to compliance.
 
-Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker). We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. One new rule (people shown in a creative) was added and the consistency rule was extended to dates, promo codes and documents. The documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
+Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker), and Groq's smaller model takes over while the main one is rate-limited. We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. One new rule (people shown in a creative) was added and the consistency rule was extended to dates, promo codes and documents. The documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
 
 ## Testing details
-- 77 unit tests (CI on every push).
+- 81 unit tests (CI on every push).
 - On the live site: a 20-step browser journey, a 51-step sweep of every page and control at desktop and phone sizes, and a 93-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only.
 - Images: 20 of 20 planted errors caught, with 0 false alarms.

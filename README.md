@@ -17,7 +17,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 
 95% Wilson intervals. Images: 20 generated creatives with planted colour, contrast and logo errors, all 20 caught with no false alarms (`npm run eval:images`). Privacy: personal data planted in 24 drafts and canaries in 3 confidential ones, 0 leaks in 144 AI prompts (`npm run eval:privacy`). The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed so anyone gets the same set; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The numbers are optimistic because the same team wrote the rules and the drafts.
 
-**Tests:** 77 unit tests, a 20-step browser test of the whole journey, a 51-step sweep that clicks every page and control at desktop and phone sizes, and a 93-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
+**Tests:** 81 unit tests, a 20-step browser test of the whole journey, a 51-step sweep that clicks every page and control at desktop and phone sizes, and a 93-check probe that sends every API route bad input, the wrong role, and requests from another visitor's workspace. The browser test, the sweep and the probe pass against the live site; the unit tests and the evaluation run in CI on every push.
 
 ## Try it in two minutes
 
@@ -46,7 +46,7 @@ Then try to break it: **New review → Try a hard case** offers seven drafts bui
 | Workflow | Four roles enforced on the server; accept, edit a fix before accepting, dismiss with a reason, reopen; locked phrases no fix may remove; comments, versions with word-level changes, request changes, audit log |
 | Insights and Guideline Health | Rules that fire and get dismissed most, rules two or more people call unclear, and facts that are expired, embargoed or expiring within 60 days. For a rule with dismissals, Guidewise drafts clearer wording and new tests; code re-runs every test and the manager approves |
 | Privacy | Emails, phone numbers, Aadhaar, PAN and card numbers are masked before any AI call. A draft marked confidential is never sent to AI |
-| Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 12-second cap per call (25 for images), automatic fallback, and a provider that is rate-limited or slow rested for a minute; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
+| Reliability | One AI adapter (Claude → Groq → Groq's smaller model → Gemini, whichever keys exist; Groq serves the live site, and its smaller model, which has its own rate limit, takes over while the main one is limited) with a 12-second cap per call (25 for images), automatic fallback, and a provider that is rate-limited or slow rested for a minute; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
 
 
 ## Changes from the Round 1 plan (summary)
@@ -84,7 +84,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 77 unit tests, including a deliberately wrong AI
+npm test                                                     # 81 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone
@@ -105,7 +105,7 @@ Apply the migrations in `supabase/migrations/` (001 to 008, in order) to a Supab
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` | Supabase project URL and publishable key |
 | `GROQ_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Optional; set any. Keys present are tried in turn, falling through on errors, timeouts or rate limits. With none, Guidewise runs in rules-only mode |
-| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL`, `GROQ_VISION_MODEL` | Optional model overrides (Gemini defaults to `gemini-3.5-flash-lite`) |
+| `GROQ_MODEL`, `GROQ_BACKUP_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL`, `GROQ_VISION_MODEL` | Optional model overrides (Groq defaults to `openai/gpt-oss-120b` with `openai/gpt-oss-20b` as backup, `off` to disable; Gemini defaults to `gemini-3.5-flash-lite`) |
 | `EVAL_TOKEN` | Optional; protects the endpoint that measures AI accuracy |
 
 ## Limits, stated plainly

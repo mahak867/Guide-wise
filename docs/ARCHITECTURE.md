@@ -36,7 +36,7 @@ AI writing tools (MCP clients, scripts) ──────►            └─ 
 
 ## AI providers (`src/lib/engine/ai.ts`)
 
-Claude, Groq and Gemini are tried in that order, whichever keys are set (the live site: Groq `openai/gpt-oss-120b`, then Gemini `gemini-3.5-flash-lite`). Images go to Gemini first. Each call has a time cap (12 s for text, 25 s for images); a provider that is rate-limited or slow is rested for 30–60 s so later calls do not wait on it; answers are cached in Postgres (`ai_cache`). With no provider, the code checks and the whole workflow still run, and the app says so.
+Claude, Groq and Gemini are tried in that order, whichever keys are set (the live site: Groq `openai/gpt-oss-120b`, then Groq `openai/gpt-oss-20b`, then Gemini `gemini-3.5-flash-lite`). Groq limits each model separately, so the smaller model takes over text checks while the main one is rate-limited. Images go to Gemini first. Each call has a time cap (12 s for text, 25 s for images); a provider that is rate-limited or slow is rested for 30–60 s so later calls do not wait on it; answers are cached in Postgres (`ai_cache`). With no provider, the code checks and the whole workflow still run, and the app says so.
 
 ## Data (`supabase/migrations/001`–`008`)
 

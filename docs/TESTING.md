@@ -1,6 +1,6 @@
 # Testing
 
-Latest full run against the live site (19 Nov 2026 build): **77 unit tests, 20 of 20 journey steps, 51 of 51 sweep steps, 93 of 93 API probe checks**, no server or page errors.
+Latest full run against the live site (19 Nov 2026 build): **81 unit tests, 20 of 20 journey steps, 51 of 51 sweep steps, 93 of 93 API probe checks**, no server or page errors.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |
@@ -30,6 +30,10 @@ The image labels were corrected once: three backgrounds first labelled "colour o
 ## Reliability checks a judge will do
 
 Bad input (malformed JSON, corrupt files, impossible dates, unsafe patterns, too-long text), empty states, refreshing, and repeating an action (saving the same fact change twice, accepting all twice, revoking a key twice) are all covered by the sweep and the probe. None returns a server error.
+
+## The demo over the judging period
+
+`tests/demo-dates.test.ts` runs the sample post with the clock set to 21 November 2026, 15 December 2026 and 15 February 2027: the embargoed fee (F-9) and the expired rating (F-11) are still flagged on every date. The whole unit suite was also run with the clock set to 28 November, 15 December and 15 January: all pass. This found that F-9's embargo ended on 1 December 2026, during judging; it now ends on 1 March 2027.
 
 ## Fuzzing
 
