@@ -1,11 +1,16 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Impact } from "@/lib/impact";
 
 /** After any fact or rule change, shows which drafts used it, what the re-check found, and which approvals were reopened. */
 export function ImpactPanel() {
   const [impact, setImpact] = useState<Impact | null>(null);
+  const ref = useRef<HTMLElement>(null);
+  // The change is usually saved from a form further down the page; bring the result into view.
+  useEffect(() => {
+    if (impact) ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [impact]);
   useEffect(() => {
     const on = (e: Event) => setImpact((e as CustomEvent<Impact>).detail);
     window.addEventListener("gw-impact", on);
@@ -15,7 +20,7 @@ export function ImpactPanel() {
   const reopened = impact.affected.filter((a) => a.outcome === "reapproval");
   const label = { reapproval: "Sent back for re-approval", still_passes: "Approved, still passes", rechecked: "Re-checked" } as const;
   return (
-    <section role="status" aria-label="Impact of this change" className="mb-5 rounded-md border border-line bg-white p-4 text-sm shadow-sm">
+    <section ref={ref} role="status" aria-label="Impact of this change" className="mb-5 scroll-mt-28 rounded-md border border-line bg-white p-4 text-sm shadow-sm">
       <div className="flex flex-wrap items-start gap-2">
         <div className="flex-1">
           <h2 className="text-base">Impact of this change</h2>
