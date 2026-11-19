@@ -8,7 +8,12 @@ Built the review pipeline (redaction, code checks, AI checks and the provider ad
 
 ## Roshini R — frontend and design
 
-_To be completed by Roshini before submission: the screens, designs, copy, testing or documentation she worked on. Only what she actually did._
+Directed the home page and the product's look, and the review page UI, working through the team's shared Claude account (so these changes were pushed from Mahak's account and are not listed under her name in the commit history):
+
+- **Home page and look:** the home page layout, the four-step guide, the "New in the final round" cards that link straight to the three Round 3 features, and the visual style (serif headings, warm paper background, green brand colour, spacing).
+- **Review page:** the findings list and how each finding shows its rule, source and fix, the "Back for re-approval" banner, the Campaign documents card, the image panel with what AI vision read, and the guided tour.
+
+From 20 November 2026, commits in these areas carry her as co-author.
 
 ## Tools
 
