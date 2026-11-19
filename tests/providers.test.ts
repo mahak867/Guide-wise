@@ -3,16 +3,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls: string[] = [];
-let groqBehaviour: "rate-limit" | "bad-json" | "ok" = "rate-limit";
+let groqBehaviour: "rate-limit" | "bad-json" | "ok" | "main-limited" = "rate-limit";
 const geminiModelsSeen: string[] = [];
 
 vi.mock("groq-sdk", () => ({
   default: class {
     chat = {
       completions: {
-        create: async () => {
-          calls.push("groq");
-          if (groqBehaviour === "rate-limit") throw Object.assign(new Error("Rate limit reached"), { status: 429 });
+        create: async ({ model }: { model: string }) => {
+          const small = model === "openai/gpt-oss-20b";
+          calls.push(small ? "groq-small" : "groq");
+          if (groqBehaviour === "rate-limit" || (groqBehaviour === "main-limited" && !small)) throw Object.assign(new Error("Rate limit reached"), { status: 429 });
+          if (small && groqBehaviour === "main-limited") return { choices: [{ message: { content: '{"findings":[{"quote":"best coaching","explanation":"from the small model","fix":"trusted coaching"}]}' } }] };
           if (groqBehaviour === "bad-json") return { choices: [{ message: { content: '{"findings":[{"quote":1}]}' } }] };
           return { choices: [{ message: { content: '{"findings":[{"quote":"best coaching","explanation":"x","fix":"trusted coaching"}]}' } }] };
         },
@@ -52,22 +54,28 @@ const rule = SEED_RULES.find((r) => r.id === "R-08")!;
 beforeEach(() => { calls.length = 0; resetBreaker(); });
 
 describe("provider chain", () => {
-  it("lists Groq first, then Gemini", () => {
-    expect(aiModel()).toMatch(/^Groq .* then Gemini/);
+  it("lists Groq first, then Groq's smaller model, then Gemini", () => {
+    expect(aiModel()).toMatch(/^Groq \(openai\/gpt-oss-120b\), then Groq \(openai\/gpt-oss-20b\), then Gemini/);
   });
+  it("hands over to Groq's smaller model while the main one is rate-limited", async () => {
+    groqBehaviour = "main-limited";
+    const out = await judgeRule(rule, "The best coaching in Madurai.", null);
+    expect(out[0].explanation).toBe("from the small model");
+    expect(calls).toEqual(["groq", "groq", "groq-small"]);
+  }, 15000);
   it("falls through to Gemini when Groq is rate-limited, and finds a Gemini model the key can use", async () => {
     groqBehaviour = "rate-limit";
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
     expect(out[0].explanation).toBe("from gemini");
-    // one Groq retry, then Gemini: its default name 404s, so it picks the newest non-lite Flash model and retries
-    expect(calls).toEqual(["groq", "groq", "gemini", "gemini"]);
+    // one retry on each Groq model, then Gemini: its default name 404s, so it picks the newest non-lite Flash model and retries
+    expect(calls).toEqual(["groq", "groq", "groq-small", "groq-small", "gemini", "gemini"]);
     expect(geminiModelsSeen).toEqual(["gemini-2.5-flash", "gemini-3.5-flash"]);
     expect(aiModel()).toMatch(/Gemini \(gemini-3.5-flash\)/);
   }, 15000);
   it("rejects an answer that does not match the schema", async () => {
     groqBehaviour = "bad-json";
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
-    expect(calls).toEqual(["groq", "gemini"]);
+    expect(calls).toEqual(["groq", "groq-small", "gemini"]);
     expect(out[0].explanation).toBe("from gemini");
   });
   it("uses Groq when it answers", async () => {
@@ -101,5 +109,6 @@ describe("provider chain", () => {
     const out = await judgeRule(rule, "The best coaching in Chennai.", null);
     expect(out[0].explanation).toBe("from gemini");
     expect(calls).not.toContain("groq");
+    expect(calls).not.toContain("groq-small");
   });
 });

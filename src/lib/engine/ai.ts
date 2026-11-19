@@ -23,7 +23,7 @@ const VISION_TIMEOUT_MS = 25_000;
 /** image: a data URL (JPEG or PNG) for vision tasks. */
 interface Task<T> { name: string; system: string; user: string; schema: z.ZodType<T>; maxTokens: number; image?: string }
 const imgParts = (dataUrl: string) => { const m = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/); if (!m) throw new Error("The image could not be sent to the AI service."); return { mime: m[1], data: m[2] }; };
-interface Provider { id: string; label: string; run<T>(t: Task<T>): Promise<T> }
+interface Provider { id: string; label: string; textOnly?: boolean; run<T>(t: Task<T>): Promise<T> }
 
 /** JSON Schema for a Zod schema, without the $schema header some providers reject. */
 function jsonSchema(schema: z.ZodType): Record<string, unknown> {
@@ -62,13 +62,23 @@ function claude(): Provider | null {
   };
 }
 
-function groq(): Provider | null {
+/**
+ * Groq limits each model separately, so a second, smaller model on the same key takes over while the main one is
+ * rate-limited (text only). Set GROQ_BACKUP_MODEL=off to turn it off.
+ */
+function groqBackup(): Provider | null {
+  const model = process.env.GROQ_BACKUP_MODEL || "openai/gpt-oss-20b";
+  if (!process.env.GROQ_API_KEY || model === "off" || model === (process.env.GROQ_MODEL || "openai/gpt-oss-120b")) return null;
+  const p = groq(model, "groq-small");
+  return p && { ...p, textOnly: true };
+}
+
+function groq(model = process.env.GROQ_MODEL || "openai/gpt-oss-120b", id = "groq"): Provider | null {
   if (!process.env.GROQ_API_KEY) return null;
-  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
   let client: Groq | null = null;
   let visionModel: string | undefined;
   return {
-    id: "groq", label: `Groq (${model})`,
+    id, label: `Groq (${model})`,
     async run<T>(t: Task<T>): Promise<T> {
       client ??= new Groq({ timeout: CALL_TIMEOUT_MS, maxRetries: 0 });
       if (t.image) {
@@ -170,7 +180,7 @@ function gemini(): Provider | null {
 
 let providers: Provider[] | null = null;
 function chain(): Provider[] {
-  providers ??= [claude(), groq(), gemini()].filter((p): p is Provider => p !== null);
+  providers ??= [claude(), groq(), groqBackup(), gemini()].filter((p): p is Provider => p !== null);
   return providers;
 }
 
@@ -262,7 +272,7 @@ export function resetBreaker() { restingUntil.clear(); }
 /** Run one structured task on the first provider that answers; rate limits get one short retry. */
 async function ask<T>(t: Task<T>): Promise<T> {
   // Images go to Gemini before Groq: it reads creatives better and every Gemini Flash model takes images.
-  const all = t.image ? [...chain()].sort((a, b) => Number(a.id === "groq") - Number(b.id === "groq")) : chain();
+  const all = t.image ? chain().filter((p) => !p.textOnly).sort((a, b) => Number(a.id === "groq") - Number(b.id === "groq")) : chain();
   if (!all.length) throw new Error("No AI service is configured.");
   const c = all.filter((p) => (restingUntil.get(p.id) ?? 0) <= Date.now());
   if (!c.length) throw new Error("The AI service is busy (rate limit on the free tier). Code checks ran; press Re-check in a minute for the AI checks.");
