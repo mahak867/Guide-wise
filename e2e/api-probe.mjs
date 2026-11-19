@@ -24,6 +24,12 @@ const is4xx = (r) => r.s >= 400 && r.s < 500 && typeof r.j?.error === "string" &
 const is = (code) => (r) => r.s === code;
 
 await call("GET", "/api/state");
+{
+  const h = (await fetch(L + "/")).headers;
+  const csp = h.get("content-security-policy") ?? "";
+  expect("security headers: CSP forbids framing and other origins", { s: 200, j: { csp } }, () => /default-src 'self'/.test(csp) && /frame-ancestors 'none'/.test(csp) && /object-src 'none'/.test(csp));
+  expect("security headers: nosniff, no framing, no x-powered-by", { s: 200, j: {} }, () => h.get("x-content-type-options") === "nosniff" && h.get("x-frame-options") === "DENY" && !h.get("x-powered-by"));
+}
 const { j: created } = await call("POST", "/api/drafts", { body: { title: "Probe", content_type: "social", text: "100% selection guaranteed!! Call 98765 43210.", useAI: false } });
 const id = created?.id;
 console.log("draft", id);
