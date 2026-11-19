@@ -1,12 +1,15 @@
 // Clicks through every page and control of the app in a fresh workspace, at desktop and phone sizes.
 // Fails on any page error, console error, server error (5xx), broken image, broken internal link,
-// sideways scrolling on a phone, or a control that does not do what it says.
+// sideways scrolling on a phone, an accessibility violation of "serious" or "critical" impact (axe-core),
+// or a control that does not do what it says.
 //   BASE_URL=https://guidewise-kohl.vercel.app node e2e/sweep.mjs
 import { createRequire } from "node:module";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-const { chromium, devices } = createRequire(import.meta.url)("playwright");
+const require = createRequire(import.meta.url);
+const { chromium, devices } = require("playwright");
+const AXE = require.resolve("axe-core/axe.min.js");
 
 const L = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 const tmp = mkdtempSync(join(tmpdir(), "guidewise-sweep-"));
@@ -79,18 +82,31 @@ async function checkPage(p, path) {
   must(r.h1.trim() || /not found|not been approved/i.test(await p.locator("main").innerText()), "no page heading or explanation");
   must(!r.broken.length, `broken images: ${r.broken.join(", ")}`);
   must(r.overflow <= 1, `scrolls sideways by ${r.overflow}px`);
-  return r.links;
+  return { links: r.links, axe: await axeCheck(p) };
+}
+/** Run axe-core on the open page: fail on "serious" or "critical" violations, count the rest. */
+const axeLog = [];
+async function axeCheck(p) {
+  if (!(await p.evaluate(() => typeof window.axe === "object"))) await p.addScriptTag({ path: AXE });
+  const v = await p.evaluate(async () => (await window.axe.run(document, { resultTypes: ["violations"] })).violations
+    .map((x) => ({ id: x.id, impact: x.impact, nodes: x.nodes.length, target: String(x.nodes[0]?.target ?? "") })));
+  const count = (imp) => v.filter((x) => x.impact === imp).reduce((n, x) => n + x.nodes, 0);
+  const c = { critical: count("critical"), serious: count("serious"), moderate: count("moderate"), minor: count("minor") };
+  axeLog.push({ url: p.url().replace(L, "") || "/", ...c, rules: v.map((x) => `${x.id} (${x.impact}, ${x.nodes})`) });
+  const bad = v.filter((x) => x.impact === "serious" || x.impact === "critical");
+  must(!bad.length, `axe: ${bad.map((x) => `${x.id} (${x.impact}, ${x.nodes} element${x.nodes === 1 ? "" : "s"}, e.g. ${x.target})`).join("; ")}`);
+  return `axe: 0 serious/critical, ${c.moderate} moderate, ${c.minor} minor${v.length ? " [" + v.map((x) => x.id).join(", ") + "]" : ""}`;
 }
 const links = new Set();
 for (const path of PAGES) {
-  await step(page, `desktop ${path.replace(rid, "ID")}`, async () => { (await checkPage(page, path)).forEach((l) => links.add(l)); });
+  await step(page, `desktop ${path.replace(rid, "ID")}`, async () => { const r = await checkPage(page, path); r.links.forEach((l) => links.add(l)); return r.axe; });
 }
 const phone = await browser.newContext({ ...devices["iPhone 13"], ignoreHTTPSErrors: true });
 const mp = await phone.newPage();
 watch(mp, "phone");
 await mp.goto(L); await mp.waitForTimeout(1000);
 for (const path of PAGES.filter((p) => !p.includes(rid))) {
-  await step(mp, `phone ${path}`, () => checkPage(mp, path).then(() => undefined));
+  await step(mp, `phone ${path}`, () => checkPage(mp, path).then((r) => r.axe));
 }
 await step(mp, "phone: sample review works and does not scroll sideways", async () => {
   await mp.goto(L);
@@ -473,6 +489,9 @@ await step(page, "reset demo restores the sample kit", async () => {
 
 await browser.close();
 writeFileSync(join(tmp, "problems.txt"), problems.join("\n"));
+writeFileSync(join(tmp, "axe.json"), JSON.stringify(axeLog, null, 2));
+const tot = (k) => axeLog.reduce((n, x) => n + x[k], 0);
+console.log(`\naxe-core: ${axeLog.length} page checks; ${tot("critical")} critical, ${tot("serious")} serious, ${tot("moderate")} moderate, ${tot("minor")} minor (elements). Details: ${join(tmp, "axe.json")}`);
 const uniq = [...new Set(problems)];
 if (uniq.length) { console.log(`\n${uniq.length} problem(s) seen while clicking:`); uniq.slice(0, 40).forEach((p) => console.log("  " + p)); }
 console.log(failed || uniq.length ? `\n${failed} step(s) failed. Screenshots: ${tmp}` : "\nAll steps passed. No errors.");

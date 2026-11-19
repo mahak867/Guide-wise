@@ -17,7 +17,8 @@
     "e2e:api": "NODE_USE_ENV_PROXY=1 node e2e/api-probe.mjs",
     "test:load": "NODE_USE_ENV_PROXY=1 node scripts/load-test.mjs",
     "eval:images": "vitest run tests/image-eval.test.ts --reporter=verbose",
-    "eval:privacy": "vitest run tests/privacy-eval.test.ts --reporter=verbose"
+    "eval:privacy": "vitest run tests/privacy-eval.test.ts --reporter=verbose",
+    "eval:helpers": "node scripts/eval-helpers.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -39,6 +40,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "axe-core": "4.10.3",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",

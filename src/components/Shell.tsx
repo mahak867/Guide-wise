@@ -65,7 +65,7 @@ export function Shell({ children }: { children: ReactNode }) {
             {state && <span className="hidden xl:inline"><Badge>{state.kit.name} · Kit v{state.kit.version}</Badge></span>}
             <label className="flex items-center gap-1.5">
               <span className="hidden text-muted md:inline">Acting as</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="min-w-0 max-w-[60vw] rounded-md border border-line bg-white px-2 py-1.5 font-medium sm:max-w-none">
+              <select aria-label="Acting as" value={role} onChange={(e) => setRole(e.target.value as Role)} className="min-w-0 max-w-[60vw] rounded-md border border-line bg-white px-2 py-1.5 font-medium sm:max-w-none">
                 {(Object.keys(ROLES) as Role[]).map((r) => (
                   <option key={r} value={r}>
                     {ROLES[r].name} · {ROLES[r].title}
