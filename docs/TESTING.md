@@ -35,6 +35,10 @@ Bad input (malformed JSON, corrupt files, impossible dates, unsafe patterns, too
 
 `tests/demo-dates.test.ts` runs the sample post with the clock set to 21 November 2026, 15 December 2026 and 15 February 2027: the embargoed fee (F-9) and the expired rating (F-11) are still flagged on every date. The whole unit suite was also run with the clock set to 28 November, 15 December and 15 January: all pass. This found that F-9's embargo ended on 1 December 2026, during judging; it now ends on 1 March 2027.
 
+## Accessibility
+
+axe-core 4.10 was run on 12 live pages (home, new review, a review with findings, an approval record, the approved demo post, Brand Kit, Facts and assets, Insights, Results, How it works, API, and the 404 page). It found two minor issues, both fixed: the approval record had no top-level heading before a draft was approved, and the facts table's actions column had no label. No colour-contrast, label or keyboard-name violations.
+
 ## Fuzzing
 
 `tests/fuzz.test.ts` (runs with the unit tests): 26 hostile inputs (12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, right-to-left overrides, prompt injection, broken surrogate pairs, an 11,000-letter word, repeated figures) through the whole engine, as a social post and as an ad: no crash, no finding quoting words not in the draft, slowest review 25 ms. Writing it as a test found one real problem: the email pattern took quadratic time on a long run of letters (about 1 s for 11,000), now bounded to the 64-character limit of an email address.
