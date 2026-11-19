@@ -44,7 +44,7 @@ code { font-size: 8.8pt; }
 
 <table class="links" style="margin-top:12pt">
 <tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · no sign-in; each visitor gets a private demo workspace</td></tr>
-<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 32 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
+<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 36 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
 <tr><td>Walkthrough video</td><td>https://guidewise-kohl.vercel.app/demo.webm (Round 2 journey, 100 seconds)</td></tr>
 <tr><td>Documentation</td><td>In the repository: docs/ARCHITECTURE.md, TESTING.md, KNOWN_ISSUES.md, ROADMAP.md, API.md, CHANGELOG.md</td></tr>
 <tr><td>Demo brand</td><td>PrepPath Academy, a fictional JEE/NEET coaching brand written by the team</td></tr>
@@ -54,7 +54,7 @@ code { font-size: 8.8pt; }
 <h2>At a glance</h2>
 <div class="grid2">
 <div class="box"><b>All three promised improvements are live.</b><p>Change impact, the API and MCP server, and campaign review with AI vision. Each was tested on the live site against the exact test we wrote down at Round 2 (next pages).</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>Text: 92% precision and 98% recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. 76 unit tests; a 20-step journey, 51-step sweep and 93-check probe pass on the live site.</p></div>
+<div class="box"><b>Measured, not claimed.</b><p>Text: 92% precision and 98% recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. 77 unit tests; a 20-step journey, 51-step sweep and 93-check probe pass on the live site.</p></div>
 </div>
 <div style="width:78%"><figure><img src="img/01-home.png" alt="Home page"><figcaption>The home page: the sample post, the sample campaign and every review in this visitor's private workspace.</figcaption></figure></div>
 
@@ -71,13 +71,13 @@ code { font-size: 8.8pt; }
 
 <h3>2. Governance at the source: an API and MCP server <span class="done">Live</span></h3>
 <p class="promise"><b>Promised:</b> a REST API with scoped keys and an MCP server exposing <code>get_brief</code> and <code>check_draft</code>; an in-app playground and a per-key audit trail. Test: call <code>check_draft</code> from the playground and from an MCP client → the same cited findings as the app, and a new audit entry.</p>
-<p><b>Delivered.</b> The <b>API</b> page creates keys with scopes (<code>brief:read</code>, <code>check:write</code>); a key is shown once, stored only as a SHA-256 hash, and can be revoked. <code>get_brief</code> returns the rules in force for a channel and only the facts valid today, so an AI writer never sees an expired or embargoed figure. <code>check_draft</code> runs the same pipeline as the app and returns the same cited findings. Both are served over REST (<code>/api/v1/…</code>) and as an MCP server (<code>/api/mcp</code>, official SDK, Streamable HTTP) that Claude Desktop, Cursor or any MCP client can add with the config shown on the page. Every call is audited with key, route, status and time; keys are rate-limited.</p>
+<p><b>Delivered.</b> The <b>API</b> page creates keys with scopes (<code>brief:read</code>, <code>draft:check</code>); a key is shown once, stored only as a SHA-256 hash, and can be revoked. <code>get_brief</code> returns the rules in force for a channel and only the facts valid today, so an AI writer never sees an expired or embargoed figure. <code>check_draft</code> runs the same pipeline as the app and returns the same cited findings. Both are served over REST (<code>/api/v1/…</code>) and as an MCP server (<code>/api/mcp</code>, official SDK, Streamable HTTP) that an MCP client such as Cursor or Claude Code adds with the config or command shown on the page. Every call is audited with key, route, status and time; keys are rate-limited.</p>
 <figure><img src="img/05-api.png" alt="API page"><figcaption>The API page: a scoped key, the playground calling check_draft over MCP, and the audit trail.</figcaption></figure>
 <p class="note"><b>Tested:</b> live probe, 13 checks — key creation is manager-only; <code>get_brief</code> excludes the expired F-11 and the embargoed F-9; <code>check_draft</code> returns exactly the app's findings through REST and through a real MCP SDK client; a missing, wrong, revoked or under-scoped key is refused; every call appears in the audit; another workspace cannot see the keys. Full reference in docs/API.md.</p>
 
 <h3>3. Campaign and creative review with AI vision <span class="done">Live</span></h3>
 <p class="promise"><b>Promised:</b> review a whole campaign (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets — prices, dates, claims, promo codes; AI vision for stylised text and for photos of people, flagged for a consent check. Test: a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p>
-<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every text rule runs on every document, and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
+<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every code check runs on every document (the AI checks run on the caption), and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
 <div class="grid2">
 <figure><img src="img/06-campaign.png" alt="Campaign review"><figcaption>The sample campaign: the brochure's ₹14,999 and the landing page's 12 January and EARLY10 contradict the caption.</figcaption></figure>
 <figure><img src="img/07-vision.png" alt="AI vision"><figcaption>AI vision on a creative: the text it read and the person shown, flagged for a consent check.</figcaption></figure>
@@ -92,7 +92,7 @@ code { font-size: 8.8pt; }
 <tr><td>AI checks</td><td>Claims and voice rules, one rule per call, run twice when they find something; disagreement becomes a suggestion. Claude → Groq → Gemini with fallback, time caps and a circuit breaker; answers validated with Zod and cached.</td></tr>
 <tr><td>Verifier</td><td>Code drops any finding whose quote is not in the draft, image or document, or whose rule or fact does not exist: no source, no flag.</td></tr>
 <tr><td>Images</td><td>In the browser: OCR, palette (CIELAB), WCAG contrast, alt text, logo found by masked cross-correlation and checked for size and clear space. <b>New:</b> AI vision for stylised text and people shown.</td></tr>
-<tr><td>Campaigns <b>new</b></td><td>Every rule on every document; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
+<tr><td>Campaigns <b>new</b></td><td>Every code check on every document; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
 <tr><td>Facts Register</td><td>Evidence, owner, valid-from, valid-until, required disclosure; embargoed, expired and wrong-subject figures flagged. <b>New:</b> every change shows its impact.</td></tr>
 <tr><td>Fixes</td><td>Each fix applied and re-checked before it is offered; edit before accepting; Accept all works through follow-ups.</td></tr>
 <tr><td>Brand Kit</td><td>Rules with test sentences and an enforce gate, per-channel rules, versioning, JSON export and import, and a guide compiler for pasted text, PDF or Word.</td></tr>
@@ -111,7 +111,7 @@ code { font-size: 8.8pt; }
 <div><b>2 Code checks</b>Rules and every figure</div>
 <div class="ai"><b>3 AI checks</b>One rule per call, twice</div>
 <div class="ai"><b>4 AI vision</b>Text and people</div>
-<div><b>5 Documents</b>Every rule on each</div>
+<div><b>5 Documents</b>Code checks on each</div>
 <div><b>6 Consistency</b>Across all sources</div>
 <div><b>7 Verifier</b>No source, no flag</div>
 <div><b>8 Re-test fixes</b></div>
@@ -134,18 +134,18 @@ code { font-size: 8.8pt; }
 <li><b>Two new evaluations.</b> Images (20 generated creatives) and privacy (personal data planted in 24 drafts, canaries in 3 confidential ones). The privacy evaluation found a real leak — landlines like 080-4123-5678 were not masked — fixed before publishing.</li>
 <li><b>Fewer false flags, fewer misses.</b> A number inside a promo code (EARLY10) and an offer cap ("the first 50 students") are no longer read as claims; a "$" that OCR reads in place of "₹" is treated as a price, so prices in creatives are still compared.</li>
 <li><b>Easier to try.</b> The home page links straight to the three new features; the sample campaign opens from one link; the demo starts with an approved post that cites F-3, and facts are edited in place, so change impact takes two clicks: Edit F-3, change the figure, save.</li>
-<li><b>New rules in the demo kit:</b> consistency across the campaign (high risk), people shown in a creative, hidden characters.</li>
+<li><b>Rules in the demo kit:</b> a new rule for people shown in a creative; the Round 2 consistency rule now also compares dates and promo codes, covers campaign documents, and is high risk.</li>
 <li><b>Documentation:</b> architecture, testing, known issues with file references, dated and costed roadmap, API reference, changelog.</li>
 </ul>
 
 <h2 class="page">Testing</h2>
 <table>
 <tr><th>Suite</th><th>Result</th><th>What it covers</th></tr>
-<tr><td>Unit tests (Vitest, CI)</td><td>76 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback and circuit breaker, change impact, campaign consistency, input validation, every rule's own tests</td></tr>
+<tr><td>Unit tests (Vitest, CI)</td><td>77 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback and circuit breaker, change impact, campaign consistency, input validation, every rule's own tests</td></tr>
 <tr><td>Browser journey (live)</td><td>20 of 20</td><td>Review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
 <tr><td>UI sweep (live)</td><td>51 of 51</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
 <tr><td>API probe (live)</td><td>93 of 93</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end, including a real MCP client</td></tr>
-<tr><td>Fuzzing</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters: no crash, no invented quote, slowest review 0.6 s</td></tr>
+<tr><td>Fuzzing (CI)</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, prompt injection, an 11,000-letter word: no crash, no invented quote, slowest review 25 ms. It found a slow email pattern (about 1 s on a long word), now fixed</td></tr>
 </table>
 <h3>Accuracy and privacy</h3>
 <table>
@@ -158,7 +158,7 @@ code { font-size: 8.8pt; }
 <p class="note">95% Wilson intervals; test-set fingerprint <code>4d33aae3cdaa2051</code>, shown on the live Results page, which re-runs the code checks on demand. The numbers are optimistic because the team wrote both the rules and the drafts; real drafts are the first step on the roadmap.</p>
 
 <h2>Known issues and limits</h2>
-<ol class="note" style="font-size:9pt"><li><b>No sign-in.</b> Roles are switched with "Acting as" so judges can use the link directly. Roles are enforced on the server and each visitor gets a private workspace, but a real deployment needs accounts and per-organisation row-level security.</li><li><b>Free AI tiers.</b> Heavy simultaneous use can hit rate limits. The review then finishes with code checks only and says so; "Re-check" brings the AI back about a minute later.</li><li><b>AI vision needs the AI service.</b> With no provider available, people in creatives are not detected and the review says so.</li><li><b>Logo check matches the logo file itself.</b> A redrawn, recoloured or heavily stretched logo is reported as missing; a reviewer dismisses it with a reason.</li><li><b>OCR reads English.</b> Hindi text inside an image is not read reliably by OCR; AI vision usually reads it. Hindi in the caption is checked.</li><li><b>Brand-name spelling</b> catches wrong capitals and spacing at capital letters ("Preppath", "Prep Path"), not every misspelling.</li><li><b>Code-only recall is 74%.</b> Paraphrased claims ("your seat is assured") need the AI checks; with AI on, recall is 98% on our held-out set.</li><li><b>Our test set was written by us.</b> Accuracy numbers are optimistic; real drafts from marketers would be harder.</li><li><b>Change impact re-checks with code only.</b> AI findings on a re-checked draft are kept from its last AI review rather than re-run, to save quota.</li><li><b>Campaign documents are text.</b> A PDF brochure is read as text; its images are not checked.</li><li><b>API rate limit is per server instance.</b> 30 calls a minute per key, counted in memory, so it is approximate across instances.</li><li><b>Penalty precedents</b> are cited as reported in press coverage; we have not read the orders themselves.</li></ol>
+<ol class="note" style="font-size:9pt"><li><b>No sign-in.</b> Roles are switched with "Acting as" so judges can use the link directly. Roles are enforced on the server and each visitor gets a private workspace, but a real deployment needs accounts and per-organisation row-level security.</li><li><b>Free AI tiers.</b> Heavy simultaneous use can hit rate limits. The review then finishes with code checks only and says so; "Re-check" brings the AI back about a minute later.</li><li><b>AI vision needs the AI service.</b> With no provider available, people in creatives are not detected and the review says so.</li><li><b>Logo check matches the logo file itself.</b> A redrawn, recoloured or heavily stretched logo is reported as missing; a reviewer dismisses it with a reason.</li><li><b>OCR reads English.</b> Hindi text inside an image is not read reliably by OCR; AI vision usually reads it. Hindi in the caption is checked.</li><li><b>Brand-name spelling</b> catches wrong capitals and spacing at capital letters ("Preppath", "Prep Path"), not every misspelling.</li><li><b>Code-only recall is 74%.</b> Paraphrased claims ("your seat is assured") need the AI checks; with AI on, recall is 98% on our held-out set.</li><li><b>Our test set was written by us.</b> Accuracy numbers are optimistic; real drafts from marketers would be harder.</li><li><b>Change impact re-checks with code only.</b> AI findings on a re-checked draft are kept from its last AI review rather than re-run, to save quota.</li><li><b>Campaign documents and image text get the code checks only.</b> A PDF brochure is read as text and its images are not checked; the AI checks (paraphrased claims, tone) run on the caption, not on each document or on text read from a creative, to keep a review inside the free-tier limits.</li><li><b>API rate limit is per server instance.</b> 30 calls a minute per key, counted in memory, so it is approximate across instances.</li><li><b>Penalty precedents</b> are cited as reported in press coverage; we have not read the orders themselves.</li><li><b>No hands-on tests with real users yet.</b> At Round 2 we moved hands-on tests with students to Round 3; they had not been run when this was written. Usability rests on our own browser tests at desktop and phone sizes. The December pilot on the roadmap is where real marketers use it.</li></ol>
 
 <h2>Roadmap</h2>
 <table>
