@@ -46,7 +46,7 @@ Then try to break it: **New review → Try a hard case** offers seven drafts bui
 | Workflow | Four roles enforced on the server; accept, edit a fix before accepting, dismiss with a reason, reopen; locked phrases no fix may remove; comments, versions with word-level changes, request changes, audit log |
 | Insights and Guideline Health | Rules that fire and get dismissed most, rules two or more people call unclear, and facts that are expired, embargoed or expiring within 60 days. For a rule with dismissals, Guidewise drafts clearer wording and new tests; code re-runs every test and the manager approves |
 | Privacy | Emails, phone numbers, Aadhaar, PAN and card numbers are masked before any AI call. A draft marked confidential is never sent to AI |
-| Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 12-second cap per call and automatic fallback; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
+| Reliability | One AI adapter (Claude → Groq → Gemini, whichever keys exist; Groq serves the live site) with a 12-second cap per call (25 for images), automatic fallback, and a provider that is rate-limited or slow rested for a minute; answers validated with Zod; an answer cache; every API input validated. Without AI, code checks and the whole workflow still run, and the app says so |
 
 
 ## Changes from the Round 1 plan (summary)
@@ -60,11 +60,17 @@ Then try to break it: **New review → Try a hard case** offers seven drafts bui
 
 Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md).
 
-## Round 3: three improvements, each with a test
+## Round 3: the three improvements, delivered
 
-1. **Change impact.** Changing a fact or amending a rule lists every draft and approved piece that used it, re-checks them, and marks approved pieces that no longer pass for re-approval; each amended rule shows its dismissal rate before and after.
-2. **Governance at the source.** A REST API and an MCP server (`get_brief`, `check_draft`) so AI writing tools fetch today's rules and facts and check drafts before handing them over.
-3. **Campaign and creative review with AI vision.** A whole campaign checked together for mismatched prices, dates and claims; AI vision for what OCR cannot read: stylised type, and photos of people, flagged for a consent check.
+1. **Change impact.** Change, expire or delete a fact, or change a rule, and Guidewise re-checks every draft that used it. An approved piece that no longer passes goes back for re-approval with the reason; the Impact panel lists everything touched; Insights shows each amended rule's dismissal rate before and after. *Try it:* approve a draft that cites fact F-3, then change F-3's figure on **Facts and assets**.
+2. **API and MCP server.** Scoped keys (shown once, stored hashed, revocable), `get_brief` (rules in force and only facts valid today) and `check_draft` (the same cited findings as the app) over REST and MCP, a playground and an audit trail. *Try it:* **API** page → Create key → Call check_draft. Reference: [`docs/API.md`](docs/API.md).
+3. **Campaign review with AI vision.** A caption, up to 4 creatives and up to 4 documents (landing page, brochure, email) reviewed together: every rule on every document, and prices, figures, dates and promo codes compared across all of them. AI vision reads stylised text and flags people shown for a consent check, routed to compliance. *Try it:* **New review → Use the sample campaign → Run review**.
+
+Each one is tested live against exactly what we promised at Round 2 ([`docs/TESTING.md`](docs/TESTING.md)).
+
+## Documentation
+
+[Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Known issues](docs/KNOWN_ISSUES.md) · [Roadmap](docs/ROADMAP.md) · [API and MCP](docs/API.md) · [Changelog](docs/CHANGELOG.md) · [Contributions](docs/CONTRIBUTIONS.md)
 
 ## Team
 
@@ -93,13 +99,14 @@ cp .env.example .env.local   # fill in the values
 npm run dev
 ```
 
-Apply the migrations in `supabase/migrations/` (001 to 005, in order) to a Supabase project first. The app seeds the PrepPath demo on first load.
+Apply the migrations in `supabase/migrations/` (001 to 008, in order) to a Supabase project first. The app seeds the PrepPath demo on first load.
 
 | Variable | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY` | Supabase project URL and publishable key |
 | `GROQ_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Optional; set any. Keys present are tried in turn, falling through on errors, timeouts or rate limits. With none, Guidewise runs in rules-only mode |
-| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL` | Optional model overrides |
+| `GROQ_MODEL`, `GEMINI_MODEL`, `GUIDEWISE_MODEL`, `GROQ_VISION_MODEL` | Optional model overrides (Gemini defaults to `gemini-3.5-flash-lite`) |
+| `EVAL_TOKEN` | Optional; protects the endpoint that measures AI accuracy |
 
 ## Limits, stated plainly
 
