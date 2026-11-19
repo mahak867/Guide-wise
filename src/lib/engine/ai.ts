@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI, type ThinkingLevel } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import type { Intent, Rule } from "../types";
@@ -103,7 +103,7 @@ function groq(): Provider | null {
  * and thinking makes Gemini answers take tens of seconds. Gemini 2.x takes a budget; Gemini 3 takes a level.
  */
 function quickThinking(model: string): { thinkingBudget: number } | { thinkingLevel: ThinkingLevel } {
-  return /^gemini-2/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: /lite/.test(model) ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW };
+  return /^gemini-2/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: (/lite/.test(model) ? "MINIMAL" : "LOW") as ThinkingLevel };
 }
 
 /** Flash models this key can call, newest first (lite models last). */
