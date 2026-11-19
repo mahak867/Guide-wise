@@ -2,6 +2,7 @@ import { actor, bumpKit, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { aiAvailable, draftAmendment } from "@/lib/engine/ai";
 import { redact } from "@/lib/engine/redact";
 import { runRuleTests } from "@/lib/engine/ruletest";
+import { assessImpact } from "@/lib/impact";
 import type { Rule } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -56,7 +57,8 @@ export async function POST(req: Request, ctx: Ctx) {
       must(await db().from("rules").update({ description, config: amended.config, tests: amended.tests, last_test: run, updated_at: new Date().toISOString() }).eq("ws", wsOf(req)).eq("id", id));
       const v = await bumpKit(wsOf(req));
       await log(req, null, "rule_amended", { rule: id, kit_version: v, from: rule.description, to: description, tests_added: extra.length });
-      return Response.json({ ok: true, kit_version: v, run });
+      const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was amended: "${description}"` });
+      return Response.json({ ok: true, kit_version: v, run, impact });
     }
     if (action === "promote") {
       // The gate: tests are re-run now, so a stale pass can't be used.
@@ -74,7 +76,8 @@ export async function POST(req: Request, ctx: Ctx) {
     }
     const version = await bumpKit(wsOf(req));
     await log(req, null, `rule_${action}d`, { rule: id, kit_version: version });
-    return Response.json({ ok: true, kit_version: version });
+    const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: action === "promote" ? `Rule ${id} is now enforced.` : `Rule ${id} is now advisory.` });
+    return Response.json({ ok: true, kit_version: version, impact });
   } catch (e) {
     return fail(e, 500);
   }
@@ -87,7 +90,8 @@ export async function DELETE(req: Request, ctx: Ctx) {
     must(await db().from("rules").delete().eq("ws", wsOf(req)).eq("id", id));
     const version = await bumpKit(wsOf(req));
     await log(req, null, "rule_deleted", { rule: id, kit_version: version });
-    return Response.json({ ok: true });
+    const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was deleted.` });
+    return Response.json({ ok: true, impact });
   } catch (e) {
     return fail(e, 500);
   }

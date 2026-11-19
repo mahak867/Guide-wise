@@ -1,4 +1,5 @@
 "use client";
+import { ImpactPanel } from "./ImpactPanel";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -81,6 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <Notice tone="error">Guidewise could not load the workspace: {error}</Notice>
           </div>
         )}
+        <ImpactPanel />
         {children}
       </main>
       <footer className="print:hidden border-t border-line px-4 py-3 text-center text-xs text-muted">

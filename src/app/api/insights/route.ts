@@ -9,8 +9,11 @@ export async function GET(req: Request) {
     const drafts = must(await d.from("drafts").select("id,status").eq("ws", ws)) as { id: string; status: string }[];
     const ids = drafts.map((x) => x.id);
     const findings = ids.length
-      ? (must(await d.from("findings").select("rule_id,state,dismiss_reason,resolved_by,draft_id").in("draft_id", ids)) as { rule_id: string; state: string; dismiss_reason: string | null; resolved_by: string | null; draft_id: string }[])
+      ? (must(await d.from("findings").select("rule_id,state,dismiss_reason,resolved_by,draft_id,created_at").in("draft_id", ids)) as { rule_id: string; state: string; dismiss_reason: string | null; resolved_by: string | null; draft_id: string; created_at: string }[])
       : [];
+    // Each amended rule: dismissal rate of its findings before and after the latest amendment.
+    const amendments = must(await d.from("events").select("detail,at").eq("ws", ws).eq("action", "rule_amended").order("at", { ascending: false })) as { detail: { rule?: string }; at: string }[];
+    const rate = (fs: { state: string }[]) => ({ raised: fs.length, dismissed: fs.filter((f) => f.state === "dismissed").length });
     const perRule = rules.map((r) => {
       const fs = findings.filter((f) => f.rule_id === r.id);
       const dismissed = fs.filter((f) => f.state === "dismissed");
@@ -21,6 +24,10 @@ export async function GET(req: Request) {
         fixed: fs.filter((f) => f.state === "accepted" || f.state === "resolved").length,
         dismissed: dismissed.length,
         unclearBy: [...new Set(unclear.map((f) => f.resolved_by ?? "?"))],
+        amended: (() => {
+          const at = amendments.find((e) => e.detail?.rule === r.id)?.at;
+          return at ? { at, before: rate(fs.filter((f) => f.created_at < at)), after: rate(fs.filter((f) => f.created_at >= at)) } : null;
+        })(),
         reasons: Object.entries(dismissed.reduce<Record<string, number>>((m, f) => ((m[f.dismiss_reason ?? "?"] = (m[f.dismiss_reason ?? "?"] ?? 0) + 1), m), {})),
       };
     }).filter((r) => r.raised > 0).sort((a, b) => b.raised - a.raised);

@@ -6,7 +6,7 @@ import { api, useApp } from "@/lib/client";
 
 interface Ins {
   totals: { drafts: number; approved: number; findings: number; dismissed: number };
-  perRule: { id: string; title: string; status: string; raised: number; drafts: number; fixed: number; dismissed: number; unclearBy: string[]; reasons: [string, number][] }[];
+  perRule: { id: string; title: string; status: string; raised: number; drafts: number; fixed: number; dismissed: number; unclearBy: string[]; reasons: [string, number][]; amended: { at: string; before: { raised: number; dismissed: number }; after: { raised: number; dismissed: number } } | null }[];
   watch: { id: string; statement: string; owner: string; valid_from: string | null; valid_until: string | null; state: string }[];
 }
 
@@ -74,6 +74,11 @@ export default function Insights() {
                         {r.unclearBy.length >= 2 ? <Badge tone="critical">Unclear to {r.unclearBy.length} people</Badge>
                           : r.dismissed > 0 && r.dismissed >= r.fixed ? <Badge tone="major">Often dismissed</Badge>
                           : r.raised >= 3 ? <Badge tone="minor">Common mistake</Badge> : <span className="text-muted">–</span>}
+                        {r.amended && (
+                          <div className="mt-1 text-xs text-muted">
+                            Amended {new Date(r.amended.at).toLocaleDateString("en-IN")}. Dismissed before: {r.amended.before.dismissed} of {r.amended.before.raised}; after: {r.amended.after.raised ? `${r.amended.after.dismissed} of ${r.amended.after.raised}` : "no findings yet"}.
+                          </div>
+                        )}
                         {r.dismissed > 0 && (
                           <div className="mt-1.5">
                             {role === "manager"

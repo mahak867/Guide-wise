@@ -19,6 +19,7 @@ export interface DraftRow {
   author: string;
   mode: string;
   stats: Record<string, unknown>;
+  impact?: { reason: string; change_kind: string; change_id: string; at: string; previous_status: string } | null;
 }
 
 const key = (f: { rule_id: string; quote: string; location?: string }) => `${f.rule_id}|${f.location ?? "text"}|${f.quote}`;

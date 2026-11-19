@@ -112,6 +112,31 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("matching fee is not flagged", { s: 200, j: await mk("December batch\nFee ₹39,999") }, (r) => r.j.length === 0);
 }
 
+// Round 3 improvement 1, change impact: change fact F-3 and every draft that used it is listed and re-checked;
+// an approved piece that no longer passes is sent back for re-approval with the reason.
+{
+  const text = "4,200+ JEE selections in 2025 from our two-year classroom programme. Past results do not guarantee future selection.";
+  const mk = async (title) => (await call("POST", "/api/drafts", { body: { title, content_type: "email", text, useAI: false } })).j.id;
+  const approvedId = await mk("Impact probe: approved");
+  const openId = await mk("Impact probe: in progress");
+  await call("POST", `/api/drafts/${approvedId}`, { body: { action: "submit" } });
+  for (const f of (await call("GET", `/api/drafts/${approvedId}`)).j.findings.filter((x) => x.state === "open" && x.level === "violation")) {
+    await call("POST", `/api/drafts/${approvedId}`, { role: "compliance", body: { action: "dismiss", finding_id: f.id, reason: "Approved exception" } });
+  }
+  const ap = await call("POST", `/api/drafts/${approvedId}`, { role: "compliance", body: { action: "approve" } });
+  expect("impact: draft approved before the change", ap, (r) => r.s === 200);
+  const f3 = (await call("GET", "/api/state")).j.facts.find((f) => f.id === "F-3");
+  const ch = await call("POST", "/api/facts", { role: "manager", body: { ...f3, value: 4500, statement: "4,500+ JEE selections in 2025 from our two-year classroom programme" } });
+  const aff = ch.j?.impact?.affected ?? [];
+  expect("impact: the change is described", ch, (r) => r.s === 200 && /F-3 changed: value 4200 to 4500/.test(r.j.impact.change.what));
+  expect("impact: the approved piece is sent back for re-approval", { s: 200, j: aff }, (r) => r.j.some((a) => a.id === approvedId && a.outcome === "reapproval"));
+  expect("impact: the open draft is listed and re-checked", { s: 200, j: aff }, (r) => r.j.some((a) => a.id === openId && a.outcome === "rechecked"));
+  const back = (await call("GET", `/api/drafts/${approvedId}`)).j;
+  expect("impact: re-approval shows the reason and a new open finding", { s: 200, j: back }, (r) => r.j.draft.status !== "approved" && /F-3 changed/.test(r.j.draft.impact?.reason ?? "") && r.j.findings.some((f) => f.state === "open" && f.fact_id === "F-3"));
+  const again = await call("POST", "/api/facts", { role: "manager", body: { ...f3, value: 4500, statement: "4,500+ JEE selections in 2025 from our two-year classroom programme" } });
+  expect("impact: saving the same change twice reopens nothing more", again, (r) => r.s === 200 && !r.j.impact.affected.some((a) => a.outcome === "reapproval"));
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));

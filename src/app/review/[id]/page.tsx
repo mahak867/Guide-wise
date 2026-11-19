@@ -13,6 +13,7 @@ import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 interface Draft {
   id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[] };
   images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null }[];
+  impact?: { reason: string; at: string } | null;
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
 }
 interface Ev { id: number; actor: string; role: string; action: string; detail: Record<string, unknown>; at: string }
@@ -170,6 +171,9 @@ export default function ReviewPage() {
       {/* What happens next, and who does it */}
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-3.5 text-sm">
         <div className="min-w-0 flex-1">
+          {draft.impact && inReview && (
+            <><b>Back for re-approval.</b> This piece was approved, then a Brand Kit change made it fail: {draft.impact.reason} The new findings are below. </>
+          )}
           {approved ? (
             <><b>Approved and locked.</b> The receipt below records exactly what was approved.</>
           ) : inReview ? (

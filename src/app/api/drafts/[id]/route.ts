@@ -172,7 +172,7 @@ export async function POST(req: Request, ctx: Ctx) {
             draft_version: draft.version, risk_tier: draft.risk_tier,
           },
         }));
-        must(await d.from("drafts").update({ status: "approved", updated_at: new Date().toISOString() }).eq("id", id));
+        must(await d.from("drafts").update({ status: "approved", impact: null, updated_at: new Date().toISOString() }).eq("id", id));
         await log(req, id, "approved", { version: draft.version, kit_version: kit.version, note: b.comment ?? "" });
         break;
       }

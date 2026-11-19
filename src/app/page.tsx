@@ -9,7 +9,7 @@ import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
 import { ROLES } from "@/lib/types";
 
 interface Row {
-  id: string; title: string; content_type: string; status: string; risk_tier: string | null;
+  id: string; title: string; content_type: string; status: string; risk_tier: string | null; impact?: { reason: string } | null;
   version: number; author: string; mode: string; updated_at: string; open: number;
 }
 
@@ -114,7 +114,7 @@ export default function Home() {
                       <Link href={`/review/${r.id}`} className="font-medium text-brand-dark underline-offset-2 hover:underline">{r.title}</Link>
                       <div className="text-xs text-muted">{r.content_type} · by {r.author}{mine.includes(r) ? " · waiting for you" : ""}</div>
                     </td>
-                    <td className="px-4 py-2.5"><Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge></td>
+                    <td className="px-4 py-2.5"><Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge>{r.impact && <span className="ml-1"><Badge tone="critical">Re-approval</Badge></span>}</td>
                     <td className="px-4 py-2.5">{r.risk_tier ? <Badge tone={r.risk_tier === "high" ? "critical" : "green"}>{r.risk_tier === "high" ? "High" : "Low"}</Badge> : "–"}</td>
                     <td className="px-4 py-2.5">{r.open}</td>
                     <td className="px-4 py-2.5">v{r.version}</td>

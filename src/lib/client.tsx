@@ -45,6 +45,9 @@ export async function api<T = Record<string, unknown>>(path: string, body?: unkn
     const msg = (data as { error?: string } | null)?.error ?? `The server returned an error (${res.status}). Try again.`;
     throw Object.assign(new Error(msg), { data });
   }
+  // A fact or rule change reports which drafts it touched; the Impact panel shows it on any page.
+  const impact = (data as { impact?: unknown } | null)?.impact;
+  if (impact && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("gw-impact", { detail: impact }));
   return data as T;
 }
 

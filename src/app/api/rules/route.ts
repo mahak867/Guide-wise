@@ -1,5 +1,6 @@
 import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
 import { RuleIn, firstIssue } from "@/lib/schemas";
+import { assessImpact } from "@/lib/impact";
 
 // Create or edit a rule. Only the brand manager may change the Brand Kit.
 // A new or edited rule is always advisory: it has to pass its tests again before it can be enforced.
@@ -18,7 +19,8 @@ export async function POST(req: Request) {
     must(await db().from("rules").upsert({ ...row, ws: wsOf(req) }));
     const version = await bumpKit(wsOf(req));
     await log(req, null, "rule_saved", { rule: id, kit_version: version });
-    return Response.json({ ok: true, id, kit_version: version });
+    const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was saved: "${row.description}"` });
+    return Response.json({ ok: true, id, kit_version: version, impact });
   } catch (e) {
     return fail(e, 500);
   }

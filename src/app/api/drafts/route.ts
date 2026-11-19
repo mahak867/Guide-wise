@@ -6,7 +6,7 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   try {
     const d = db();
-    const drafts = must(await d.from("drafts").select("id,title,content_type,status,risk_tier,version,author,mode,updated_at,created_at").eq("ws", wsOf(req)).order("updated_at", { ascending: false }).limit(100)) as { id: string }[];
+    const drafts = must(await d.from("drafts").select("id,title,content_type,status,risk_tier,version,author,mode,updated_at,created_at,impact").eq("ws", wsOf(req)).order("updated_at", { ascending: false }).limit(100)) as { id: string }[];
     const findings = must(await d.from("findings").select("draft_id,state").in("draft_id", drafts.map((x) => x.id).concat("00000000-0000-0000-0000-000000000000"))) as { draft_id: string; state: string }[];
     const open: Record<string, number> = {};
     for (const f of findings) if (f.state === "open") open[f.draft_id] = (open[f.draft_id] ?? 0) + 1;

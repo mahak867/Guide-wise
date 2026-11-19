@@ -1,5 +1,7 @@
 import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
 import { FactIn, firstIssue } from "@/lib/schemas";
+import { loadKit } from "@/lib/db";
+import { assessImpact, describeFactChange } from "@/lib/impact";
 
 const list = (v: unknown): string[] =>
   Array.isArray(v) ? v.map(String) : String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -22,10 +24,13 @@ export async function POST(req: Request) {
     });
     if (!parsed.success) return fail(`That fact can't be saved (${firstIssue(parsed.error)}).`);
     const row = parsed.data;
+    const before = (await loadKit(wsOf(req))).facts;
     must(await db().from("facts").upsert({ ...row, ws: wsOf(req) }));
     const version = await bumpKit(wsOf(req));
     await log(req, null, "fact_saved", { fact: id, kit_version: version });
-    return Response.json({ ok: true, id });
+    const prev = before.find((f) => f.id === id);
+    const impact = await assessImpact(wsOf(req), { kind: "fact", id, what: describeFactChange(prev, { ...(prev ?? {}), ...row } as typeof before[number]) }, before);
+    return Response.json({ ok: true, id, impact });
   } catch (e) {
     return fail(e, 500);
   }
