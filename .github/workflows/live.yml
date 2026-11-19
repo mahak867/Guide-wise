@@ -1,0 +1,23 @@
+name: Live site check
+
+# Once a day, the 93-check API probe runs against the live site: every route with bad input, wrong roles and another
+# visitor's workspace, plus the three Round 3 improvements end to end. A failure emails the repository owner.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:api
+        env:
+          BASE_URL: https://guidewise-kohl.vercel.app
