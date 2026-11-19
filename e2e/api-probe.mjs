@@ -22,6 +22,16 @@ function expect(name, r, ok) {
 }
 const is4xx = (r) => r.s >= 400 && r.s < 500 && typeof r.j?.error === "string" && r.j.error.length > 5;
 const is = (code) => (r) => r.s === code;
+/** Approve a draft in review: compliance first; a high-risk draft then needs the brand sign-off as well. Returns the draft. */
+async function approveFully(draftId) {
+  const first = await call("POST", `/api/drafts/${draftId}`, { role: "compliance", body: { action: "approve" } });
+  if (first.s !== 200) return { s: first.s, j: first.j };
+  if (first.j?.waiting_for === "brand") {
+    const second = await call("POST", `/api/drafts/${draftId}`, { role: "brand", body: { action: "approve" } });
+    if (second.s !== 200) return { s: second.s, j: second.j };
+  }
+  return call("GET", `/api/drafts/${draftId}`);
+}
 
 await call("GET", "/api/state");
 {
@@ -137,8 +147,8 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   for (const f of (await call("GET", `/api/drafts/${approvedId}`)).j.findings.filter((x) => x.state === "open" && x.level === "violation")) {
     await call("POST", `/api/drafts/${approvedId}`, { role: "compliance", body: { action: "dismiss", finding_id: f.id, reason: "Approved exception" } });
   }
-  const ap = await call("POST", `/api/drafts/${approvedId}`, { role: "compliance", body: { action: "approve" } });
-  expect("impact: draft approved before the change", ap, (r) => r.s === 200);
+  const ap = await approveFully(approvedId);
+  expect("impact: draft approved before the change", ap, (r) => r.s === 200 && r.j?.draft?.status === "approved");
   const f3 = (await call("GET", "/api/state")).j.facts.find((f) => f.id === "F-3");
   const ch = await call("POST", "/api/facts", { role: "manager", body: { ...f3, value: 4500, statement: "4,500+ JEE selections in 2025 from our two-year classroom programme" } });
   const aff = ch.j?.impact?.affected ?? [];
@@ -162,6 +172,60 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   const ap = await call("POST", `/api/drafts/${dk.id}`, { role: "brand", body: { action: "approve" } });
   expect("kit binding: approval re-checks against the new kit and refuses", ap, (r) => r.s === 409 && /Brand Kit changed/.test(r.j?.error ?? ""));
   await call("POST", "/api/kit", { role: "manager", body: { contacts: st.kit.contacts } });
+  // With the contact approved again, the re-check at approval clears the finding and the draft is approved.
+  expect("kit binding: once the kit allows it again, approval re-checks and goes through", await approveFully(dk.id), (r) => r.s === 200 && r.j?.draft?.status === "approved");
+}
+
+// Time-limited exceptions and dual sign-off. A high-risk draft (a guarantee, so it goes to compliance) with a
+// non-critical violation (an unapproved phone number) and a missing disclaimer.
+{
+  const { j: dx } = await call("POST", "/api/drafts", { body: { title: "Exception and sign-off probe", content_type: "social", text: "100% selection guaranteed!! Call 98765 43210.", useAI: false } });
+  const did = dx.id;
+  const get = async () => (await call("GET", `/api/drafts/${did}`)).j;
+  const find = async (rule) => (await get()).findings.find((f) => f.rule_id === rule);
+  const dismiss = (role, rule, reason, until) => find(rule).then((f) => call("POST", `/api/drafts/${did}`, { role, body: { action: "dismiss", finding_id: f?.id, reason, ...(until !== undefined ? { until } : {}) } }));
+  const contact = await find("R-15");
+  expect("exceptions: the probe draft has a non-critical violation to try them on", { s: 200, j: contact }, (r) => r.j?.level === "violation" && r.j.severity !== "critical");
+  expect("exceptions: a creator cannot grant an exception", await dismiss("creator", "R-15", "Approved exception", "2099-12-31"), (r) => r.s === 403 && /reviewer/i.test(r.j?.error ?? ""));
+  expect("exceptions: a creator cannot slip one in through the reason text", await dismiss("creator", "R-15", "Approved exception (until 2099-12-31)"), is(403));
+  expect("exceptions: the creator may still dismiss it with another reason", await dismiss("creator", "R-15", "The flag is wrong"), is(200));
+  await call("POST", `/api/drafts/${did}`, { body: { action: "reopen", finding_id: contact.id } });
+  await call("POST", `/api/drafts/${did}`, { body: { action: "submit" } });
+  expect("sign-off: the high-risk draft is routed to compliance", { s: 200, j: (await get()).draft }, (r) => r.j.status === "compliance_review");
+  expect("exceptions: an end date that is not a real date is a clear 400", await dismiss("compliance", "R-15", "Approved exception", "2026-02-30"), is(400));
+  // A dated exception is stored readably in the dismiss reason; one whose date has passed lapses at the next re-check.
+  const dated = await dismiss("compliance", "R-15", "Approved exception", "2099-12-31");
+  expect("exceptions: a reviewer grants one until a date", dated, (r) => r.s === 200);
+  expect("exceptions: stored as \"Approved exception (until …)\"", { s: 200, j: await find("R-15") }, (r) => r.j?.state === "dismissed" && r.j.dismiss_reason === "Approved exception (until 2099-12-31)" && r.j.resolved_by === "Kavya");
+  await dismiss("compliance", "R-12", "Approved exception");
+  await dismiss("compliance", "R-DISC", "Approved exception", "2020-01-01");
+  expect("exceptions: every violation is settled before the re-check", { s: 200, j: await get() }, (r) => !r.j.findings.some((f) => f.state === "open" && f.level === "violation"));
+  await call("POST", `/api/drafts/${did}`, { role: "compliance", body: { action: "recheck", useAI: false } });
+  const after = await get();
+  expect("exceptions: an expired exception reopens on re-check", { s: 200, j: after }, (r) => r.j.findings.find((f) => f.rule_id === "R-DISC")?.state === "open"
+    && r.j.events.some((e) => e.action === "exception_lapsed" && e.detail.rule === "R-DISC" && e.detail.until === "2020-01-01"));
+  expect("exceptions: one still in date stays settled", { s: 200, j: after }, (r) => r.j.findings.find((f) => f.rule_id === "R-15")?.state === "dismissed" && r.j.findings.find((f) => f.rule_id === "R-12")?.state === "dismissed");
+  expect("exceptions: the reopened finding blocks approval", await call("POST", `/api/drafts/${did}`, { role: "compliance", body: { action: "approve" } }), (r) => r.s === 409);
+  // Approval checks end dates itself too, without a re-check: an exception that has lapsed is reopened and refused.
+  await dismiss("compliance", "R-DISC", "Approved exception", "2021-06-30");
+  expect("exceptions: approval itself refuses a lapsed exception", await call("POST", `/api/drafts/${did}`, { role: "compliance", body: { action: "approve" } }), (r) => r.s === 409 && /lapsed/.test(r.j?.error ?? ""));
+  await dismiss("compliance", "R-DISC", "Approved exception", "2099-06-30");
+  // Dual sign-off: compliance first, then brand. Compliance alone does not approve.
+  expect("sign-off: brand cannot sign off before compliance", await call("POST", `/api/drafts/${did}`, { role: "brand", body: { action: "approve" } }), is(403));
+  const partial = await call("POST", `/api/drafts/${did}`, { role: "compliance", body: { action: "approve" } });
+  expect("sign-off: compliance's approval is recorded as the first sign-off", partial, (r) => r.s === 200 && r.j.waiting_for === "brand");
+  const mid = await get();
+  expect("sign-off: compliance alone does not approve a high-risk draft", { s: 200, j: mid }, (r) => r.j.draft.status === "compliance_review" && !r.j.receipt
+    && r.j.sign_off?.waiting_for === "brand" && r.j.events.some((e) => e.action === "approved_partial" && e.role === "compliance" && e.actor === "Kavya"));
+  expect("sign-off: compliance cannot sign twice", await call("POST", `/api/drafts/${did}`, { role: "compliance", body: { action: "approve" } }), is(409));
+  expect("sign-off: the creator cannot give the second sign-off", await call("POST", `/api/drafts/${did}`, { body: { action: "approve" } }), is(403));
+  expect("sign-off: brand gives the second sign-off", await call("POST", `/api/drafts/${did}`, { role: "brand", body: { action: "approve" } }), is(200));
+  const done = await get();
+  expect("sign-off: compliance and brand together approve it", { s: 200, j: done }, (r) => r.j.draft.status === "approved");
+  expect("sign-off: the receipt names both approvers", { s: 200, j: done.receipt }, (r) => /Kavya \(compliance\) and Arjun \(brand\)/.test(r.j?.approver ?? "")
+    && JSON.stringify((r.j.findings_summary.approvers ?? []).map((a) => [a.name, a.role])) === JSON.stringify([["Kavya", "compliance"], ["Arjun", "brand"]]));
+  expect("exceptions: the receipt lists each exception and its end date", { s: 200, j: done.receipt }, (r) => r.j.findings_summary.exceptions?.some((x) => x.rule === "R-15" && x.until === "2099-12-31")
+    && r.j.findings_summary.exceptions.some((x) => x.rule === "R-12" && x.until === null));
 }
 
 // Round 3 improvement 2, API and MCP server: scoped keys, get_brief, check_draft (same findings as the app),

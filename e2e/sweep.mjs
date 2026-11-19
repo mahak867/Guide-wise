@@ -358,14 +358,18 @@ await step(page, "review: request changes sends it back, then approve and downlo
   await page.reload(); await role("creator");
   await page.getByRole("button", { name: "Submit for review" }).click();
   await msg(/Waiting for/);
-  await role("brand");
+  // A low-risk draft goes to the brand reviewer; a high-risk one to compliance first, then brand (two sign-offs).
+  const high = async () => (await page.getByText(/Waiting for Kavya/).count()) > 0;
+  const first = (await high()) ? "compliance" : "brand";
+  await role(first);
   await page.getByPlaceholder("Comment (required when requesting changes)").fill("Please add the fee disclaimer.");
   await page.getByRole("button", { name: "Request changes" }).click();
   await page.waitForTimeout(2500);
   await role("creator");
   await page.getByRole("button", { name: "Submit for review" }).click();
   await msg(/Waiting for/);
-  await role("brand");
+  const dual = await high();
+  await role(dual ? "compliance" : "brand");
   const approve = page.getByRole("button", { name: "Approve" });
   if (await approve.isDisabled()) {
     // Open findings block approval: dismiss each with a reason as the reviewer.
@@ -377,7 +381,13 @@ await step(page, "review: request changes sends it back, then approve and downlo
     }
   }
   await approve.click();
-  await msg(/Approved|approved/, 30000);
+  if (dual) {
+    // Compliance alone does not approve high-risk content: brand signs off second.
+    await msg(/waiting for brand sign-off/i, 30000);
+    await role("brand");
+    await page.getByRole("button", { name: "Approve" }).click();
+  }
+  await page.getByRole("heading", { name: "Approval receipt" }).waitFor({ timeout: 30000 });
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download JSON" }).click()]);
   const j = JSON.parse(readFileSync(await dl.path(), "utf8"));
   must(/^[0-9a-f]{64}$/.test(j.text_hash ?? ""), "receipt has no SHA-256 fingerprint");

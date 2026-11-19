@@ -1,5 +1,6 @@
+import { isLapsed } from "./approval";
 import { db, loadKit, must } from "./db";
-import { extractNumberClaims, subjectWindow } from "./engine/code";
+import { extractNumberClaims, subjectWindow, today } from "./engine/code";
 import { reviewDraft, riskTier } from "./engine/review";
 import type { Fact, Finding } from "./types";
 import { getFindings, runReview, type DraftRow } from "./workflow";
@@ -50,12 +51,16 @@ export async function assessImpact(ws: string, change: Change, factsBefore: Fact
     const relevant = findings.filter((f) => cites(f) && f.level === "violation");
     const brief = (fs: Finding[]) => fs.map((f) => ({ rule_id: f.rule_id, quote: f.quote, message: f.message }));
     if (draft.status === "approved") {
-      const settled = new Set(existing.filter((f) => f.state === "dismissed").map(key));
-      const fresh = relevant.filter((f) => !settled.has(key(f)));
+      // A dismissal settles its finding, unless it was an exception whose end date has passed: that one reopens.
+      const t = today();
+      const lapsed = existing.filter((f) => isLapsed(f, t));
+      const settled = new Set(existing.filter((f) => f.state === "dismissed" && !isLapsed(f, t)).map(key));
+      const fresh = [...relevant.filter((f) => !settled.has(key(f))), ...lapsed.filter((f) => !relevant.some((r) => key(r) === key(f)))];
       if (!fresh.length) { affected.push({ id: draft.id, title: draft.title, status: draft.status, outcome: "still_passes", findings: [] }); continue; }
       await runReview(ws, draft, false, true);
       const status = riskTier(await getFindings(draft.id)).tier === "high" ? "compliance_review" : "brand_review";
-      const impact = { reason: change.what, change_kind: change.kind, change_id: change.id, at: new Date().toISOString(), previous_status: "approved" };
+      const why = lapsed.length ? `${change.what} An approved exception has also lapsed (${[...new Set(lapsed.map((f) => f.rule_id))].join(", ")}).` : change.what;
+      const impact = { reason: why, change_kind: change.kind, change_id: change.id, at: new Date().toISOString(), previous_status: "approved" };
       must(await d.from("drafts").update({ status, impact, updated_at: new Date().toISOString() }).eq("id", draft.id));
       must(await d.from("events").insert({ ws, draft_id: draft.id, actor: "Guidewise", role: "system", action: "reapproval_needed", detail: { change: change.what, findings: fresh.length } }));
       affected.push({ id: draft.id, title: draft.title, status, outcome: "reapproval", findings: brief(fresh) });

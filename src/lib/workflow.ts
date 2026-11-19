@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+import { isLapsed, parseException } from "./approval";
 import { BadInput, db, loadKit, must } from "./db";
+import { today } from "./engine/code";
 import { reviewDraft, riskTier } from "./engine/review";
 import type { Finding, Intent } from "./types";
 import type { DraftImage } from "./engine/visual";
@@ -35,6 +37,24 @@ export async function getFindings(id: string): Promise<Finding[]> {
 }
 
 /**
+ * Exceptions past their end date lapse: the finding is open again (its old reason is kept, so the page can say the
+ * exception lapsed), and the lapse is logged. Returns the findings that were reopened; `findings` is updated in place.
+ */
+export async function lapseExceptions(ws: string, draftId: string, findings: Finding[]): Promise<Finding[]> {
+  const t = today();
+  const lapsed = findings.filter((f) => isLapsed(f, t));
+  if (!lapsed.length) return [];
+  const d = db();
+  must(await d.from("findings").update({ state: "open", resolved_by: null }).in("id", lapsed.map((f) => f.id!)));
+  must(await d.from("events").insert(lapsed.map((f) => ({
+    ws, draft_id: draftId, actor: "Guidewise", role: "system", action: "exception_lapsed",
+    detail: { rule: f.rule_id, quote: f.quote, until: parseException(f.dismiss_reason)?.until ?? null, granted_by: f.resolved_by ?? null },
+  }))));
+  for (const f of lapsed) { f.state = "open"; f.resolved_by = null; }
+  return lapsed;
+}
+
+/**
  * Run the review on the draft's current text and reconcile with what is already recorded:
  * decisions people made are kept, open findings whose words are gone are closed,
  * and anything new is added.
@@ -51,6 +71,8 @@ export async function runReview(ws: string, draft: DraftRow, useAI: boolean, kee
   const visionAdded = images.some((img, i) => img.vision !== undefined && draft.images?.[i]?.vision === undefined);
   if (visionAdded) { must(await d.from("drafts").update({ images }).eq("id", draft.id)); draft.images = images; }
   const existing = await getFindings(draft.id);
+  // An exception past its end date no longer settles its finding: it is reopened before anything else is reconciled.
+  await lapseExceptions(ws, draft.id, existing);
   const found = new Set(findings.map(key));
   const known = new Map(existing.map((f) => [key(f), f]));
 

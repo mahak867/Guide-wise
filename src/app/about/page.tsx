@@ -11,7 +11,7 @@ const STEPS: [string, string, boolean?][] = [
   ["Consistency", "Prices, figures, dates and promo codes are compared across the caption, every creative and every document. A mismatch quotes both sides."],
   ["Verifier", "Plain code. A finding is dropped unless its quoted words are in the draft, image or document it cites, its rule exists and its cited fact exists. No source, no flag."],
   ["Fix and re-test", "Each suggested fix is applied and the checks are run again. A fix that would introduce a new issue is withdrawn."],
-  ["Route and approve", "A fixed rule table sends outcome claims, regulated content, mismatched prices and people shown to the compliance reviewer, and everything else to the brand reviewer. A person approves, and a receipt records what was approved."],
+  ["Route and approve", "A fixed rule table sends outcome claims, regulated content, mismatched prices and people shown to the compliance reviewer, and everything else to the brand reviewer. A person approves (high-risk content needs compliance and then brand), and a receipt records what was approved and by whom. An exception can be granted until a date, after which the finding reopens."],
 ];
 
 export default function About() {

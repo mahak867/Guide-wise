@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { SEED_APPROVED, SEED_FACTS, SEED_KIT, SEED_RULES } from "./seed";
+import { approverLabel } from "./approval";
+import { SEED_APPROVED, SEED_APPROVED_SIGNOFFS, SEED_FACTS, SEED_KIT, SEED_RULES } from "./seed";
 import { ROLES, type Fact, type Kit, type Role, type Rule } from "./types";
 
 let _db: SupabaseClient | null = null;
@@ -64,12 +65,20 @@ async function seedApproved(ws: string): Promise<void> {
     risk_reasons: ["Uses a results figure (F-3)"], author: "Riya", mode: "rules-only", created_at: at, updated_at: at,
   }).select("id").single()) as { id: string };
   must(await d.from("versions").insert({ draft_id: row.id, version: 1, text: a.text, note: "Submitted for review" }));
+  // High risk, so it carries both sign-offs: compliance (Kavya) first, then brand (Arjun).
+  const hour = (h: number) => new Date(Date.parse(at) - h * 36e5).toISOString();
+  const approvers = SEED_APPROVED_SIGNOFFS.map((s) => ({ name: s.name, role: s.role, at: hour(s.hoursBefore) }));
   must(await d.from("receipts").insert({
     draft_id: row.id, text_hash: createHash("sha256").update(a.text, "utf8").digest("hex"), approved_text: a.text, kit_version: 1,
-    approver: "Kavya", approver_role: "compliance", at,
-    findings_summary: { total: 0, fixed: 0, dismissed: 0, suggestions_left_open: 0, rules: [], dismissals: [], draft_version: 1, risk_tier: "high" },
+    approver: approverLabel(approvers), approver_role: approvers.map((x) => x.role).join(" and "), at,
+    findings_summary: { approvers, sign_off: "dual", exceptions: [], total: 0, fixed: 0, dismissed: 0, suggestions_left_open: 0, rules: [], dismissals: [], draft_version: 1, risk_tier: "high" },
   }));
-  must(await d.from("events").insert({ ws, draft_id: row.id, actor: "Kavya", role: "compliance", action: "approved", detail: { version: 1, kit_version: 1, note: "Demo data: approved before you arrived" }, at }));
+  const note = "Demo data: approved before you arrived";
+  must(await d.from("events").insert([
+    { ws, draft_id: row.id, actor: "Riya", role: "creator", action: "submitted", detail: { routed_to: "compliance_review", risk: "high", reasons: ["Uses a results figure (F-3)"], version: 1 }, at: hour(3) },
+    { ws, draft_id: row.id, actor: approvers[0].name, role: approvers[0].role, action: "approved_partial", detail: { version: 1, kit_version: 1, note, waiting_for: "brand" }, at: approvers[0].at },
+    { ws, draft_id: row.id, actor: approvers[1].name, role: approvers[1].role, action: "approved", detail: { version: 1, kit_version: 1, note, approvers: approvers.map((x) => ({ name: x.name, role: x.role })) }, at: approvers[1].at },
+  ]));
 }
 
 export async function loadKit(ws: string): Promise<{ kit: Kit; rules: Rule[]; facts: Fact[] }> {
