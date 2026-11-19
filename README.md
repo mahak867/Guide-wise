@@ -84,7 +84,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                     # 63 unit tests, including a deliberately wrong AI
+npm test                                                     # 73 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone
