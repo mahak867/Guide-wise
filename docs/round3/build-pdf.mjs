@@ -146,7 +146,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>Text, code checks only <span>(40 held-out drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${code.hardCaught} of ${code.hardPlanted} hard phrasings</td></tr>
 <tr><td>Text, code and AI <span>(live, run twice)</span></td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${ai.hardCaught} of ${ai.hardPlanted} hard; ${pct(ai.agreement)} same on both runs</td></tr>
 <tr><td>Images <span>(20 creatives)</span></td><td>100% <span>(0 false alarms in 40 clean checks)</span></td><td>20 of 20</td><td>Colour, contrast, logo</td></tr>
-<tr><td>Privacy <span>(24 + 3 drafts)</span></td><td colspan="2">0 leaks in 144 AI prompts</td><td>8 kinds of personal data; canaries in confidential drafts</td></tr>
+<tr><td>Privacy <span>(24 + 3 drafts)</span></td><td colspan="2">0 leaks in 144 AI prompts</td><td>8 pieces of personal data of 5 kinds; canaries in confidential drafts</td></tr>
 </table>
 <p class="note">95% Wilson intervals; test-set fingerprint <code>${code.fingerprint}</code>, shown on the live Results page, which re-runs the code checks on demand. The numbers are optimistic because the team wrote both the rules and the drafts; real drafts are the first step on the roadmap.</p>
 

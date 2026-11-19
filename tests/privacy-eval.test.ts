@@ -42,7 +42,7 @@ describe("privacy evaluation", () => {
     sent = prompts.length;
     const all = prompts.join("\n");
     const leaks = [...PII.map((p) => p.v), ...CANARIES].filter((v) => all.includes(v) || all.includes(v.replace(/\s/g, "")));
-    console.log(`privacy eval: ${drafts} drafts, ${PII.length} kinds of personal data x3 and ${CANARIES.length} confidential drafts, ${sent} AI prompts captured, leaks: ${leaks.length}`);
+    console.log(`privacy eval: ${drafts} drafts, ${PII.length} pieces of personal data x3 and ${CANARIES.length} confidential drafts, ${sent} AI prompts captured, leaks: ${leaks.length}`);
     expect(sent).toBeGreaterThan(20); // the AI really was called for the non-confidential drafts
     expect(leaks).toEqual([]);
   });
