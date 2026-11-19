@@ -153,14 +153,14 @@ await step(page, "facts: add a dated fact, refuse a bad one, delete it", async (
   const dates = f.locator("input[type=date]");
   const dated = (await dates.count()) >= 2;
   if (dated) { await dates.nth(0).fill("2026-06-01"); await dates.nth(1).fill("2026-01-01"); }
-  await f.getByRole("button", { name: "Save fact" }).click();
   if (dated) {
-    await page.waitForFunction(() => document.body.innerText.includes("end date is before the start date"), null, { timeout: 15000 });
-    await page.waitForTimeout(800);
+    // An end date before the start date is caught as you type, and Save stays disabled until it is fixed.
+    await msg(/before the start date/, 15000);
+    must(await f.getByRole("button", { name: "Save fact" }).isDisabled(), "Save allowed with the end date before the start date");
     await dates.nth(1).fill("2026-12-31");
     await page.waitForTimeout(300);
-    await f.getByRole("button", { name: "Save fact" }).click();
   }
+  await f.getByRole("button", { name: "Save fact" }).click();
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ timeout: 15000 });
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).getByRole("button", { name: "Delete" }).click();
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ state: "detached", timeout: 15000 });
@@ -187,6 +187,8 @@ await step(page, "facts: profile, palette, disclaimer, logo", async () => {
   await n.fill("50000"); await n.locator("xpath=ancestor::form").getByRole("button", { name: "Save" }).click();
   await msg(/CCPA coaching rules apply/);
   await page.getByLabel("Colour name").fill("Sky");
+  // A colour already in the palette is refused, so pick a new one.
+  await page.locator("input[type=color]").first().fill("#3a86ff");
   await page.getByRole("button", { name: "Add colour" }).click();
   await page.getByRole("button", { name: "Remove Sky" }).click({ timeout: 15000 });
   await page.waitForTimeout(1500);

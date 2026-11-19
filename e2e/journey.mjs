@@ -101,12 +101,12 @@ await step("compliance grants exceptions (one with an end date) and gives the fi
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   // High risk needs two sign-offs: compliance alone does not approve it.
   await page.getByText(/Approved by Kavya, waiting for brand sign-off/).waitFor({ timeout: 30000 });
-  if (await page.getByText("Approval receipt").count()) throw new Error("approved on the compliance sign-off alone");
+  if (await page.getByRole("heading", { name: "Approval receipt" }).count()) throw new Error("approved on the compliance sign-off alone");
 });
 await step("brand gives the second sign-off; the receipt names both approvers and the exception's end date", async () => {
   await role("brand");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
-  await page.getByText("Approval receipt").waitFor({ timeout: 30000 });
+  await page.getByRole("heading", { name: "Approval receipt" }).waitFor({ timeout: 30000 });
   const receipt = await page.locator("section").filter({ has: page.getByRole("heading", { name: "Approval receipt" }) }).first().innerText();
   if (!/Kavya/.test(receipt) || !/Arjun/.test(receipt)) throw new Error("the receipt does not name both approvers");
   if (!receipt.includes(`valid until ${until}`)) throw new Error("the receipt does not show the exception's end date");

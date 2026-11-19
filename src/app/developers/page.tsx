@@ -142,9 +142,9 @@ export default function Developers() {
           <div>
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Connect an MCP client</h3>
             <p className="mt-1 text-muted">For a client that reads a JSON config with remote servers and headers (for example Cursor&apos;s <code>mcp.json</code>). It exposes <code>get_brief</code> and <code>check_draft</code>.</p>
-            <pre className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{mcpConfig}</pre>
+            <pre tabIndex={0} aria-label="MCP client configuration" className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{mcpConfig}</pre>
             <p className="mt-2 text-muted">Claude Code, from a terminal:</p>
-            <pre className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{`claude mcp add --transport http guidewise ${origin}/api/mcp --header "Authorization: Bearer ${created ?? "gw_your_key"}"`}</pre>
+            <pre tabIndex={0} aria-label="Claude Code command" className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{`claude mcp add --transport http guidewise ${origin}/api/mcp --header "Authorization: Bearer ${created ?? "gw_your_key"}"`}</pre>
           </div>
         </Card>
 
@@ -178,7 +178,7 @@ export default function Developers() {
                 </div>
               )}
               {typeof body === "object" && body?.rules && <p>{body.rules.length} rules in force and {body.facts?.length} facts valid today. An AI writing tool never sees an expired or embargoed fact.</p>}
-              <details><summary className="cursor-pointer text-xs text-muted">Raw response</summary><pre className="mt-1 max-h-72 overflow-auto rounded bg-mist p-2 text-xs">{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre></details>
+              <details><summary className="cursor-pointer text-xs text-muted">Raw response</summary><pre tabIndex={0} aria-label="Raw response" className="mt-1 max-h-72 overflow-auto rounded bg-mist p-2 text-xs">{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre></details>
             </div>
           )}
         </Card>
