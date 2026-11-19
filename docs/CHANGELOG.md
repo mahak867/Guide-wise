@@ -8,6 +8,7 @@
 - **Reliability:** Gemini backup repaired (the old default model was retired for new keys; minimal thinking so it answers in seconds); a rate-limited AI provider is skipped for a short while instead of making every review wait; numbers inside codes ("EARLY10") are no longer read as figures; vision errors are recorded.
 - **Usability:** the home page links straight to the three new features; the sample campaign opens from one link; facts can be edited in place (Edit fills the form and keeps the owner and holding line), so a judge can try change impact without retyping a fact; the demo starts with an approved post that cites F-3, so change impact takes two clicks, and the Impact panel scrolls into view when a change is saved.
 - **Accuracy:** an offer cap ("the first 50 students") is no longer compared with the student-count fact; a "$" that OCR reads in place of "₹" is treated as a price, so prices in creatives are still compared across the campaign.
+- **Robustness:** a fuzz test (26 hostile inputs) now runs in CI; it found that the email pattern took quadratic time on very long words (about 1 s), now bounded (25 ms).
 - **Docs:** architecture, testing, known issues, roadmap, API reference, contributions.
 
 ## Round 2 — The Build (13–16 November 2026)

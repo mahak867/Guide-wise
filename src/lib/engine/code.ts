@@ -165,7 +165,7 @@ export function parseNumber(raw: string): number | null {
 }
 
 // Phone numbers and email addresses are contact details, not claims.
-const CONTACT_SPANS = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const CONTACT_SPANS = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}/g; // bounded: an unbounded run made long words take quadratic time
 
 export function extractNumberClaims(text: string): NumberClaim[] {
   const out: NumberClaim[] = [];

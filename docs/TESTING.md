@@ -1,6 +1,6 @@
 # Testing
 
-Latest full run against the live site (19 Nov 2026 build): **76 unit tests, 20 of 20 journey steps, 51 of 51 sweep steps, 93 of 93 API probe checks**, no server or page errors.
+Latest full run against the live site (19 Nov 2026 build): **77 unit tests, 20 of 20 journey steps, 51 of 51 sweep steps, 93 of 93 API probe checks**, no server or page errors.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |
@@ -33,4 +33,4 @@ Bad input (malformed JSON, corrupt files, impossible dates, unsafe patterns, too
 
 ## Fuzzing
 
-Twenty-six hostile inputs (12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, repeated figures) through the whole engine, as a social post and as an ad: no crash, no finding quoting words not in the draft, slowest review 0.6 s.
+`tests/fuzz.test.ts` (runs with the unit tests): 26 hostile inputs (12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, right-to-left overrides, prompt injection, broken surrogate pairs, an 11,000-letter word, repeated figures) through the whole engine, as a social post and as an ad: no crash, no finding quoting words not in the draft, slowest review 25 ms. Writing it as a test found one real problem: the email pattern took quadratic time on a long run of letters (about 1 s for 11,000), now bounded to the 64-character limit of an email address.

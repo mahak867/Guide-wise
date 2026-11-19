@@ -62,13 +62,13 @@ ${img("04-reapproval.png", "Re-approval banner", "The approved post, back in rev
 
 <h3>2. Governance at the source: an API and MCP server <span class="done">Live</span></h3>
 <p class="promise"><b>Promised:</b> a REST API with scoped keys and an MCP server exposing <code>get_brief</code> and <code>check_draft</code>; an in-app playground and a per-key audit trail. Test: call <code>check_draft</code> from the playground and from an MCP client → the same cited findings as the app, and a new audit entry.</p>
-<p><b>Delivered.</b> The <b>API</b> page creates keys with scopes (<code>brief:read</code>, <code>check:write</code>); a key is shown once, stored only as a SHA-256 hash, and can be revoked. <code>get_brief</code> returns the rules in force for a channel and only the facts valid today, so an AI writer never sees an expired or embargoed figure. <code>check_draft</code> runs the same pipeline as the app and returns the same cited findings. Both are served over REST (<code>/api/v1/…</code>) and as an MCP server (<code>/api/mcp</code>, official SDK, Streamable HTTP) that Claude Desktop, Cursor or any MCP client can add with the config shown on the page. Every call is audited with key, route, status and time; keys are rate-limited.</p>
+<p><b>Delivered.</b> The <b>API</b> page creates keys with scopes (<code>brief:read</code>, <code>draft:check</code>); a key is shown once, stored only as a SHA-256 hash, and can be revoked. <code>get_brief</code> returns the rules in force for a channel and only the facts valid today, so an AI writer never sees an expired or embargoed figure. <code>check_draft</code> runs the same pipeline as the app and returns the same cited findings. Both are served over REST (<code>/api/v1/…</code>) and as an MCP server (<code>/api/mcp</code>, official SDK, Streamable HTTP) that an MCP client such as Cursor or Claude Code adds with the config or command shown on the page. Every call is audited with key, route, status and time; keys are rate-limited.</p>
 ${img("05-api.png", "API page", "The API page: a scoped key, the playground calling check_draft over MCP, and the audit trail.")}
 <p class="note"><b>Tested:</b> live probe, 13 checks — key creation is manager-only; <code>get_brief</code> excludes the expired F-11 and the embargoed F-9; <code>check_draft</code> returns exactly the app's findings through REST and through a real MCP SDK client; a missing, wrong, revoked or under-scoped key is refused; every call appears in the audit; another workspace cannot see the keys. Full reference in docs/API.md.</p>
 
 <h3>3. Campaign and creative review with AI vision <span class="done">Live</span></h3>
 <p class="promise"><b>Promised:</b> review a whole campaign (caption, creatives, landing-page copy, PDF brochure) and flag inconsistencies across assets — prices, dates, claims, promo codes; AI vision for stylised text and for photos of people, flagged for a consent check. Test: a three-asset campaign with a price mismatch and an unconsented student photo → both found, cited and routed to compliance.</p>
-<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every text rule runs on every document, and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
+<p><b>Delivered.</b> A review now takes a caption, up to 4 creatives and up to 4 documents (landing page, brochure, email; pasted or uploaded as PDF or Word). Every code check runs on every document (the AI checks run on the caption), and the consistency check compares prices, percentages, counts, dates and promo codes across all sources, quoting both sides. AI vision reads text that OCR misses and reports people shown (described, never named), which raises a high-risk consent finding routed to compliance. If vision is unavailable the review says so rather than passing silently.</p>
 <div class="grid2">
 ${img("06-campaign.png", "Campaign review", "The sample campaign: the brochure's ₹14,999 and the landing page's 12 January and EARLY10 contradict the caption.")}
 ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read and the person shown, flagged for a consent check.")}
@@ -83,7 +83,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>AI checks</td><td>Claims and voice rules, one rule per call, run twice when they find something; disagreement becomes a suggestion. Claude → Groq → Gemini with fallback, time caps and a circuit breaker; answers validated with Zod and cached.</td></tr>
 <tr><td>Verifier</td><td>Code drops any finding whose quote is not in the draft, image or document, or whose rule or fact does not exist: no source, no flag.</td></tr>
 <tr><td>Images</td><td>In the browser: OCR, palette (CIELAB), WCAG contrast, alt text, logo found by masked cross-correlation and checked for size and clear space. <b>New:</b> AI vision for stylised text and people shown.</td></tr>
-<tr><td>Campaigns <b>new</b></td><td>Every rule on every document; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
+<tr><td>Campaigns <b>new</b></td><td>Every code check on every document; prices, figures, dates and promo codes compared across caption, images and documents.</td></tr>
 <tr><td>Facts Register</td><td>Evidence, owner, valid-from, valid-until, required disclosure; embargoed, expired and wrong-subject figures flagged. <b>New:</b> every change shows its impact.</td></tr>
 <tr><td>Fixes</td><td>Each fix applied and re-checked before it is offered; edit before accepting; Accept all works through follow-ups.</td></tr>
 <tr><td>Brand Kit</td><td>Rules with test sentences and an enforce gate, per-channel rules, versioning, JSON export and import, and a guide compiler for pasted text, PDF or Word.</td></tr>
@@ -102,7 +102,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <div><b>2 Code checks</b>Rules and every figure</div>
 <div class="ai"><b>3 AI checks</b>One rule per call, twice</div>
 <div class="ai"><b>4 AI vision</b>Text and people</div>
-<div><b>5 Documents</b>Every rule on each</div>
+<div><b>5 Documents</b>Code checks on each</div>
 <div><b>6 Consistency</b>Across all sources</div>
 <div><b>7 Verifier</b>No source, no flag</div>
 <div><b>8 Re-test fixes</b></div>
@@ -136,7 +136,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>Browser journey (live)</td><td>20 of 20</td><td>Review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
 <tr><td>UI sweep (live)</td><td>51 of 51</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
 <tr><td>API probe (live)</td><td>93 of 93</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end, including a real MCP client</td></tr>
-<tr><td>Fuzzing</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters: no crash, no invented quote, slowest review 0.6 s</td></tr>
+<tr><td>Fuzzing (CI)</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, prompt injection, an 11,000-letter word: no crash, no invented quote, slowest review 25 ms. It found a slow email pattern (about 1 s on a long word), now fixed</td></tr>
 </table>
 <h3>Accuracy and privacy</h3>
 <table>

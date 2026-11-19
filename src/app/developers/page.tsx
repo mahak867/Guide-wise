@@ -110,8 +110,10 @@ export default function Developers() {
           </div>
           <div>
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Connect an MCP client</h3>
-            <p className="mt-1 text-muted">Add this to an MCP client that supports remote servers (for example Claude Desktop or Cursor). It exposes <code>get_brief</code> and <code>check_draft</code>.</p>
+            <p className="mt-1 text-muted">For a client that reads a JSON config with remote servers and headers (for example Cursor&apos;s <code>mcp.json</code>). It exposes <code>get_brief</code> and <code>check_draft</code>.</p>
             <pre className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{mcpConfig}</pre>
+            <p className="mt-2 text-muted">Claude Code, from a terminal:</p>
+            <pre className="mt-1 overflow-x-auto rounded bg-mist p-2 text-xs">{`claude mcp add --transport http guidewise ${origin}/api/mcp --header "Authorization: Bearer ${created ?? "gw_your_key"}"`}</pre>
           </div>
         </Card>
 

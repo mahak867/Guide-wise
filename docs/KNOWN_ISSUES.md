@@ -11,6 +11,7 @@ Stated plainly, with where each one lives in the code.
 7. **Code-only recall is 74%.** Paraphrased claims ("your seat is assured") need the AI checks; with AI on, recall is 98% on our held-out set.
 8. **Our test set was written by us.** Accuracy numbers are optimistic; real drafts from marketers would be harder.
 9. **Change impact re-checks with code only.** AI findings on a re-checked draft are kept from its last AI review rather than re-run, to save quota (`src/lib/impact.ts`).
-10. **Campaign documents are text.** A PDF brochure is read as text; its images are not checked (`src/lib/engine/review.ts:183`).
+10. **Campaign documents and image text get the code checks only.** A PDF brochure is read as text and its images are not checked; the AI checks (paraphrased claims, tone) run on the caption, not on each document or on text read from a creative, to keep a review inside the free-tier limits (`src/lib/engine/review.ts:183`, `src/lib/engine/visual.ts:186`).
 11. **API rate limit is per server instance.** 30 calls a minute per key, counted in memory, so it is approximate across instances (`src/lib/apikeys.ts:31`).
 12. **Penalty precedents** are cited as reported in press coverage; we have not read the orders themselves.
+13. **No hands-on tests with real users yet.** At Round 2 we moved hands-on tests with students to Round 3; they had not been run when this was written. Usability rests on our own browser tests at desktop and phone sizes. The December pilot on the roadmap is where real marketers use it.
