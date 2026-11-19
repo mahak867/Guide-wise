@@ -162,10 +162,24 @@ export async function POST(req: Request, ctx: Ctx) {
         if (draft.status === "compliance_review" && a.role !== "compliance") {
           return fail("This draft is high risk, so it needs the compliance reviewer. Switch role to Kavya.", 403);
         }
-        const open = findings.filter((f) => f.state === "open" && f.level === "violation");
-        if (open.length) return fail(`${open.length} finding${open.length > 1 ? "s are" : " is"} still open. Dismiss each with a reason, or request changes.`, 409);
         const { kit } = await loadKit(wsOf(req));
-        const count = (s: string) => findings.filter((f) => f.state === s).length;
+        // Approval is bound to the Brand Kit in force now: if rules, facts or assets changed since the draft was last
+        // checked, the code checks run again first, and anything new must be resolved before approval.
+        let current = findings;
+        if ((draft.kit_version ?? 0) < kit.version) {
+          const before = new Set(findings.filter((f) => f.state === "open").map((f) => f.id));
+          await runReview(ws, draft, false, true);
+          current = await getFindings(id);
+          draft = (await getDraft(ws, id))!;
+          const fresh = current.filter((f) => f.state === "open" && f.level === "violation" && !before.has(f.id));
+          if (fresh.length) {
+            await log(req, id, "approval_blocked_kit_changed", { from: draft.kit_version, to: kit.version, new_findings: fresh.map((f) => f.rule_id) });
+            return fail(`The Brand Kit changed since this draft was checked, so it was checked again: ${fresh.length} new finding${fresh.length > 1 ? "s" : ""} (${[...new Set(fresh.map((f) => f.rule_id))].join(", ")}). Resolve ${fresh.length > 1 ? "them" : "it"}, then approve.`, 409);
+          }
+        }
+        const open = current.filter((f) => f.state === "open" && f.level === "violation");
+        if (open.length) return fail(`${open.length} finding${open.length > 1 ? "s are" : " is"} still open. Dismiss each with a reason, or request changes.`, 409);
+        const count = (s: string) => current.filter((f) => f.state === s).length;
         must(await d.from("receipts").insert({
           draft_id: id,
           text_hash: fingerprint(draft.text),
@@ -174,10 +188,10 @@ export async function POST(req: Request, ctx: Ctx) {
           approver: a.name,
           approver_role: a.role,
           findings_summary: {
-            total: findings.length, fixed: count("accepted") + count("resolved"), dismissed: count("dismissed"),
-            suggestions_left_open: findings.filter((f) => f.state === "open").length,
-            rules: [...new Set(findings.map((f) => f.rule_id))],
-            dismissals: findings.filter((f) => f.state === "dismissed").map((f) => ({ rule: f.rule_id, reason: f.dismiss_reason, by: f.resolved_by })),
+            total: current.length, fixed: count("accepted") + count("resolved"), dismissed: count("dismissed"),
+            suggestions_left_open: current.filter((f) => f.state === "open").length,
+            rules: [...new Set(current.map((f) => f.rule_id))],
+            dismissals: current.filter((f) => f.state === "dismissed").map((f) => ({ rule: f.rule_id, reason: f.dismiss_reason, by: f.resolved_by })),
             draft_version: draft.version, risk_tier: draft.risk_tier,
           },
         }));

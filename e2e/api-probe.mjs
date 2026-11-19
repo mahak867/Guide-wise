@@ -144,6 +144,19 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("impact: saving the same change twice reopens nothing more", again, (r) => r.s === 200 && !r.j.impact.affected.some((a) => a.outcome === "reapproval"));
 }
 
+// Approval is bound to the Brand Kit in force: an asset change after the last check means the draft is checked again
+// before it can be approved, and a new problem blocks approval.
+{
+  const st = (await call("GET", "/api/state")).j;
+  const { j: dk } = await call("POST", "/api/drafts", { body: { title: "Kit binding probe", content_type: "email", text: "For the December batch, write to admissions@preppath.in.", useAI: false } });
+  await call("POST", `/api/drafts/${dk.id}`, { body: { action: "submit" } });
+  const k = await call("POST", "/api/kit", { role: "manager", body: { contacts: st.kit.contacts.filter((c) => !/admissions@/.test(c.value)) } });
+  expect("kit binding: contact removed after the draft was checked", k, (r) => r.s === 200);
+  const ap = await call("POST", `/api/drafts/${dk.id}`, { role: "brand", body: { action: "approve" } });
+  expect("kit binding: approval re-checks against the new kit and refuses", ap, (r) => r.s === 409 && /Brand Kit changed/.test(r.j?.error ?? ""));
+  await call("POST", "/api/kit", { role: "manager", body: { contacts: st.kit.contacts } });
+}
+
 // Round 3 improvement 2, API and MCP server: scoped keys, get_brief, check_draft (same findings as the app),
 // a real MCP client over Streamable HTTP, and an audit entry per call.
 {
