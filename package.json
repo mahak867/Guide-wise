@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "e2e": "node e2e/journey.mjs",
     "e2e:sweep": "node e2e/sweep.mjs",
-    "e2e:api": "NODE_USE_ENV_PROXY=1 node e2e/api-probe.mjs"
+    "e2e:api": "NODE_USE_ENV_PROXY=1 node e2e/api-probe.mjs",
+    "eval:images": "vitest run tests/image-eval.test.ts --reporter=verbose",
+    "eval:privacy": "vitest run tests/privacy-eval.test.ts --reporter=verbose"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

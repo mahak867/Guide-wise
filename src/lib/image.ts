@@ -1,4 +1,5 @@
 "use client";
+import { dominantFromPixels } from "./colours";
 import { findLogo, toGray, type LogoMatch, type Template } from "./logo";
 // Runs in the browser: shrink the image, measure its dominant colours, and read any text in it (OCR).
 // The server then checks the colours against the palette and the text against every rule and fact.
@@ -25,9 +26,7 @@ function load(src: string): Promise<HTMLImageElement> {
   });
 }
 
-const hex = (r: number, g: number, b: number) => "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
-
-/** Dominant colours by coarse quantisation (4 bits per channel), averaged within each bucket. */
+/** Dominant colours of an image, measured on an 80-pixel copy (see colours.ts). */
 export function dominantColours(img: HTMLImageElement): { hex: string; share: number }[] {
   const size = 80;
   const c = document.createElement("canvas");
@@ -36,33 +35,7 @@ export function dominantColours(img: HTMLImageElement): { hex: string; share: nu
   c.height = Math.max(1, Math.round(img.height * scale));
   const ctx = c.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(img, 0, 0, c.width, c.height);
-  const { data } = ctx.getImageData(0, 0, c.width, c.height);
-  const bins = new Map<number, { n: number; r: number; g: number; b: number }>();
-  let total = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] < 128) continue;
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const k = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-    const e = bins.get(k) ?? { n: 0, r: 0, g: 0, b: 0 };
-    e.n++; e.r += r; e.g += g; e.b += b;
-    bins.set(k, e);
-    total++;
-  }
-  // Merge neighbouring buckets whose averages are close, so one flat colour is one entry.
-  const list = [...bins.values()].map((e) => ({ n: e.n, r: e.r / e.n, g: e.g / e.n, b: e.b / e.n })).sort((a, b) => b.n - a.n);
-  const merged: typeof list = [];
-  for (const e of list) {
-    const m = merged.find((x) => Math.hypot(x.r - e.r, x.g - e.g, x.b - e.b) < 28);
-    if (m) {
-      const n = m.n + e.n;
-      m.r = (m.r * m.n + e.r * e.n) / n; m.g = (m.g * m.n + e.g * e.n) / n; m.b = (m.b * m.n + e.b * e.n) / n; m.n = n;
-    } else merged.push({ ...e });
-  }
-  return merged
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 6)
-    .map((e) => ({ hex: hex(e.r, e.g, e.b), share: Math.round((e.n / Math.max(1, total)) * 1000) / 1000 }))
-    .filter((e) => e.share >= 0.02);
+  return dominantFromPixels(ctx.getImageData(0, 0, c.width, c.height).data);
 }
 
 function shrink(img: HTMLImageElement, max = 1100): { dataUrl: string; w: number; h: number } {
