@@ -16,6 +16,14 @@ describe("reading a web page", () => {
     expect(title).toBe("JEE Crash Course | PrepPath");
     expect(text).toBe("JEE Crash Course\nStarts 12 January. Fee ₹14,999 & printed tests.\nStudents in a PrepPath classroom\n60 days\nCode EARLY10");
     expect(text).not.toMatch(/track|Home|Fees|Enrol|Privacy|color/);
+    expect(pageText(PAGE).hidden).toEqual([]);
+  });
+  it("separates text hidden from readers, including nested elements, and leaves small visible text alone", () => {
+    const { text, hidden } = pageText(`<main><h1>Crash course</h1><div style="display:none">100% selection <b>guaranteed</b></div>
+      <p style="color:#fff;background:#ffffff">Rank 1 assured</p><span style="font-size:0px">best coaching</span><p hidden>secret</p>
+      <div><div style="opacity:0"><div>nested one</div> tail</div></div><p style="font-size:0.9em">visible small</p></main>`);
+    expect(hidden).toEqual(["100% selection guaranteed", "Rank 1 assured", "best coaching", "secret", "nested one tail"]);
+    expect(text).toBe("Crash course\nvisible small");
   });
   it("keeps table cells apart", () => {
     expect(pageText("<main><table><tr><td>Fee</td><td>₹14,999</td></tr></table></main>").text).toBe("Fee ₹14,999");

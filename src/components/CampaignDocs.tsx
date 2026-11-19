@@ -27,9 +27,10 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
   async function readPage() {
     setBusy(true); setError(null); setNote(null);
     try {
-      const out = await api<{ text: string; url: string; truncated: boolean }>("/api/extract", { url });
+      const out = await api<{ text: string; url: string; truncated: boolean; hidden: number }>("/api/extract", { url });
       onChange([...docs, { name: kind, text: out.text }]);
-      setNote(`Read ${out.url}${out.truncated ? " (the first 12,000 characters)" : ""}. Menus, headers and footers were left out; edit the text below if needed.`);
+      setNote(`Read ${out.url}${out.truncated ? " (the first 12,000 characters)" : ""}. Menus, headers and footers were left out; edit the text below if needed.`
+        + (out.hidden ? ` Warning: ${out.hidden} piece${out.hidden > 1 ? "s" : ""} of text on this page ${out.hidden > 1 ? "are" : "is"} hidden from readers (for example white on white) but still read by search engines and AI tools. ${out.hidden > 1 ? "They are" : "It is"} added at the end, under a label, so every check runs on ${out.hidden > 1 ? "them" : "it"}.` : ""));
       setUrl("");
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     setBusy(false);

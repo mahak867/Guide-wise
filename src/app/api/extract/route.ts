@@ -13,8 +13,11 @@ export async function POST(req: Request) {
       if (typeof url !== "string" || !url.trim() || url.length > 2000) return fail("Send the web page address as url.");
       const page = await fetchPage(url);
       if (page.text.length < 10) return fail("No readable text was found on that page. If it is built entirely in JavaScript, copy the text from your browser instead.");
-      const truncated = page.text.length > 12000;
-      return Response.json({ text: page.text.slice(0, 12000), name: page.title || new URL(page.url).hostname, url: page.url, truncated });
+      // Hidden text is kept, under a label, so every check runs on what search engines and AI tools still read.
+      const hidden = page.hidden.slice(0, 20);
+      const full = hidden.length ? `${page.text}\n\n[Hidden on the page: readers do not see this text]\n${hidden.join("\n")}` : page.text;
+      const truncated = full.length > 12000;
+      return Response.json({ text: full.slice(0, 12000), name: page.title || new URL(page.url).hostname, url: page.url, truncated, hidden: hidden.length });
     }
     const form = await req.formData();
     const file = form.get("file");

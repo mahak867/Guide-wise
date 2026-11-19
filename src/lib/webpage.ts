@@ -6,10 +6,50 @@ import { BadInput } from "./db";
  * A web page in, its readable text out: the page's <main> (or its only <article>, or the body), without scripts,
  * styles, menus, headers, footers or forms. Used to review a live landing page as a campaign document.
  */
-export function pageText(html: string): { title: string; text: string } {
+const HIDDEN_STYLE = /display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0(?:\.0+)?(?:px|pt|em|rem|%)?\s*(?:;|$|!)|opacity\s*:\s*0(?:\.0+)?\s*(?:;|$|!)/i;
+
+/** Same colour for text and background in an inline style, as in white-on-white text. */
+function sameColours(style: string): boolean {
+  const c = style.match(/(?:^|;)\s*color\s*:\s*([^;!]+)/i)?.[1]?.trim().toLowerCase();
+  const bg = style.match(/background(?:-color)?\s*:\s*([^;!]+)/i)?.[1]?.trim().toLowerCase();
+  const norm = (x: string) => ({ "#fff": "#ffffff", white: "#ffffff", "#000": "#000000", black: "#000000" } as Record<string, string>)[x] ?? x;
+  return !!c && !!bg && norm(c) === norm(bg);
+}
+
+/**
+ * Text a page hides from readers but not from search engines or AI tools: display:none, visibility:hidden, zero-size
+ * or transparent type, the hidden attribute, or text the same colour as its background. Removed from the visible text
+ * and returned separately so it can be shown, and checked, as hidden.
+ */
+function takeHidden(h: string): { html: string; hidden: string[] } {
+  const hidden: string[] = [];
+  const open = /<([a-z][a-z0-9]*)\b([^>]*)>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = open.exec(h))) {
+    const [tag, attrs] = [m[1].toLowerCase(), m[2]];
+    if (/\/\s*$/.test(attrs) || /^(img|br|hr|input|meta|link|source)$/.test(tag)) continue;
+    const style = attrs.match(/\bstyle\s*=\s*(["'])([\s\S]*?)\1/i)?.[2] ?? "";
+    if (!(/\shidden(?:\s|=|$)/i.test(attrs) || HIDDEN_STYLE.test(style) || sameColours(style))) continue;
+    // Find the matching close tag, counting nested elements of the same name.
+    const scan = new RegExp(`<(/?)${tag}\\b[^>]*>`, "gi");
+    scan.lastIndex = open.lastIndex;
+    let depth = 1, end = h.length, s2: RegExpExecArray | null;
+    while (depth && (s2 = scan.exec(h))) { depth += s2[1] ? -1 : 1; if (!depth) end = s2.index + s2[0].length; }
+    const inner = h.slice(open.lastIndex, depth ? h.length : end - `</${tag}>`.length);
+    const t = decode(inner.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    if (t) hidden.push(t);
+    h = h.slice(0, m.index) + " " + h.slice(end);
+    open.lastIndex = m.index + 1;
+  }
+  return { html: h, hidden };
+}
+
+export function pageText(html: string): { title: string; text: string; hidden: string[] } {
   const title = decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").replace(/\s+/g, " ").trim());
   let h = html.replace(/<!--[\s\S]*?-->/g, " ");
   for (const tag of ["script", "style", "noscript", "svg", "template", "iframe", "head"]) h = h.replace(new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}\\s*>`, "gi"), " ");
+  const taken = takeHidden(h);
+  h = taken.html;
   const main = h.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i)?.[1];
   const articles = [...h.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/gi)];
   let body = main ?? (articles.length === 1 ? articles[0][1] : h.match(/<body\b[^>]*>([\s\S]*)<\/body\s*>/i)?.[1] ?? h);
@@ -20,7 +60,7 @@ export function pageText(html: string): { title: string; text: string } {
   // Table cells and labels are separated by a space; inline tags (b, span, a) vanish without one.
   const text = decode(body.replace(/<\/?(td|th|label|option)\b[^>]*>/gi, " ").replace(/<[^>]+>/g, ""))
     .split("\n").map((l) => l.replace(/[ \t ]+/g, " ").trim()).filter(Boolean).join("\n");
-  return { title, text };
+  return { title, text, hidden: taken.hidden };
 }
 
 const NAMED: Record<string, string> = {
@@ -67,7 +107,7 @@ export async function checkUrl(raw: string): Promise<URL> {
 const MAX_BYTES = 2 * 1024 * 1024;
 
 /** Fetch a public web page safely (redirects re-checked, 8 s, 2 MB) and return its readable text. */
-export async function fetchPage(raw: string): Promise<{ url: string; title: string; text: string }> {
+export async function fetchPage(raw: string): Promise<{ url: string; title: string; text: string; hidden: string[] }> {
   let url = await checkUrl(raw);
   for (let hop = 0; ; hop++) {
     const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(8000), headers: { "user-agent": "Guidewise page reader", accept: "text/html,text/plain;q=0.9" } })
@@ -91,7 +131,7 @@ export async function fetchPage(raw: string): Promise<{ url: string; title: stri
       chunks.push(value);
     }
     const body = Buffer.concat(chunks).toString("utf8");
-    const out = /text\/plain/i.test(type) ? { title: "", text: body.trim() } : pageText(body);
+    const out = /text\/plain/i.test(type) ? { title: "", text: body.trim(), hidden: [] as string[] } : pageText(body);
     return { url: url.toString(), ...out };
   }
 }

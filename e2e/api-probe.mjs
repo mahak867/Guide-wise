@@ -48,7 +48,8 @@ const ft = new FormData(); ft.append("file", new Blob(["hello"]), "notes.txt");
 expect("extract wrong type", await call("POST", "/api/extract", { form: ft }), is4xx);
 // Reading a live web page as a campaign document: a public page works; private addresses never reach the server's network.
 expect("read a public web page: main content, no menus, scripts or footer", await call("POST", "/api/extract", { body: { url: L + "/sample-landing.html" } }),
-  (r) => r.s === 200 && /₹14,999/.test(r.j?.text ?? "") && /EARLY10/.test(r.j.text) && !/<[a-z]|Courses|Privacy|Enrol now|sample page for trying/i.test(r.j.text));
+  (r) => r.s === 200 && /₹14,999/.test(r.j?.text ?? "") && /EARLY10/.test(r.j.text) && !/<[a-z]|Courses|Privacy|Enrol now|sample page for trying/i.test(r.j.text)
+    && r.j.hidden === 1 && /\[Hidden on the page[^\]]*\]\n100% selection guaranteed/.test(r.j.text));
 expect("web page: cloud metadata address refused", await call("POST", "/api/extract", { body: { url: "http://169.254.169.254/latest/meta-data/" } }), is4xx);
 expect("web page: localhost refused", await call("POST", "/api/extract", { body: { url: "http://localhost:3000/api/state" } }), is4xx);
 expect("web page: not a web address", await call("POST", "/api/extract", { body: { url: "javascript:alert(1)" } }), is4xx);
