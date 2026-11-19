@@ -8,6 +8,7 @@ import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
 import type { ImageInput } from "@/lib/image";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { wordDiff } from "@/lib/diff";
+import { BRAND_SIGNERS, EXCEPTION, approversOf, canGrantException, complianceSignOff, exceptionLapsed, exceptionsOf, parseException } from "@/lib/approval";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
@@ -21,7 +22,22 @@ interface Ev { id: number; actor: string; role: string; action: string; detail: 
 interface Receipt { id: string; text_hash: string; approved_text: string; kit_version: number; approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> }
 interface Data { draft: Draft; findings: Finding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null }
 
-const REASONS = ["The rule is unclear", "The rule does not apply to this content", "The flag is wrong", "Approved exception"];
+const REASONS = ["The rule is unclear", "The rule does not apply to this content", "The flag is wrong", EXCEPTION];
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+/** "Approved exception until 31 Dec 2026", "Approved exception, no end date", or that it lapsed. */
+function ExceptionNote({ reason, by, open }: { reason?: string | null; by?: string | null; open?: boolean }) {
+  const ex = parseException(reason);
+  if (!ex) return null;
+  const lapsed = exceptionLapsed(reason, todayIso());
+  return (
+    <span className={`inline-flex flex-wrap items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${lapsed ? "border-crit/40 bg-crit-soft" : "border-brand/30 bg-brand-soft"}`}>
+      <b>{open || lapsed ? "Exception lapsed" : "Approved exception"}</b>
+      <span>{ex.until ? `${lapsed ? "ended" : "valid until"} ${ex.until}` : "no end date"}{by && !open ? ` · granted by ${by}` : ""}</span>
+      {open && <span>The finding is open again: resolve it before approval.</span>}
+    </span>
+  );
+}
 const CHECK = { code: "Code check", claims: "Claims check", voice: "Voice check", visual: "Visual check" } as const;
 
 function Highlighted({ text, findings, active, onPick }: { text: string; findings: Finding[]; active: string | null; onPick: (id: string) => void }) {
@@ -60,7 +76,14 @@ function describe(e: Ev): string {
     case "finding_reopened": return `reopened ${d.rule}`;
     case "text_edited": return `edited the text (version ${d.version})`;
     case "submitted": return `submitted version ${d.version}. Routed to ${d.routed_to === "compliance_review" ? "the compliance reviewer" : "the brand reviewer"} (${d.risk} risk)`;
-    case "approved": return `approved version ${d.version} against Brand Kit v${d.kit_version}`;
+    case "approved": {
+      const by = e.detail.approvers as { name: string; role: string }[] | undefined;
+      return `approved version ${d.version} against Brand Kit v${d.kit_version}${by && by.length > 1 ? ` (brand sign-off, after ${by[0].name}'s compliance sign-off)` : ""}`;
+    }
+    case "approved_partial": return `approved version ${d.version} for compliance against Brand Kit v${d.kit_version}. Waiting for brand sign-off`;
+    case "exception_lapsed": return `found that the approved exception for ${d.rule} ("${d.quote}") ended on ${d.until}, so the finding is open again`;
+    case "approval_blocked_exception_lapsed": return `could not approve: an approved exception had lapsed (${(d.rules as string[]).join(", ")})`;
+    case "approval_blocked_kit_changed": return `could not approve: the Brand Kit changed and the re-check found ${(d.new_findings as string[]).join(", ")}`;
     case "changes_requested": return `requested changes: ${d.comment}`;
     case "comment": return `commented: ${d.comment}`;
     case "images_updated": return `updated the images (version ${d.version}) and re-ran the checks`;
@@ -79,6 +102,8 @@ export default function ReviewPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [dismissing, setDismissing] = useState<string | null>(null);
+  const [granting, setGranting] = useState<string | null>(null);
+  const [until, setUntil] = useState("");
   const [showResolved, setShowResolved] = useState(false);
   const [imgEdit, setImgEdit] = useState<ImageInput[] | null>(null);
   const [fixEdit, setFixEdit] = useState<{ id: string; text: string } | null>(null);
@@ -130,8 +155,13 @@ export default function ReviewPage() {
   const st = draft.stats;
   const inReview = draft.status === "brand_review" || draft.status === "compliance_review";
   const approved = draft.status === "approved";
-  const needed: Role | null = draft.status === "compliance_review" ? "compliance" : draft.status === "brand_review" ? "brand" : inReview || approved ? null : "creator";
-  const canApprove = inReview && (role === "compliance" || (role === "brand" && draft.status === "brand_review"));
+  // Dual sign-off: a high-risk draft needs compliance first, then brand (Arjun or Meera). Derived from the events log.
+  const signed = draft.status === "compliance_review" ? complianceSignOff(events) : null;
+  const needed: Role | null = draft.status === "compliance_review" ? (signed ? "brand" : "compliance") : draft.status === "brand_review" ? "brand" : inReview || approved ? null : "creator";
+  const canApprove = inReview && (draft.status === "brand_review"
+    ? role === "brand" || role === "compliance" || role === "manager"
+    : signed ? BRAND_SIGNERS.includes(role) : role === "compliance");
+  const canAct = needed !== null && (needed === "creator" ? role === "creator" : canApprove);
   const canEdit = !inReview && !approved;
   const fixable = open.filter((f) => f.fix !== null && f.fix !== undefined && (f.location ?? "text") === "text");
 
@@ -183,15 +213,17 @@ export default function ReviewPage() {
           )}
           {approved ? (
             <><b>Approved and locked.</b> The receipt below records exactly what was approved.</>
+          ) : inReview && signed ? (
+            <><b>Approved by {signed.actor}, waiting for brand sign-off.</b> High-risk content needs two sign-offs: compliance, then brand ({ROLES.brand.name} or {ROLES.manager.name}).</>
           ) : inReview ? (
-            <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b> {draft.risk_reasons.length ? `Why: ${draft.risk_reasons.join("; ")}.` : "Nothing high-risk was flagged, so the brand reviewer can approve."}</>
+            <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b> {draft.risk_reasons.length ? `Why: ${draft.risk_reasons.join("; ")}.` : "Nothing high-risk was flagged, so the brand reviewer can approve."}{draft.status === "compliance_review" ? ` High risk needs two sign-offs: ${ROLES.compliance.name} first, then brand.` : ""}</>
           ) : draft.status === "changes_requested" ? (
             <><b>Changes requested.</b> {ROLES.creator.name} edits the draft and submits it again.</>
           ) : (
             <><b>With {draft.author}, the creator.</b> {openViolations.length ? `Resolve the ${openViolations.length} open finding${openViolations.length > 1 ? "s" : ""}, or submit and let a reviewer decide.` : "No open findings. Submit it for approval."}</>
           )}
         </div>
-        {needed && role !== needed && !(needed === "brand" && role === "compliance") && (
+        {needed && role !== needed && !canAct && (
           <Button onClick={() => setRole(needed)}>Act as {ROLES[needed].name}</Button>
         )}
         {canEdit && role === "creator" && <Button variant="primary" disabled={!!busy} onClick={() => act("Submitting…", { action: "submit" })}>{busy === "Submitting…" ? busy : "Submit for review"}</Button>}
@@ -350,15 +382,20 @@ export default function ReviewPage() {
               <h2>Reviewer decision</h2>
               {!canApprove ? (
                 <p className="mt-1 text-sm text-muted">
-                  {draft.status === "compliance_review" ? "This draft is high risk, so only the compliance reviewer can decide." : "A brand or compliance reviewer decides."}{" "}
+                  {draft.status === "compliance_review"
+                    ? signed ? `${signed.actor} gave the compliance sign-off. The brand sign-off is next: the brand reviewer or the brand manager.` : "This draft is high risk, so the compliance reviewer signs off first, then brand."
+                    : "A brand or compliance reviewer decides."}{" "}
                   Use "Act as {ROLES[needed!].name}" above.
                 </p>
               ) : (
                 <div className="mt-2 space-y-2">
+                  {draft.status === "compliance_review" && (
+                    <p className="text-sm text-muted">{signed ? `Second of two sign-offs: ${signed.actor} approved for compliance on ${fmtDate(signed.at)}. Approving now completes the approval.` : "First of two sign-offs: after you approve, the brand reviewer or the brand manager signs off."}</p>
+                  )}
                   <label className="sr-only" htmlFor="cm">Comment</label>
                   <textarea id="cm" rows={2} className={inputCls} placeholder="Comment (required when requesting changes)" value={comment} onChange={(e) => setComment(e.target.value)} />
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="primary" disabled={!!busy || openViolations.length > 0} onClick={() => act("Approving…", { action: "approve", comment }, "Approved. The receipt is below.")}>Approve</Button>
+                    <Button variant="primary" disabled={!!busy || openViolations.length > 0} onClick={() => act("Approving…", { action: "approve", comment }, draft.status === "compliance_review" && !signed ? "Compliance sign-off recorded. Waiting for brand sign-off." : "Approved. The receipt is below.")}>Approve</Button>
                     <Button disabled={!!busy} onClick={async () => { if (await act("Sending…", { action: "request_changes", comment })) setComment(""); }}>Request changes</Button>
                     {openViolations.length > 0 && <span className="text-sm text-muted">{openViolations.length} open finding{openViolations.length > 1 ? "s" : ""}: dismiss each with a reason, or request changes.</span>}
                   </div>
@@ -381,10 +418,17 @@ export default function ReviewPage() {
                 <Link href={`/review/${draft.id}/record`} className="rounded-[5px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-paper">Approval record (PDF)</Link></div>
               </div>
               <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Approved by</dt><dd>{receipt.approver} ({ROLES[receipt.approver_role as Role]?.title ?? receipt.approver_role}) · {fmtDate(receipt.at)}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-muted">Approved by</dt><dd>{approversOf(receipt).map((x, i) => (
+                  <span key={i} className="block">{x.name} ({ROLES[x.role as Role]?.title ?? x.role}) · {fmtDate(x.at)}</span>
+                ))}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-muted">Checked against</dt><dd>Brand Kit v{receipt.kit_version} · draft v{String(receipt.findings_summary.draft_version)}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-muted">Findings</dt><dd>{String(receipt.findings_summary.total)} raised · {String(receipt.findings_summary.fixed)} fixed · {String(receipt.findings_summary.dismissed)} dismissed with a reason</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-muted">Rules involved</dt><dd>{(receipt.findings_summary.rules as string[]).join(", ") || "None"}</dd></div>
+                {exceptionsOf(receipt).length > 0 && (
+                  <div className="sm:col-span-2"><dt className="text-xs uppercase tracking-wide text-muted">Approved exceptions</dt><dd>{exceptionsOf(receipt).map((x, i) => (
+                    <span key={i} className="block">{x.rule} (&ldquo;{x.quote}&rdquo;) · {x.until ? `valid until ${x.until}${x.until < todayIso() ? " (lapsed)" : ""}` : "no end date"}{x.by ? ` · granted by ${x.by}` : ""}</span>
+                  ))}</dd></div>
+                )}
                 <div className="sm:col-span-2"><dt className="text-xs uppercase tracking-wide text-muted">Fingerprint of the approved text (SHA-256)</dt><dd className="break-all font-mono text-xs">{receipt.text_hash}</dd></div>
               </dl>
               <p className="mt-2 text-xs text-muted">If the published text differs by one character, its fingerprint will not match this one.</p>
@@ -454,6 +498,7 @@ export default function ReviewPage() {
                 </div>
                 <blockquote className="mt-1 flex items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
                 <p className="mt-2">{f.message}</p>
+                {parseException(f.dismiss_reason) && <div className="mt-2"><ExceptionNote reason={f.dismiss_reason} open /></div>}
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
                 {f.precedent && (
                   <p className="mt-2 rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-xs">
@@ -474,11 +519,29 @@ export default function ReviewPage() {
                   dismissing === f.id ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <label className="sr-only" htmlFor={`r-${f.id}`}>Reason</label>
-                      <select id={`r-${f.id}`} className={inputCls + " w-auto"} defaultValue="" onChange={async (e) => { if (e.target.value && (await act("…", { action: "dismiss", finding_id: f.id, reason: e.target.value }))) setDismissing(null); }}>
+                      <select id={`r-${f.id}`} className={inputCls + " w-auto"} defaultValue="" onChange={async (e) => {
+                        const reason = e.target.value;
+                        if (!reason) return;
+                        // An exception asks for an optional end date first; the other reasons dismiss at once.
+                        if (reason === EXCEPTION) { setGranting(f.id!); setUntil(""); return; }
+                        setGranting(null);
+                        if (await act("…", { action: "dismiss", finding_id: f.id, reason })) setDismissing(null);
+                      }}>
                         <option value="" disabled>Choose a reason</option>
-                        {REASONS.map((r) => <option key={r}>{r}</option>)}
+                        {REASONS.map((r) => r === EXCEPTION && f.level === "violation" && !canGrantException(role)
+                          ? <option key={r} value={r} disabled>{r} (reviewers only)</option>
+                          : <option key={r} value={r}>{r}</option>)}
                       </select>
-                      <Button variant="ghost" onClick={() => setDismissing(null)}>Cancel</Button>
+                      {granting === f.id && (
+                        <>
+                          <label className="text-xs text-muted" htmlFor={`u-${f.id}`}>Valid until (optional)</label>
+                          <input id={`u-${f.id}`} type="date" min={todayIso()} className={inputCls + " w-auto"} value={until} onChange={(e) => setUntil(e.target.value)} />
+                          <Button variant="primary" disabled={!!busy} onClick={async () => {
+                            if (await act("…", { action: "dismiss", finding_id: f.id, reason: EXCEPTION, until: until || null }, until ? `Exception granted until ${until}. After that date the finding reopens.` : "Exception granted, with no end date.")) { setDismissing(null); setGranting(null); }
+                          }}>Grant exception</Button>
+                        </>
+                      )}
+                      <Button variant="ghost" onClick={() => { setDismissing(null); setGranting(null); }}>Cancel</Button>
                     </div>
                   ) : (
                     <div className="mt-2.5 flex flex-wrap gap-2">
@@ -497,7 +560,7 @@ export default function ReviewPage() {
                           <Button disabled={!!busy} onClick={() => setFixEdit({ id: f.id!, text: f.fix ?? "" })}>Edit fix</Button>
                         </>
                       ))}
-                      <Button disabled={!!busy} onClick={() => { setError(null); setDismissing(f.id!); }}>Dismiss</Button>
+                      <Button disabled={!!busy} onClick={() => { setError(null); setGranting(null); setDismissing(f.id!); }}>Dismiss</Button>
                     </div>
                   )
                 )}
@@ -521,6 +584,7 @@ export default function ReviewPage() {
                         {f.resolved_by && f.resolved_by !== "edit" && <span className="text-xs text-muted">by {f.resolved_by}</span>}
                       </div>
                       <div className="mt-1 text-muted">"{f.quote}"{f.state === "accepted" && f.fix ? ` → "${f.fix}"` : ""}</div>
+                      {f.state === "dismissed" && parseException(f.dismiss_reason) && <div className="mt-1"><ExceptionNote reason={f.dismiss_reason} by={f.resolved_by} /></div>}
                       {f.dismiss_reason && <div className="mt-1 text-xs">Reason: {f.dismiss_reason}{!approved && <button className="ml-2 underline" onClick={() => act("…", { action: "reopen", finding_id: f.id })}>Reopen</button>}</div>}
                     </li>
                   ))}

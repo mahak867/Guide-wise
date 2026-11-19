@@ -85,7 +85,7 @@ export default function Home() {
           <li><b className="text-ink">1. Review.</b> The sample is an Instagram post from a fictional coaching brand: a caption and a creative, with problems in both.</li>
           <li><b className="text-ink">2. Resolve.</b> Accept the re-tested fixes for the caption. Image findings are fixed in the design file, so they stay open for the reviewer.</li>
           <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
-          <li><b className="text-ink">4. Approve.</b> Switch to Kavya, dismiss what is left with a reason (or request changes), and approve to get the receipt.</li>
+          <li><b className="text-ink">4. Approve.</b> Switch to Kavya, dismiss what is left with a reason (or request changes) and approve; high-risk content then needs Arjun's brand sign-off before the receipt.</li>
         </ol>
         <div className="mt-6 border-t border-line pt-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">New in the final round</p>

@@ -86,20 +86,37 @@ await step("the brand reviewer cannot approve a high-risk draft", async () => {
   const b = page.getByRole("button", { name: "Approve", exact: true });
   if ((await b.count()) && (await b.isEnabled())) throw new Error("brand reviewer could approve");
 });
-await step("compliance dismisses with reasons and approves", async () => {
+// The first exception is granted until a date 90 days ahead; it is shown on the receipt and the record.
+const until = new Date(Date.now() + 90 * 864e5).toISOString().slice(0, 10);
+await step("compliance grants exceptions (one with an end date) and gives the first sign-off", async () => {
   await role("compliance");
   for (let k = 0; k < 15 && (await open()) > 0; k++) {
     const n = await open();
     await page.getByRole("button", { name: "Dismiss", exact: true }).first().click();
     await page.locator('select[id^="r-"]').selectOption("Approved exception");
+    if (k === 0) await page.locator('input[type=date][id^="u-"]').fill(until);
+    await page.getByRole("button", { name: "Grant exception" }).click();
     await waitChange(n);
   }
   await page.getByRole("button", { name: "Approve", exact: true }).click();
-  await page.getByText("Approval receipt").waitFor({ timeout: 30000 });
+  // High risk needs two sign-offs: compliance alone does not approve it.
+  await page.getByText(/Approved by Kavya, waiting for brand sign-off/).waitFor({ timeout: 30000 });
+  if (await page.getByText("Approval receipt").count()) throw new Error("approved on the compliance sign-off alone");
 });
-await step("approval record opens", async () => {
+await step("brand gives the second sign-off; the receipt names both approvers and the exception's end date", async () => {
+  await role("brand");
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await page.getByText("Approval receipt").waitFor({ timeout: 30000 });
+  const receipt = await page.locator("section").filter({ has: page.getByRole("heading", { name: "Approval receipt" }) }).first().innerText();
+  if (!/Kavya/.test(receipt) || !/Arjun/.test(receipt)) throw new Error("the receipt does not name both approvers");
+  if (!receipt.includes(`valid until ${until}`)) throw new Error("the receipt does not show the exception's end date");
+});
+await step("approval record opens, with both approvers and the exception", async () => {
   await page.getByRole("link", { name: "Approval record (PDF)" }).click();
   await page.getByText("Guidewise approval record").waitFor({ timeout: 30000 });
+  const rec = await page.locator("article").innerText();
+  if (!/Kavya/.test(rec) || !/Arjun/.test(rec)) throw new Error("the record does not name both approvers");
+  if (!rec.includes(`valid until ${until}`)) throw new Error("the record does not show the exception's end date");
 });
 await step("PDF upload extracts text", async () => {
   const pdfPage = await browser.newPage();

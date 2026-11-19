@@ -418,3 +418,9 @@ export const SEED_APPROVED = {
   text: "Our 2025 results: 4,200+ JEE selections from our two-year classroom programme. Past results do not guarantee future selection. Admissions for the 2026 batch are open: write to admissions@preppath.in.",
   intent: { goal: "Announce 2025 results", audience: "Parents of Class 11 students", cta: "Write to admissions", confidential: false, locked: [] as string[], demo: "approved-before" },
 };
+
+/** It is high risk, so it was signed off twice: compliance first, then brand (hours before the receipt time). */
+export const SEED_APPROVED_SIGNOFFS: { name: string; role: "compliance" | "brand"; hoursBefore: number }[] = [
+  { name: "Kavya", role: "compliance", hoursBefore: 1 },
+  { name: "Arjun", role: "brand", hoursBefore: 0 },
+];

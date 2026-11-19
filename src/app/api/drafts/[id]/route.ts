@@ -1,7 +1,8 @@
+import { BRAND_SIGNERS, approverLabel, canGrantException, complianceSignOff, exceptionReason, isIsoDate, parseException, type SignEvent } from "@/lib/approval";
 import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
-import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
+import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, lapseExceptions, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
@@ -18,7 +19,10 @@ export async function GET(req: Request, ctx: Ctx) {
       d.from("versions").select("*").eq("draft_id", id).order("version", { ascending: false }),
       d.from("receipts").select("*").eq("draft_id", id).order("at", { ascending: false }).limit(1).maybeSingle(),
     ]);
-    return Response.json({ draft, findings, events: must(events), versions: must(versions), receipt: must(receipt) });
+    const evs = must(events) as SignEvent[];
+    // A high-risk draft needs compliance and then brand. Which sign-off still stands is derived from the events log.
+    const sign_off = draft.status === "compliance_review" ? { compliance: complianceSignOff(evs), waiting_for: complianceSignOff(evs) ? "brand" : "compliance" } : null;
+    return Response.json({ draft, findings, events: evs, versions: must(versions), receipt: must(receipt), sign_off });
   } catch (e) {
     return fail(e, 500);
   }
@@ -38,7 +42,8 @@ export async function POST(req: Request, ctx: Ctx) {
     if (draft.status === "approved") return fail("This draft is approved and locked. Start a new review to change it.", 409);
     const findings = await getFindings(id);
     const inReview = REVIEW.includes(draft.status);
-    const reviewer = a.role === "brand" || a.role === "compliance";
+    // Reviewers: brand (Arjun), compliance (Kavya), and the brand manager (Meera), who can stand in for brand.
+    const reviewer = a.role === "brand" || a.role === "compliance" || a.role === "manager";
 
     switch (b.action) {
       case "accept": {
@@ -94,13 +99,27 @@ export async function POST(req: Request, ctx: Ctx) {
       case "dismiss": {
         const f = findings.find((x) => x.id === b.finding_id);
         if (!f || f.state !== "open") return fail("That finding is not open.");
-        const reason = String(b.reason ?? "").trim();
+        let reason = String(b.reason ?? "").trim().slice(0, 300);
         if (!reason) return fail("Choose a reason for dismissing this finding.");
+        // An exception is granted by a reviewer, optionally until a date; it is stored in the reason itself,
+        // as "Approved exception (until 2026-12-31)", so it reads plainly wherever the reason is shown.
+        const exception = /^approved exception\b/i.test(reason);
+        let until: string | null = null;
+        if (exception) {
+          if (f.level === "violation" && !canGrantException(a.role)) {
+            return fail("Only a reviewer (Arjun, Kavya or Meera) can grant an exception. Choose another reason, fix it, or submit and let a reviewer decide.", 403);
+          }
+          const embedded = /\(until\s+([^)]*)\)/i.exec(reason)?.[1]?.trim() ?? null;
+          const raw = b.until === undefined || b.until === null || b.until === "" ? embedded : String(b.until).trim();
+          if (raw && !isIsoDate(raw)) return fail("The exception's end date must be a real date, written YYYY-MM-DD.");
+          until = raw || null;
+          reason = exceptionReason(until);
+        }
         if (f.severity === "critical" && f.level === "violation" && a.role !== "compliance") {
           return fail("A critical finding can only be dismissed by the compliance reviewer (Kavya). You can fix it, or submit and let compliance decide.", 403);
         }
         must(await d.from("findings").update({ state: "dismissed", dismiss_reason: reason, resolved_by: a.name }).eq("id", f.id!));
-        await log(req, id, "finding_dismissed", { rule: f.rule_id, quote: f.quote, reason });
+        await log(req, id, "finding_dismissed", { rule: f.rule_id, quote: f.quote, reason, ...(exception ? { exception: true, until } : {}) });
         break;
       }
       case "reopen": {
@@ -158,13 +177,32 @@ export async function POST(req: Request, ctx: Ctx) {
       }
       case "approve": {
         if (!inReview) return fail("The creator has to submit this draft for review first.", 409);
-        if (!reviewer) return fail("Only a reviewer can approve. Switch role to Arjun (brand) or Kavya (compliance).", 403);
-        if (draft.status === "compliance_review" && a.role !== "compliance") {
-          return fail("This draft is high risk, so it needs the compliance reviewer. Switch role to Kavya.", 403);
+        if (!reviewer) return fail("Only a reviewer can approve. Switch role to Arjun (brand), Kavya (compliance) or Meera (brand manager).", 403);
+        // Dual sign-off: a high-risk draft needs compliance (Kavya) first, then brand (Arjun or Meera).
+        // The compliance sign-off is an "approved_partial" event; the brand sign-off completes the approval.
+        const dual = draft.status === "compliance_review";
+        const evs = dual ? must(await d.from("events").select("id, actor, role, action, at").eq("ws", ws).eq("draft_id", id)) as SignEvent[] : [];
+        const signed = dual ? complianceSignOff(evs) : null;
+        if (dual && a.role === "compliance" && signed) {
+          return fail(`${signed.actor} has already given the compliance sign-off. It now needs the brand sign-off: switch role to Arjun (brand) or Meera (brand manager).`, 409);
+        }
+        if (dual && a.role !== "compliance" && !signed) {
+          return fail("This draft is high risk, so it needs two sign-offs: compliance first (switch role to Kavya), then brand.", 403);
+        }
+        if (dual && a.role !== "compliance" && !BRAND_SIGNERS.includes(a.role)) {
+          return fail("The second sign-off on a high-risk draft is the brand reviewer's (Arjun) or the brand manager's (Meera).", 403);
         }
         const { kit } = await loadKit(wsOf(req));
+        // An exception past its end date has lapsed: its finding is open again, and approval waits until it is resolved.
+        const lapsed = await lapseExceptions(ws, id, findings);
+        if (lapsed.length) {
+          await log(req, id, "approval_blocked_exception_lapsed", { rules: lapsed.map((f) => f.rule_id) });
+          const ends = lapsed.map((f) => `${f.rule_id} until ${parseException(f.dismiss_reason)?.until}`).join(", ");
+          return fail(`${lapsed.length === 1 ? "An approved exception has" : `${lapsed.length} approved exceptions have`} lapsed (${ends}), so ${lapsed.length === 1 ? "the finding is" : "the findings are"} open again. Resolve ${lapsed.length === 1 ? "it" : "them"}, then approve.`, 409);
+        }
         // Approval is bound to the Brand Kit in force now: if rules, facts or assets changed since the draft was last
         // checked, the code checks run again first, and anything new must be resolved before approval.
+        // This applies to each sign-off, the first and the second.
         let current = findings;
         if ((draft.kit_version ?? 0) < kit.version) {
           const before = new Set(findings.filter((f) => f.state === "open").map((f) => f.id));
@@ -179,15 +217,26 @@ export async function POST(req: Request, ctx: Ctx) {
         }
         const open = current.filter((f) => f.state === "open" && f.level === "violation");
         if (open.length) return fail(`${open.length} finding${open.length > 1 ? "s are" : " is"} still open. Dismiss each with a reason, or request changes.`, 409);
+        if (dual && a.role === "compliance") {
+          // First of two sign-offs: recorded, and the draft stays with review until brand signs off.
+          await log(req, id, "approved_partial", { version: draft.version, kit_version: kit.version, note: b.comment ?? "", waiting_for: "brand" });
+          must(await d.from("drafts").update({ updated_at: new Date().toISOString() }).eq("id", id));
+          return Response.json({ ok: true, approved: false, waiting_for: "brand", message: `Approved by ${a.name}, waiting for brand sign-off.` });
+        }
+        const now = new Date().toISOString();
+        const approvers = [...(dual && signed ? [{ name: signed.actor, role: "compliance", at: signed.at }] : []), { name: a.name, role: a.role, at: now }];
         const count = (s: string) => current.filter((f) => f.state === s).length;
         must(await d.from("receipts").insert({
           draft_id: id,
           text_hash: fingerprint(draft.text),
           approved_text: draft.text,
           kit_version: kit.version,
-          approver: a.name,
-          approver_role: a.role,
+          approver: dual ? approverLabel(approvers) : a.name,
+          approver_role: dual ? approvers.map((x) => x.role).join(" and ") : a.role,
           findings_summary: {
+            approvers, sign_off: dual ? "dual" : "single",
+            exceptions: current.filter((f) => f.state === "dismissed" && parseException(f.dismiss_reason))
+              .map((f) => ({ rule: f.rule_id, quote: f.quote, until: parseException(f.dismiss_reason)!.until, by: f.resolved_by })),
             total: current.length, fixed: count("accepted") + count("resolved"), dismissed: count("dismissed"),
             suggestions_left_open: current.filter((f) => f.state === "open").length,
             rules: [...new Set(current.map((f) => f.rule_id))],
@@ -196,12 +245,12 @@ export async function POST(req: Request, ctx: Ctx) {
           },
         }));
         must(await d.from("drafts").update({ status: "approved", impact: null, updated_at: new Date().toISOString() }).eq("id", id));
-        await log(req, id, "approved", { version: draft.version, kit_version: kit.version, note: b.comment ?? "" });
+        await log(req, id, "approved", { version: draft.version, kit_version: kit.version, note: b.comment ?? "", approvers: approvers.map((x) => ({ name: x.name, role: x.role })) });
         break;
       }
       case "request_changes": {
         if (!inReview) return fail("The creator has to submit this draft for review first.", 409);
-        if (!reviewer) return fail("Only a reviewer can request changes. Switch role to Arjun or Kavya.", 403);
+        if (!reviewer) return fail("Only a reviewer can request changes. Switch role to Arjun, Kavya or Meera.", 403);
         const comment = String(b.comment ?? "").trim();
         if (!comment) return fail("Say what needs to change.");
         must(await d.from("drafts").update({ status: "changes_requested", updated_at: new Date().toISOString() }).eq("id", id));
