@@ -304,9 +304,9 @@ export default function ReviewPage() {
           <Card className="p-4 text-sm">
             <h2>How this review was produced</h2>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
-              <li><b className="text-ink">{st.codeFindings ?? 0}</b> findings from code checks</li>
-              <li><b className="text-ink">{st.aiFindings ?? 0}</b> findings from AI checks{draft.intent.confidential ? " (off: confidential draft)" : draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls${st.aiCached ? `, ${st.aiCached} answered from cache` : ""})`}</li>
-              {!!st.images && <li><b className="text-ink">{st.visualFindings ?? 0}</b> findings from {st.images} image{st.images > 1 ? "s" : ""} (colours, alt text and the text inside)</li>}
+              <li><b className="text-ink">{st.codeFindings ?? 0}</b> finding{st.codeFindings === 1 ? "" : "s"} from code checks</li>
+              <li><b className="text-ink">{st.aiFindings ?? 0}</b> finding{st.aiFindings === 1 ? "" : "s"} from AI checks{draft.intent.confidential ? " (off: confidential draft)" : draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls${st.aiCached ? `, ${st.aiCached} answered from cache` : ""})`}</li>
+              {!!(st.images || st.assets) && <li><b className="text-ink">{st.visualFindings ?? 0}</b> finding{st.visualFindings === 1 ? "" : "s"} from {[st.images ? `${st.images} image${st.images > 1 ? "s" : ""}` : "", st.assets ? `${st.assets} document${st.assets > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ")} and the checks across them</li>}
               <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
               <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>
               <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
