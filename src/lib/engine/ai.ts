@@ -17,6 +17,8 @@ import { cacheGet, cacheKey, cacheOn, cacheSet } from "./aicache";
 
 // Each AI call is capped so a slow or overloaded provider cannot stall a review past the server limit.
 const CALL_TIMEOUT_MS = 12_000;
+/** Reading an image takes longer than judging text. */
+const VISION_TIMEOUT_MS = 25_000;
 
 /** image: a data URL (JPEG or PNG) for vision tasks. */
 interface Task<T> { name: string; system: string; user: string; schema: z.ZodType<T>; maxTokens: number; image?: string }
@@ -78,7 +80,7 @@ function groq(): Provider | null {
             { role: "system", content: `${t.system}\n\nAnswer with JSON only, matching this schema: ${JSON.stringify(jsonSchema(t.schema))}` },
             { role: "user", content: [{ type: "text", text: t.user }, { type: "image_url", image_url: { url: t.image } }] },
           ],
-        });
+        }, { timeout: VISION_TIMEOUT_MS });
         return parseJson(vision.choices[0]?.message?.content, t.schema);
       }
       const res = await client.chat.completions.create({
@@ -253,7 +255,7 @@ async function ask<T>(t: Task<T>): Promise<T> {
     if ((restingUntil.get(p.id) ?? 0) > Date.now()) continue; // another call found it down while this one waited
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const out = await slot(() => withTimeout(p.run(t), CALL_TIMEOUT_MS, p.label));
+        const out = await slot(() => withTimeout(p.run(t), t.image ? VISION_TIMEOUT_MS : CALL_TIMEOUT_MS, p.label));
         lastAnswered = p.label;
         return out;
       } catch (e) {
@@ -273,7 +275,8 @@ async function ask<T>(t: Task<T>): Promise<T> {
     }
   }
   const msg = last instanceof Error ? last.message : String(last);
-  throw new Error(`The AI service did not answer (${msg.slice(0, 140)})`);
+  const why = failures.slice(-c.length).join(" | ");
+  throw new Error(`The AI service did not answer (${(c.length > 1 ? why : msg).slice(0, 300)})`);
 }
 
 const SYSTEM = `You are one check inside Guidewise, a brand-governance tool. A marketing team's draft is reviewed against that team's own approved rules before it is published.
