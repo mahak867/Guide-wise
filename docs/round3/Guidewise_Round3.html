@@ -44,7 +44,7 @@ code { font-size: 8.8pt; }
 
 <table class="links" style="margin-top:12pt">
 <tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · no sign-in; each visitor gets a private demo workspace</td></tr>
-<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 23 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
+<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 32 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
 <tr><td>Walkthrough video</td><td>https://guidewise-kohl.vercel.app/demo.webm (Round 2 journey, 100 seconds)</td></tr>
 <tr><td>Documentation</td><td>In the repository: docs/ARCHITECTURE.md, TESTING.md, KNOWN_ISSUES.md, ROADMAP.md, API.md, CHANGELOG.md</td></tr>
 <tr><td>Demo brand</td><td>PrepPath Academy, a fictional JEE/NEET coaching brand written by the team</td></tr>
@@ -54,7 +54,7 @@ code { font-size: 8.8pt; }
 <h2>At a glance</h2>
 <div class="grid2">
 <div class="box"><b>All three promised improvements are live.</b><p>Change impact, the API and MCP server, and campaign review with AI vision. Each was tested on the live site against the exact test we wrote down at Round 2 (next pages).</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>Text: 92% precision and 98% recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. 74 unit tests; a 20-step journey, 51-step sweep and 93-check probe pass on the live site.</p></div>
+<div class="box"><b>Measured, not claimed.</b><p>Text: 92% precision and 98% recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. 76 unit tests; a 20-step journey, 51-step sweep and 93-check probe pass on the live site.</p></div>
 </div>
 <div style="width:78%"><figure><img src="img/01-home.png" alt="Home page"><figcaption>The home page: the sample post, the sample campaign and every review in this visitor's private workspace.</figcaption></figure></div>
 
@@ -133,7 +133,7 @@ code { font-size: 8.8pt; }
 <li><b>AI backup repaired.</b> Gemini 2.5 is not available to new keys and Gemini 3 models stalled while thinking; the adapter now uses 3.5 Flash Lite with thinking kept low (about 4 s per image) and a circuit breaker. The Groq vision model is discovered from the key instead of hard-coded.</li>
 <li><b>Two new evaluations.</b> Images (20 generated creatives) and privacy (personal data planted in 24 drafts, canaries in 3 confidential ones). The privacy evaluation found a real leak — landlines like 080-4123-5678 were not masked — fixed before publishing.</li>
 <li><b>Fewer false flags, fewer misses.</b> A number inside a promo code (EARLY10) and an offer cap ("the first 50 students") are no longer read as claims; a "$" that OCR reads in place of "₹" is treated as a price, so prices in creatives are still compared.</li>
-<li><b>Easier to try.</b> The home page links straight to the three new features; the sample campaign opens from one link; facts are edited in place, so change impact takes two clicks.</li>
+<li><b>Easier to try.</b> The home page links straight to the three new features; the sample campaign opens from one link; the demo starts with an approved post that cites F-3, and facts are edited in place, so change impact takes two clicks: Edit F-3, change the figure, save.</li>
 <li><b>New rules in the demo kit:</b> consistency across the campaign (high risk), people shown in a creative, hidden characters.</li>
 <li><b>Documentation:</b> architecture, testing, known issues with file references, dated and costed roadmap, API reference, changelog.</li>
 </ul>
@@ -141,7 +141,7 @@ code { font-size: 8.8pt; }
 <h2 class="page">Testing</h2>
 <table>
 <tr><th>Suite</th><th>Result</th><th>What it covers</th></tr>
-<tr><td>Unit tests (Vitest, CI)</td><td>74 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback and circuit breaker, change impact, campaign consistency, input validation, every rule's own tests</td></tr>
+<tr><td>Unit tests (Vitest, CI)</td><td>76 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback and circuit breaker, change impact, campaign consistency, input validation, every rule's own tests</td></tr>
 <tr><td>Browser journey (live)</td><td>20 of 20</td><td>Review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
 <tr><td>UI sweep (live)</td><td>51 of 51</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
 <tr><td>API probe (live)</td><td>93 of 93</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end, including a real MCP client</td></tr>
