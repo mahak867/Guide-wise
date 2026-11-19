@@ -1,5 +1,7 @@
 # Testing
 
+Latest full run against the live site (21 Nov 2026 build): **72 unit tests, 20 of 20 journey steps, 50 of 50 sweep steps, 93 of 93 API probe checks**, no server or page errors.
+
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |
 | Unit tests (Vitest) | `npm test` | Engine rules, fact matching, logo matching on real images, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback, change impact, campaign consistency, input validation, every rule's own test sentences | Locally and in CI on every push |

@@ -54,7 +54,7 @@ https://github.com/mahak867/Guide-wise
 26. **Engineering.**
     - 63 automated tests, including logo matching on the real sample creatives, and eight that replace the AI with a deliberately wrong one (invented quotes, a forbidden fix, a wrong number, a time misread as a figure, personal data, a confidential draft, prompt injection, locked phrases) and check that code catches each.
     - CI on every push: lint, type-check, tests, evaluation, build.
-    - A 20-step browser test of the whole journey (`npm run e2e`), a 46-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 69-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
+    - A 20-step browser test of the whole journey (`npm run e2e`), a 50-step sweep that clicks every page and control at desktop and phone sizes (`npm run e2e:sweep`), and a 93-check probe that sends every API route bad input, the wrong role and requests from another visitor's workspace (`npm run e2e:api`). All three pass against the live site; unit tests and the evaluation run in CI on every push ([CI runs](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)).
     - Every input is validated: malformed requests, corrupt files, impossible dates and unsafe patterns get a clear message, never a server error.
     - Functions run in Mumbai next to the database.
 
