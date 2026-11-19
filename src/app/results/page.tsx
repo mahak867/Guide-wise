@@ -90,6 +90,19 @@ export default function Results() {
             )}
           </Card>
 
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Card className="p-4 text-sm">
+              <h2>Images</h2>
+              <p className="mt-1"><b>20 of 20</b> planted errors caught, <b>0</b> false alarms in 40 clean checks.</p>
+              <p className="mt-1 text-muted">20 generated creatives with planted colour, contrast and logo errors, plus clean ones, read the same way the app reads an upload. It runs in CI on every push (<code className="rounded bg-mist px-1">npm run eval:images</code>), which fails if fewer than 85% are caught or there are more than 2 false alarms.</p>
+            </Card>
+            <Card className="p-4 text-sm">
+              <h2>Privacy</h2>
+              <p className="mt-1"><b>0 leaks</b> in 144 prompts sent to the AI.</p>
+              <p className="mt-1 text-muted">8 pieces of personal data of 5 kinds (emails, mobile and landline numbers, Aadhaar, PAN and a card number), each planted in 3 drafts (24 in all), plus 3 confidential drafts carrying canary words; every prompt that would reach the AI is captured and searched. It runs in CI on every push (<code className="rounded bg-mist px-1">npm run eval:privacy</code>) and fails on any leak. Its first run found that landlines like 080-4123-5678 were not masked; that was fixed.</p>
+            </Card>
+          </div>
+
           <div className="mt-4 grid gap-4 lg:grid-cols-[22rem_1fr]">
             <Card className="h-fit overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -133,19 +146,6 @@ export default function Results() {
                   );
                 })}
               </ul>
-            </Card>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Card className="p-4 text-sm">
-              <h2>Images</h2>
-              <p className="mt-1"><b>20 of 20</b> planted errors caught, <b>0</b> false alarms in 40 clean checks.</p>
-              <p className="mt-1 text-muted">20 generated creatives with planted colour, contrast and logo errors, plus clean ones, read the same way the app reads an upload. It runs in CI on every push (<code className="rounded bg-mist px-1">npm run eval:images</code>), which fails if fewer than 85% are caught or there are more than 2 false alarms.</p>
-            </Card>
-            <Card className="p-4 text-sm">
-              <h2>Privacy</h2>
-              <p className="mt-1"><b>0 leaks</b> in 144 prompts sent to the AI.</p>
-              <p className="mt-1 text-muted">8 pieces of personal data of 5 kinds (emails, mobile and landline numbers, Aadhaar, PAN and a card number), each planted in 3 drafts (24 in all), plus 3 confidential drafts carrying canary words; every prompt that would reach the AI is captured and searched. It runs in CI on every push (<code className="rounded bg-mist px-1">npm run eval:privacy</code>) and fails on any leak. Its first run found that landlines like 080-4123-5678 were not masked; that was fixed.</p>
             </Card>
           </div>
 
