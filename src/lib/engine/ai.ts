@@ -126,7 +126,11 @@ function gemini(): Provider | null {
       const call = () => client!.models.generateContent({
         model,
         contents: t.image ? [{ role: "user", parts: [{ inlineData: { mimeType: imgParts(t.image).mime, data: imgParts(t.image).data } }, { text: t.user }] }] : t.user,
-        config: { systemInstruction: t.system, responseMimeType: "application/json", responseJsonSchema: jsonSchema(t.schema), maxOutputTokens: t.maxTokens },
+        config: {
+          systemInstruction: t.system, responseMimeType: "application/json", responseJsonSchema: jsonSchema(t.schema), maxOutputTokens: t.maxTokens,
+          // Reading a creative needs no step-by-step reasoning; without it the answer comes in seconds, not tens of seconds.
+          ...(t.image ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
       });
       try {
         return parseJson((await call()).text, t.schema);
