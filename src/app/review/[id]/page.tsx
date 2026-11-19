@@ -12,7 +12,8 @@ import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
   id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[] };
-  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null }[];
+  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null; vision?: { text: string; people: { description: string; kind: string }[] } | null }[];
+  assets?: { name: string; text: string }[];
   impact?: { reason: string; at: string } | null;
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
 }
@@ -115,6 +116,7 @@ export default function ReviewPage() {
   const show = (f: Finding) => {
     setActive(f.id!);
     if (f.location?.startsWith("image:")) document.getElementById(`img-${f.location.slice(6)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (f.location?.startsWith("asset:")) document.getElementById(`doc-${f.location.slice(6)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   if (error && !data) return <Notice tone="error">{error} <Link className="underline" href="/">Back to reviews</Link></Notice>;
@@ -237,6 +239,23 @@ export default function ReviewPage() {
             </Card>
           )}
 
+          {(draft.assets?.length ?? 0) > 0 && (
+            <Card className="p-5">
+              <h2>Campaign documents</h2>
+              <p className="mt-1 text-sm text-muted">Reviewed with the caption and creatives. Prices, dates and promo codes are compared across all of them.</p>
+              <div className="mt-3 space-y-3">
+                {draft.assets!.map((a, i) => {
+                  const n = open.filter((f) => f.location === `asset:${i + 1}`).length;
+                  return (
+                    <div key={i} id={`doc-${i + 1}`} className="rounded-md border border-line p-3 text-sm">
+                      <div className="flex items-center gap-2"><b className="capitalize">{a.name}</b>{n > 0 ? <Badge tone="critical">{n} open finding{n === 1 ? "" : "s"}</Badge> : <Badge tone="green">No open findings</Badge>}</div>
+                      <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-relaxed">{a.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
           {draft.images?.length > 0 && imgEdit === null && (
             <Card className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -260,6 +279,7 @@ export default function ReviewPage() {
                         </div>
                         <div><span className="text-xs uppercase tracking-wide text-muted">Text read from the image</span><p className="mt-0.5 whitespace-pre-wrap rounded-md bg-mist px-2 py-1.5">{img.ocr_ok === false ? "Could not be read in the browser that uploaded it." : img.ocr || "No text found."}</p></div>
                         {img.logo && <div><span className="text-xs uppercase tracking-wide text-muted">Logo</span><p>{img.logo.found ? `Found: match ${img.logo.score.toFixed(2)}, ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width${(img.logo.crowd ?? 0) > 0.1 ? ", clear space crowded" : ", clear space free"}.` : <span className="text-crit">Not found. Best match {img.logo.score.toFixed(2)}; the logo counts as present at 0.70.</span>}</p></div>}
+                        {img.vision && <div><span className="text-xs uppercase tracking-wide text-muted">AI vision</span><p>{img.vision.people.length ? <span className="text-crit">Shows {img.vision.people.length === 1 ? "a person" : `${img.vision.people.length} people`}: {img.vision.people.map((p) => p.description).join("; ")}. A consent record is needed.</span> : "No people shown."}{img.vision.text && img.vision.text.replace(/\s+/g, " ").trim() !== (img.ocr ?? "").replace(/\s+/g, " ").trim() ? " It also read text the OCR missed; every rule ran on it." : ""}</p></div>}
                         <div><span className="text-xs uppercase tracking-wide text-muted">Alt text</span><p>{img.alt || <span className="text-muted">None</span>}</p></div>
                       </div>
                     </div>
@@ -382,7 +402,7 @@ export default function ReviewPage() {
                   </span>
                   <span className="shrink-0 pt-1 text-right text-[10.5px] font-medium uppercase leading-4 tracking-[0.06em] text-muted">
                     {f.severity}{f.level === "suggestion" ? " · suggestion" : ""}
-                    <span className="block">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : "Text"}{f.fix != null ? " · fix ready" : ""}</span>
+                    <span className="block">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : f.location?.startsWith("asset:") ? (draft.assets?.[Number(f.location.slice(6)) - 1]?.name ?? "Document") : "Text"}{f.fix != null ? " · fix ready" : ""}</span>
                   </span>
                   <span aria-hidden className="shrink-0 pt-0.5 text-muted">{isOpen ? "–" : "+"}</span>
                 </button>

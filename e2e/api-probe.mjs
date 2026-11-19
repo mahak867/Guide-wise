@@ -179,6 +179,29 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("api: another workspace cannot see these keys", { s: 200, j: await (await fetch(L + "/api/keys", { headers: { "x-workspace": "probe-" + randomUUID().slice(0, 12) } })).json() }, (r) => r.j.keys.length === 0);
 }
 
+// Round 3 improvement 3, campaign review with AI vision: a three-asset campaign with a price mismatch between
+// the creative and the brochure, and a student shown with no consent. Both found, cited, routed to compliance.
+{
+  const { readFileSync } = await import("node:fs");
+  const dataUrl = "data:image/png;base64," + readFileSync(new URL("../public/sample-campaign-creative.png", import.meta.url)).toString("base64");
+  const r = await call("POST", "/api/drafts", { body: {
+    title: "Campaign probe", content_type: "social",
+    text: "JEE crash course for droppers. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol at admissions@preppath.in.",
+    images: [{ name: "sample-campaign-creative.png", alt: "Crash course creative with an illustrated student holding a trophy", dataUrl, colours: [{ hex: "#0F6B5F", share: 0.8 }], ocr: "PrepPath Academy\nJEE Crash Course\nFee ₹12,999\nStarts 5 January\nCode EARLY20\nadmissions@preppath.in" }],
+    assets: [{ name: "brochure", text: "PrepPath JEE Crash Course. Fee ₹14,999 including printed test papers. Classes start on 5 January. Early-bird code EARLY20." }],
+  } });
+  expect("campaign: a three-asset campaign is accepted", r, (x) => x.s === 200);
+  const d = (await call("GET", `/api/drafts/${r.j.id}`)).j;
+  const price = d.findings.find((f) => f.rule_id === "CONS-1" && f.quote === "₹14,999");
+  expect("campaign: the price mismatch between creative and brochure is found and cited", { s: 200, j: price }, (x) => !!x.j && x.j.location === "asset:1" && /₹12,999/.test(x.j.message) && x.j.risk === "high");
+  const person = d.findings.find((f) => f.rule_id === "VIS-PEOPLE");
+  expect("campaign: AI vision finds the student shown, with no identity guessed", { s: 200, j: { person, mode: d.draft.mode, people: d.draft.images[0].vision?.people } }, (x) => !!x.j.person && x.j.person.location === "image:1" && x.j.people?.length >= 1);
+  await call("POST", `/api/drafts/${r.j.id}`, { body: { action: "submit" } });
+  const routed = (await call("GET", `/api/drafts/${r.j.id}`)).j.draft;
+  expect("campaign: routed to compliance", { s: 200, j: routed }, (x) => x.j.status === "compliance_review");
+  expect("campaign: more than 4 documents is a clear 400", await call("POST", "/api/drafts", { body: { text: "A valid draft text here.", assets: Array(5).fill({ name: "x", text: "Some document text here." }) } }), is4xx);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));

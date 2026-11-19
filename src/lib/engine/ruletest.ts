@@ -2,7 +2,7 @@ import type { Fact, Kit, Rule } from "../types";
 import { aiAvailable, judgeRule } from "./ai";
 import { patternHits, runCodeRule } from "./code";
 import { consistencyHits, parseConsistencyTest } from "./consistency";
-import { altHits, contrastHits, logoHits, paletteHits, parseColourTest, parseLogoTest } from "./visual";
+import { altHits, contrastHits, logoHits, paletteHits, parseColourTest, parseLogoTest, peopleHits } from "./visual";
 
 export type TestRun = NonNullable<Rule["last_test"]>;
 
@@ -17,13 +17,14 @@ export async function runRuleTests(rule: Rule, facts: Fact[], kit: Kit): Promise
     let got: string;
     if (rule.category === "consistency") {
       const c = parseConsistencyTest(t.text);
-      got = consistencyHits(rule, c.text, c.images).length ? "flag" : "pass";
+      got = consistencyHits(rule, c.text, c.images, c.assets).length ? "flag" : "pass";
     } else if (rule.category.startsWith("visual-")) {
       const colours = parseColourTest(t.text);
       const hits =
         rule.category === "visual-palette" ? paletteHits(rule, colours, kit, "image:1", "Test image") :
         rule.category === "visual-contrast" ? contrastHits(rule, colours, "image:1", "Test image") :
         rule.category === "visual-logo" ? logoHits(rule, parseLogoTest(t.text), "image:1", "Test image") :
+        rule.category === "visual-people" ? peopleHits(rule, /no people|nobody/i.test(t.text) ? { text: "", people: [] } : { text: "", people: [{ description: t.text.replace(/^people:\s*/i, ""), kind: "photo" }] }, "image:1", "Test image") :
         altHits(rule, t.text.replace(/^alt:\s*/i, ""), "image:1", "Test image");
       got = hits.length ? "flag" : "pass";
     } else if (rule.kind === "code") {

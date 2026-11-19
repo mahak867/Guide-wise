@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
+import { CampaignDocs, type Doc } from "@/components/CampaignDocs";
+import { analyseImage } from "@/lib/image";
 import { api, useApp } from "@/lib/client";
 import type { ImageInput } from "@/lib/image";
 import { HARD_CASES } from "@/lib/hardcases";
@@ -10,6 +12,14 @@ import { DEMO_CAPTION, DEMO_INTENT } from "@/lib/seed";
 import { CONTENT_TYPES } from "@/lib/types";
 
 const TYPES = CONTENT_TYPES;
+
+const SAMPLE_CAMPAIGN = {
+  caption: "JEE crash course for droppers: 60 days of full-length tests and evening doubt sessions. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol at admissions@preppath.in.",
+  docs: [
+    { name: "brochure", text: "PrepPath JEE Crash Course. Fee ₹14,999 including printed test papers. Classes start on 5 January at our Anna Nagar centre. Early-bird code EARLY20." },
+    { name: "landing page", text: "Join the PrepPath JEE crash course. Starts 12 January. Early-bird code EARLY10 for the first 50 students." },
+  ],
+};
 
 export default function NewReview() {
   const { state, role, setRole } = useApp();
@@ -20,6 +30,8 @@ export default function NewReview() {
   const [hard, setHard] = useState<string | null>(null);
   const [intent, setIntent] = useState({ goal: "", audience: "", cta: "", locked: "" });
   const [images, setImages] = useState<ImageInput[]>([]);
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const logo = useApp().state?.kit.logo ?? null;
   const [confidential, setConfidential] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +71,7 @@ export default function NewReview() {
     setError(null);
     try {
       if (role !== "creator") setRole("creator");
-      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent: { ...intent, confidential }, images });
+      const { id } = await api<{ id: string }>("/api/drafts", { title, content_type: type, text, intent: { ...intent, confidential }, images, assets: docs.filter((d) => d.text.trim()) });
       router.push(`/review/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -90,6 +102,20 @@ export default function NewReview() {
               <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent({ ...DEMO_INTENT, locked: "" }); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
                 Use the sample caption
               </Button>
+              <Button type="button" variant="ghost" disabled={!!busy} onClick={async () => {
+                setTitle("Campaign: JEE crash course"); setType("social"); setHard(null);
+                setText(SAMPLE_CAMPAIGN.caption); setDocs(SAMPLE_CAMPAIGN.docs);
+                setIntent({ goal: "Fill the January crash course", audience: "JEE droppers", cta: "Enrol for the crash course", locked: "" });
+                setBusy("Reading the campaign creative…");
+                try {
+                  const blob = await (await fetch("/sample-campaign-creative.png")).blob();
+                  const img = await analyseImage(blob, "sample-campaign-creative.png", (m) => setBusy(`Campaign creative: ${m}`), logo);
+                  setImages([{ ...img, alt: "PrepPath crash course creative: an illustrated student holding a trophy beside the text JEE Crash Course, Fee ₹12,999, Starts 5 January, Code EARLY20." }]);
+                } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+                setBusy(null);
+              }}>
+                Use the sample campaign
+              </Button>
               <span className="text-muted">{text.length ? `${text.trim().split(/\s+/).length} words` : ""}</span>
             </div>
             <div className="rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
@@ -106,6 +132,7 @@ export default function NewReview() {
               {hard && <p className="mt-2 text-muted" role="status"><b className="text-ink">What to look for:</b> {HARD_CASES.find((c) => c.id === hard)?.expect}</p>}
             </div>
             <ImagePicker images={images} onChange={setImages} />
+            <CampaignDocs docs={docs} onChange={setDocs} />
             <fieldset className="rounded-md border border-line p-3">
               <legend className="px-1 text-sm font-medium">What is this draft for? <span className="font-normal text-muted">Fixes are written to keep this intent.</span></legend>
               <div className="grid gap-3 sm:grid-cols-3">

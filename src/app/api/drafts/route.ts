@@ -1,5 +1,5 @@
 import { actor, db, fail, log, must, wsOf } from "@/lib/db";
-import { cleanImages, getDraft, runReview, type DraftRow } from "@/lib/workflow";
+import { cleanAssets, cleanImages, getDraft, runReview, type DraftRow } from "@/lib/workflow";
 
 export const maxDuration = 60;
 
@@ -25,12 +25,14 @@ export async function POST(req: Request) {
     if (text.length > 12000) return fail("This version reviews up to 12,000 characters at a time.");
     const a = actor(req);
     const images = cleanImages(b.images);
+    const assets = cleanAssets(b.assets);
     const row = must(await db().from("drafts").insert({
       ws: wsOf(req),
       title: String(b.title || text.slice(0, 48)).trim(),
       content_type: b.content_type || "social",
       text: text || "(Image only)",
       images,
+      assets,
       intent: {
         goal: String(b.intent?.goal ?? "").slice(0, 300), audience: String(b.intent?.audience ?? "").slice(0, 300), cta: String(b.intent?.cta ?? "").slice(0, 300),
         confidential: b.intent?.confidential === true,

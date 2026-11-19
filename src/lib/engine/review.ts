@@ -1,5 +1,5 @@
 import type { Fact, Finding, Intent, Kit, ReviewStats, Rule } from "../types";
-import { aiAvailable, extractClaims, judgeRule } from "./ai";
+import { aiAvailable, extractClaims, judgeRule, readCreative } from "./ai";
 import { dedupe, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
@@ -78,14 +78,17 @@ function toFinding(rule: Rule, quote: string, explanation: string, fix: string):
 
 const overlaps = (a: string, b: string) => a.includes(b) || b.includes(a);
 
+/** A campaign document reviewed with the caption: landing-page copy, a brochure, an email. */
+export interface Asset { name: string; text: string }
+
 export async function reviewDraft(
   text: string,
   intent: Intent | null,
   rules: Rule[],
   facts: Fact[],
   kit: Kit,
-  opts: { useAI?: boolean; images?: DraftImage[]; contentType?: string; aiCache?: boolean } = {},
-): Promise<{ findings: Finding[]; stats: ReviewStats }> {
+  opts: { useAI?: boolean; images?: DraftImage[]; contentType?: string; aiCache?: boolean; assets?: Asset[] } = {},
+): Promise<{ findings: Finding[]; stats: ReviewStats; images: DraftImage[] }> {
   const started = Date.now();
   rules = applicableRules(rules, kit);
   // A rule can be limited to some content types (for example social posts and ads only).
@@ -165,9 +168,24 @@ export async function reviewDraft(
   const aiKept = v.kept.filter((a) => !code.some((c) => c.rule_id === a.rule_id && overlaps(c.quote, a.quote)));
   const vc = verify(text, code, rules, facts);
   dropped.push(...vc.dropped);
-  const images = opts.images ?? [];
-  const cross = rules.filter((r) => r.category === "consistency").flatMap((r) => consistencyHits(r, text, images));
-  const vis = verify(text, [...runVisualChecks(images, rules, facts, kit), ...cross], rules, facts, images);
+  // AI vision reads each creative once (cached by image): text OCR may miss, and any people shown.
+  let images = opts.images ?? [];
+  let visionRead = 0;
+  if (useAI && images.some((i) => i.dataUrl && i.vision === undefined)) {
+    images = await Promise.all(images.map(async (img) => {
+      if (!img.dataUrl || img.vision !== undefined) return img;
+      try { aiCalls++; visionRead++; return { ...img, vision: await readCreative(img.dataUrl, call(1)) }; } catch { return img; }
+    }));
+  }
+  // Campaign documents beyond the caption (landing page, brochure, email): every text rule, quoted from that document.
+  const assets = opts.assets ?? [];
+  const docRules = rules.filter((r) => !r.category.startsWith("visual-") && !["length", "readability", "consistency"].includes(r.category));
+  const docFindings = assets.flatMap((a, i) => runCodeChecks(a.text, docRules, facts, kit).map((f) => ({
+    ...f, location: `asset:${i + 1}`, message: `In the ${a.name}: ${f.message}`,
+    fix_note: f.fix ? `Change the wording in the ${a.name} to: "${f.fix}"` : f.fix_note ?? null, fix: null,
+  })));
+  const cross = rules.filter((r) => r.category === "consistency").flatMap((r) => consistencyHits(r, text, images, assets));
+  const vis = verify(text, [...runVisualChecks(images, rules, facts, kit), ...cross, ...docFindings], rules, facts, images, assets);
   dropped.push(...vis.dropped);
   const seenVis = new Set<string>();
   const visual = vis.kept.filter((f) => (seenVis.has(key(f)) ? false : (seenVis.add(key(f)), true)));
@@ -187,6 +205,9 @@ export async function reviewDraft(
       codeFindings: vc.kept.length,
       visualFindings: visual.length,
       images: images.length,
+      assets: assets.length,
+      visionRead,
+      people: images.reduce((n, i) => n + (i.vision?.people?.length ?? 0), 0),
       aiFindings: aiKept.length,
       droppedByVerifier: dropped,
       fixesWithdrawn,
@@ -196,6 +217,7 @@ export async function reviewDraft(
       redactions: map.length,
       aiError,
     },
+    images,
   };
 }
 

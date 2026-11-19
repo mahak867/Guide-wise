@@ -14,7 +14,7 @@ export interface Dropped {
  * This confirms grounding, not correctness - a grounded finding can still be a wrong judgment,
  * which is why people can dismiss and why a human approves.
  */
-export function verify(text: string, findings: Finding[], rules: Rule[], facts: Fact[], images: DraftImage[] = []): { kept: Finding[]; dropped: Dropped[] } {
+export function verify(text: string, findings: Finding[], rules: Rule[], facts: Fact[], images: DraftImage[] = [], assets: { text: string }[] = []): { kept: Finding[]; dropped: Dropped[] } {
   const kept: Finding[] = [];
   const dropped: Dropped[] = [];
   const t = today();
@@ -29,9 +29,15 @@ export function verify(text: string, findings: Finding[], rules: Rule[], facts: 
         img.colours.some((c) => c.hex === f.quote) ||
         f.quote === `Image ${imgIdx + 1}: alt text` ||
         (f.quote === `Image ${imgIdx + 1}: logo` && !!img.logo) ||
-        (img.ocr ?? "").includes(f.quote)
+        (img.ocr ?? "").includes(f.quote) ||
+        (img.vision?.text ?? "").includes(f.quote) ||
+        (f.quote === `Image ${imgIdx + 1}: people` && !!img.vision?.people?.length)
       );
       if (!grounded) { drop("not found in the image it cites"); continue; }
+    } else if (f.location?.startsWith("asset:")) {
+      // A finding on another campaign document must quote that document.
+      const a = assets[Number(f.location.slice(6)) - 1];
+      if (!a || !a.text.includes(f.quote)) { drop("not found in the document it cites"); continue; }
     } else if (!text.includes(f.quote)) {
       // Recover harmless differences in case or spacing; otherwise the quote is invented.
       const re = new RegExp(f.quote.trim().split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+"), "i");

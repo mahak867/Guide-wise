@@ -11,6 +11,7 @@ export interface DraftRow {
   text: string;
   intent: Intent;
   images: DraftImage[];
+  assets?: { name: string; text: string }[];
   status: string;
   risk_tier: string | null;
   risk_reasons: string[];
@@ -45,7 +46,10 @@ export async function getFindings(id: string): Promise<Finding[]> {
 export async function runReview(ws: string, draft: DraftRow, useAI: boolean, keepAI = false): Promise<void> {
   const d = db();
   const { kit, rules, facts } = await loadKit(ws);
-  const { findings, stats } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [], contentType: draft.content_type });
+  const { findings, stats, images } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI, images: draft.images ?? [], contentType: draft.content_type, assets: draft.assets ?? [] });
+  // Keep what AI vision read from each creative, so it is read once and shown on the review.
+  const visionAdded = images.some((img, i) => img.vision !== undefined && draft.images?.[i]?.vision === undefined);
+  if (visionAdded) { must(await d.from("drafts").update({ images }).eq("id", draft.id)); draft.images = images; }
   const existing = await getFindings(draft.id);
   const found = new Set(findings.map(key));
   const known = new Map(existing.map((f) => [key(f), f]));
@@ -104,6 +108,20 @@ function cleanLogo(l: unknown): DraftImage["logo"] {
     ...(b ? { box: { x: n(b.x), y: n(b.y), w: n(b.w), h: n(b.h) } } : {}),
     ...(o.crowd !== undefined ? { crowd: n(o.crowd) } : {}),
   };
+}
+
+/** Validate campaign documents: up to 4, each named, 10 to 12,000 characters. */
+export function cleanAssets(input: unknown): { name: string; text: string }[] {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) throw new BadInput("Campaign documents must be a list.");
+  if (input.length > 4) throw new BadInput("Add up to 4 campaign documents.");
+  return input.map((a: Record<string, unknown>, n: number) => {
+    const name = String(a?.name ?? "").trim().slice(0, 40) || `document ${n + 1}`;
+    const text = String(a?.text ?? "").trim();
+    if (text.length < 10) throw new BadInput(`Campaign document ${n + 1} (${name}) needs at least 10 characters of text.`);
+    if (text.length > 12000) throw new BadInput(`Campaign document ${n + 1} (${name}) is longer than 12,000 characters.`);
+    return { name, text };
+  });
 }
 
 export function cleanImages(input: unknown): DraftImage[] {

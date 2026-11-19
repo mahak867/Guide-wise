@@ -127,6 +127,9 @@ export interface ReviewStats {
   codeFindings: number;
   visualFindings?: number;
   images?: number;
+  assets?: number;
+  visionRead?: number;
+  people?: number;
   aiFindings: number;
   droppedByVerifier: { reason: string; quote: string; rule_id: string }[];
   fixesWithdrawn: number;

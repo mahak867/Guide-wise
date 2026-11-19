@@ -179,6 +179,7 @@ export function extractNumberClaims(text: string): NumberClaim[] {
     const value = parseNumber(quote);
     if (value === null) continue;
     if (masked.some(([s0, e0]) => idx >= s0 && idx < e0)) continue;
+    if (/[A-Za-z]/.test(text[idx - 1] ?? "") && !/^(?:₹|rs)/i.test(quote)) continue; // part of a code or name: EARLY10, Class12
     const bare = /^\d+$/.test(quote);
     if (/(air|rank|#|no\.)\s*$/.test(before)) continue; // ranks belong to the student rule
     if (/^#/.test(text.slice(Math.max(0, idx - 1), idx))) continue;

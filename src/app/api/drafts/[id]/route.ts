@@ -1,7 +1,7 @@
 import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
-import { cleanImages, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
+import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
@@ -130,6 +130,15 @@ export async function POST(req: Request, ctx: Ctx) {
         if (draft.status === "changes_requested") must(await d.from("drafts").update({ status: "draft" }).eq("id", id));
         await runReview(ws, draft, false, true); // only images changed: no AI call needed
         await log(req, id, "images_updated", { count: images.length, version: draft.version });
+        break;
+      }
+      case "assets": {
+        if (inReview) return fail("The draft is with a reviewer. Documents can change again if they request changes.", 409);
+        const assets = cleanAssets(b.assets);
+        must(await d.from("drafts").update({ assets, updated_at: new Date().toISOString() }).eq("id", id));
+        if (draft.status === "changes_requested") must(await d.from("drafts").update({ status: "draft" }).eq("id", id));
+        await runReview(ws, { ...draft, assets }, false, true);
+        await log(req, id, "assets_updated", { count: assets.length });
         break;
       }
       case "recheck": {

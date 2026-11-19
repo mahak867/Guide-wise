@@ -12,6 +12,8 @@ export interface DraftImage {
   ocr_ok?: boolean;
   /** Logo search result from the browser; missing when the Brand Kit has no logo. */
   logo?: { found: boolean; score: number; box?: { x: number; y: number; w: number; h: number }; crowd?: number } | null;
+  /** AI vision read of the creative: text OCR may miss, and people shown. Added by the server, never by the browser. */
+  vision?: { text: string; people: { description: string; kind: string }[] } | null;
 }
 
 // --- colour science: sRGB -> CIELAB, CIEDE76 difference, WCAG contrast ---
@@ -152,6 +154,17 @@ export function parseLogoTest(text: string): DraftImage["logo"] {
   return { found: true, score: 0.95, box: { x: 0.05, y: 0.05, w, h: w }, crowd: /crowd/i.test(text) ? 0.3 : 0 };
 }
 
+/** People shown in a creative need a consent record before publication; code makes the finding, AI only saw them. */
+export function peopleHits(rule: Rule, vision: DraftImage["vision"], location: string, label: string): Finding[] {
+  if (!vision?.people?.length) return [];
+  const n = vision.people.length;
+  return [{
+    ...base(rule, location), quote: `${label}: people`,
+    message: `${label} shows ${n === 1 ? "a person" : `${n} people`} (${vision.people.map((p) => `${p.description}, ${p.kind}`).join("; ").slice(0, 200)}). Publishing a recognisable person, above all a student, needs their written consent on record.`,
+    fix_note: "Check the student records for a dated consent covering this image, or replace the photo.",
+  }];
+}
+
 /** Visual checks plus every text rule run on the words found inside the image. */
 export function runVisualChecks(images: DraftImage[], rules: Rule[], facts: Fact[], kit: Kit): Finding[] {
   const out: Finding[] = [];
@@ -163,11 +176,15 @@ export function runVisualChecks(images: DraftImage[], rules: Rule[], facts: Fact
       if (rule.category === "visual-contrast") out.push(...contrastHits(rule, img.colours, location, label));
       if (rule.category === "visual-alt") out.push(...altHits(rule, img.alt ?? "", location, label));
       if (rule.category === "visual-logo") out.push(...logoHits(rule, img.logo, location, label));
+      if (rule.category === "visual-people") out.push(...peopleHits(rule, img.vision, location, label));
     }
-    if (img.ocr?.trim()) {
+    // Text read by OCR, plus any lines only AI vision could read (stylised or curved type).
+    const extra = (img.vision?.text ?? "").split("\n").filter((l) => l.trim().length > 3 && !(img.ocr ?? "").toLowerCase().includes(l.trim().toLowerCase())).join("\n");
+    const imageText = [img.ocr ?? "", extra].filter((x) => x.trim()).join("\n");
+    if (imageText.trim()) {
       // Length and sentence-length rules are about body copy; text read from a design is laid out in lines.
       const textRules = rules.filter((r) => !r.category.startsWith("visual-") && r.category !== "length" && r.category !== "readability");
-      for (const f of runCodeChecks(img.ocr, textRules, facts, kit)) {
+      for (const f of runCodeChecks(imageText, textRules, facts, kit)) {
         out.push({
           ...f, location, check_type: f.check_type === "code" ? "visual" : f.check_type,
           message: `In the text of ${label.toLowerCase()}: ${f.message}`,

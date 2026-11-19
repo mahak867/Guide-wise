@@ -285,14 +285,16 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
   {
-    id: "CONS-1", kind: "code", category: "consistency", severity: "major", status: "enforced", source: "PrepPath brand guide", risk: "low",
-    title: "Figures match across the caption and creatives",
-    description: "A fee, percentage or count stated in a creative must be the same figure stated in the caption and in the other creatives.",
+    id: "CONS-1", kind: "code", category: "consistency", severity: "major", status: "enforced", source: "PrepPath brand guide; CCPA guidelines on misleading advertisements (2022)", risk: "high",
+    title: "The campaign says the same thing everywhere",
+    description: "A price, figure, date or promo code must be the same in the caption, every creative and every campaign document. Two different prices for one offer can mislead a buyer.",
     config: { guidance: "Compared by code: figures of the same kind that count the same thing. Test format: caption: … | image: …" },
     tests: [
       { text: "caption: Dropper batch fee ₹39,999. | image: Dropper batch fee ₹34,999", expect: "flag" },
       { text: "caption: 4,200+ JEE selections in 2025. | image: 5,000+ JEE selections in 2025", expect: "flag" },
       { text: "caption: 4,200+ JEE selections in 2025. 50,000+ students have prepared with us. | image: 4,200+ JEE selections in 2025", expect: "pass" },
+      { text: "caption: Crash course starts 5 January. | brochure: The crash course starts on 12 January.", expect: "flag" },
+      { text: "caption: Use code EARLY20 at checkout. | landing: Use code EARLY10 for the discount.", expect: "flag" },
     ],
     precedent: null,
   },
@@ -304,6 +306,17 @@ export const SEED_RULES: Rule[] = [
     tests: [
       { text: "100% selection guaran\u200Bteed.", expect: "flag" },
       { text: "Join the December batch at PrepPath.", expect: "pass" },
+    ],
+    precedent: null,
+  },
+  {
+    id: "VIS-PEOPLE", kind: "code", category: "visual-people", severity: "major", status: "enforced", source: "CCPA coaching guidelines (2024): student results and images need written consent", risk: "high",
+    title: "People in a creative need consent on record",
+    description: "A creative that shows a person, above all a student, needs that person's written consent on record before it is published. AI vision spots people; it never identifies them.",
+    config: { guidance: "Found by AI vision on each creative. With the AI service off, this check does not run, and the review says so." },
+    tests: [
+      { text: "people: student holding a trophy, centre", expect: "flag" },
+      { text: "no people", expect: "pass" },
     ],
     precedent: null,
   },

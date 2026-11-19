@@ -40,13 +40,13 @@ export async function assessImpact(ws: string, change: Change, factsBefore: Fact
   const affected: Affected[] = [];
   for (const draft of drafts) {
     const existing = await getFindings(draft.id);
-    const text = [draft.text, ...(draft.images ?? []).map((i) => i.ocr ?? "")].join("\n");
+    const text = [draft.text, ...(draft.images ?? []).map((i) => i.ocr ?? ""), ...(draft.assets ?? []).map((a) => a.text)].join("\n");
     const cites = (f: Finding) => (change.kind === "fact" ? f.fact_id === change.id : f.rule_id === change.id);
     const used = change.kind === "fact"
       ? factsUsed(text, [...factsBefore, ...facts]).has(change.id) || existing.some(cites)
       : existing.some(cites);
     if (!used) continue;
-    const { findings } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI: false, images: draft.images ?? [], contentType: draft.content_type });
+    const { findings } = await reviewDraft(draft.text, draft.intent, rules, facts, kit, { useAI: false, images: draft.images ?? [], contentType: draft.content_type, assets: draft.assets ?? [] });
     const relevant = findings.filter((f) => cites(f) && f.level === "violation");
     const brief = (fs: Finding[]) => fs.map((f) => ({ rule_id: f.rule_id, quote: f.quote, message: f.message }));
     if (draft.status === "approved") {
