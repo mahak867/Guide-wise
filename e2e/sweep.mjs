@@ -149,6 +149,20 @@ await step(page, "facts: add a dated fact, refuse a bad one, delete it", async (
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).getByRole("button", { name: "Delete" }).click();
   await page.locator("tr", { hasText: "1,150+ NEET selections" }).waitFor({ state: "detached", timeout: 15000 });
 });
+await step(page, "facts: edit F-3 in place and see its impact", async () => {
+  await go("/facts", "Facts Register"); await role("manager");
+  await page.locator("tr", { hasText: "F-3" }).first().getByRole("button", { name: "Edit" }).click();
+  await page.getByRole("heading", { name: "Edit fact F-3" }).waitFor({ timeout: 10000 });
+  const f = page.locator("form").filter({ has: page.getByPlaceholder("F-12") });
+  must((await f.getByPlaceholder("1150").inputValue()) === "4200", "edit did not fill the form with F-3");
+  await f.getByPlaceholder("1150").fill("4300");
+  await f.getByRole("button", { name: "Save F-3" }).click();
+  await page.waitForFunction(() => /F-3 changed/.test(document.body.innerText), null, { timeout: 30000 });
+  await page.locator("tr", { hasText: "F-3" }).first().getByRole("button", { name: "Edit" }).click();
+  await f.getByPlaceholder("1150").fill("4200");
+  await f.getByRole("button", { name: "Save F-3" }).click();
+  await msg(/F-3 saved/);
+});
 await step(page, "facts: profile, palette, disclaimer, logo", async () => {
   await go("/facts", "Facts Register"); await role("manager");
   const n = page.locator("input[name=n]");
