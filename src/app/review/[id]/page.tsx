@@ -199,7 +199,14 @@ export default function ReviewPage() {
 
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {notice && <div className="mb-4"><Notice tone="ok">{notice}</Notice></div>}
-      {st.aiError && <div className="mb-4"><Notice>The AI service was unavailable for this review ({st.aiError}), so only the code checks ran. The workflow still works.</Notice></div>}
+      {st.aiError && (
+        <div className="mb-4"><Notice>
+          The AI service was unavailable for this review ({st.aiError}), so only the code checks ran. The workflow still works.
+          {draft.status !== "approved" && !draft.intent.confidential && (
+            <> <Button disabled={!!busy} onClick={() => act("Re-checking…", { action: "recheck" }, "Checked again.")}>{busy === "Re-checking…" ? busy : "Re-check"}</Button></>
+          )}
+        </Notice></div>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
         <div className="space-y-5">
@@ -305,6 +312,32 @@ export default function ReviewPage() {
               <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
               <li>Checked against Brand Kit <b className="text-ink">v{draft.kit_version}</b>{st.ms !== undefined ? (st.ms < 100 ? " in under 0.1s" : ` in ${(st.ms / 1000).toFixed(1)}s`) : ""}</li>
             </ul>
+            {(() => {
+              // What ran on this draft, and what was skipped and why: a skipped AI stage makes this a partial review.
+              const ai = draft.mode === "ai";
+              const why = (e?: string) => (e ? e.replace(/^The AI service did not answer \(?/, "").split(/[|(]/)[0].trim().slice(0, 90) || "the AI service did not answer" : "the AI service did not answer");
+              const imgs = st.images ?? 0, docs = st.assets ?? 0;
+              const rows: [string, boolean | null, string][] = [
+                ["Code checks", true, "terms, contacts, students, disclaimers, every figure against the Facts Register"],
+                ["AI checks", draft.intent.confidential ? null : ai, draft.intent.confidential ? "skipped: confidential drafts are never sent to AI" : ai ? `${st.aiCalls ?? 0} calls on the caption${docs || imgs ? ", the documents and the text in each creative" : ""}` : `skipped: ${why(st.aiError)}. Re-check above to try again`],
+                ["Images", imgs ? true : null, imgs ? `${imgs} read in the browser: text (OCR), colours, contrast, logo, alt text` : "none attached"],
+                ["AI vision", !imgs || draft.intent.confidential ? null : (st.visionRead ?? 0) > 0 && !st.visionError, !imgs ? "no images" : draft.intent.confidential ? "skipped: confidential" : st.visionError ? `skipped: ${why(st.visionError)}` : `${st.visionRead ?? imgs} creative${(st.visionRead ?? imgs) === 1 ? "" : "s"} read for stylised text and people shown`],
+                ["Campaign documents", docs ? true : null, docs ? `${docs} document${docs > 1 ? "s" : ""}, every check` : "none attached"],
+                ["Across the campaign", docs || imgs ? true : null, docs || imgs ? "prices, figures, dates and promo codes compared" : "nothing to compare"],
+                ["Verifier", true, "every finding's quote, rule and fact confirmed"],
+              ];
+              const partial = rows.some(([, ok]) => ok === false);
+              return (
+                <div className="mt-3 border-t border-line pt-2">
+                  <h3 className="flex items-center gap-2 text-sm font-medium text-ink">What was checked {partial && <Badge tone="major">Partial review</Badge>}</h3>
+                  <ul className="mt-1 space-y-0.5 text-muted">
+                    {rows.map(([name, ok, detail]) => (
+                      <li key={name}><span aria-hidden className={ok ? "text-brand" : ok === false ? "text-crit" : ""}>{ok ? "✓" : ok === false ? "✗" : "–"}</span> <b className="text-ink">{name}</b> <span className="sr-only">{ok ? "ran" : ok === false ? "skipped" : "not applicable"}</span>· {detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
             {!!st.droppedByVerifier?.length && (
               <details className="mt-2 text-muted"><summary className="cursor-pointer">What the verifier dropped</summary>
                 <ul className="mt-1 list-disc pl-5">{st.droppedByVerifier.map((d, i) => <li key={i}>{d.rule_id}: "{d.quote}" ({d.reason})</li>)}</ul>
