@@ -25,6 +25,10 @@ describe("number claims", () => {
     const q = extractNumberClaims("In 2025, AIR 112. Starts 1 December. Call +91 80000 12345. Join 50,000+ students.").map((c) => c.quote);
     expect(q).toEqual(["50,000+"]);
   });
+  it("skips offer caps and promo codes", () => {
+    const q = extractNumberClaims("Code EARLY10 for the first 50 students. Join 50,000+ students.").map((c) => c.quote);
+    expect(q).toEqual(["50,000+"]);
+  });
   it("parses lakh and crore", () => {
     const c = extractNumberClaims("Scholarships worth ₹2.5 lakh and ₹1 crore.");
     expect(c.map((x) => x.value)).toEqual([250000, 10000000]);

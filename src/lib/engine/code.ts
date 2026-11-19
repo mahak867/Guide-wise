@@ -187,6 +187,7 @@ export function extractNumberClaims(text: string): NumberClaim[] {
     if (bare && new RegExp(`^\\s*(${MONTHS})\\b`).test(after)) continue; // "1 December"
     if (bare && new RegExp(`(${MONTHS})\\s*$`).test(before)) continue; // "December 1"
     if (bare && /^\s*(am|pm|st|nd|rd|th)\b|^:\d/.test(after)) continue;
+    if (bare && /\b(first|next|last)\s*$/.test(before)) continue; // "the first 50 students" caps an offer; it is not a count of students taught
     if (bare && value < 10) continue; // "2 batches" - too small to be a marketable claim
     if (/[\d@._-]$/.test(before.slice(-1)) || /^[\d@]/.test(after)) continue; // part of a phone/email/id
     out.push({ quote, value, index: idx });
