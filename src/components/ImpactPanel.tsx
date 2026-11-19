@@ -33,7 +33,7 @@ export function ImpactPanel() {
       ) : (
         <>
           <p className="mt-2">
-            {impact.affected.length} of {impact.checked} draft{impact.checked === 1 ? "" : "s"} used it and were checked again against the new Brand Kit.
+            {impact.affected.length} of {impact.checked} draft{impact.checked === 1 ? "" : "s"} used it and {impact.affected.length === 1 ? "was" : "were"} checked again against the new Brand Kit.
             {reopened.length > 0 && <b className="text-crit"> {reopened.length} approved piece{reopened.length === 1 ? " no longer passes and was" : "s no longer pass and were"} sent back for re-approval.</b>}
           </p>
           <ul className="mt-2 divide-y divide-line rounded-md border border-line">

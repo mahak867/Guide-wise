@@ -92,7 +92,7 @@ export default function FactsPage() {
               const v = validity(f, today);
               return (
                 <tr key={f.id} className="border-b border-line align-top last:border-0">
-                  <td className="px-4 py-2.5 font-mono text-xs">{f.id}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{f.id}</td>
                   <td className="px-4 py-2.5">{f.statement}{f.keywords.length > 0 && <div className="text-xs text-muted">Counts: {f.keywords.join(", ")}</div>}</td>
                   <td className="px-4 py-2.5"><Badge tone={v.tone}>{v.label}</Badge>{f.valid_from && <div className="mt-0.5 text-xs text-muted">from {f.valid_from}</div>}</td>
                   <td className="px-4 py-2.5 text-muted">{f.evidence}<div className="text-xs">{f.owner}</div></td>
@@ -114,7 +114,7 @@ export default function FactsPage() {
           <tbody>
             {students.map((s) => (
               <tr key={s.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-2.5 font-mono text-xs">{s.id}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{s.id}</td>
                 <td className="px-4 py-2.5">{s.meta.name}, AIR {s.meta.rank}</td>
                 <td className="px-4 py-2.5">{s.meta.course || <Badge tone="critical">Missing</Badge>}</td>
                 <td className="px-4 py-2.5">{s.meta.consent_date ? <Badge tone="green">On file, {s.meta.consent_date}</Badge> : <Badge tone="critical">No consent on file</Badge>}</td>
