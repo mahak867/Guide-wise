@@ -68,6 +68,7 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
             </div>
           </div>
         )}
+        {docs.length < 4 && !url && <p className="text-xs text-muted">No page to hand? <button type="button" className="underline hover:text-ink" onClick={() => { setKind("landing page"); setUrl(`${window.location.origin}/sample-landing.html`); }}>Use our sample landing page</button>, then press Read page.</p>}
         {note && <p className="text-xs text-muted">{note}</p>}
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
