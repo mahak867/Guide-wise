@@ -25,8 +25,14 @@ Errors: `400` bad input, `401` missing, wrong or revoked key, `403` missing scop
 
 ## MCP
 
-Streamable HTTP at `https://guidewise-kohl.vercel.app/api/mcp`, built on the official MCP TypeScript SDK. Tools: `get_brief(content_type?)`, `check_draft(text, content_type?, use_ai?)`. Example client configuration:
+Streamable HTTP at `https://guidewise-kohl.vercel.app/api/mcp`, built on the official MCP TypeScript SDK. Tools: `get_brief(content_type?)`, `check_draft(text, content_type?, use_ai?)`. Example client configuration (for a client that reads remote servers with headers from JSON, such as Cursor):
 
 ```json
 { "mcpServers": { "guidewise": { "url": "https://guidewise-kohl.vercel.app/api/mcp", "headers": { "Authorization": "Bearer gw_your_key" } } } }
+```
+
+Claude Code:
+
+```bash
+claude mcp add --transport http guidewise https://guidewise-kohl.vercel.app/api/mcp --header "Authorization: Bearer gw_your_key"
 ```
