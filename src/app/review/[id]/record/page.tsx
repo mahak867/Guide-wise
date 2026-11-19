@@ -6,7 +6,7 @@ import { api, fmtDate } from "@/lib/client";
 import { ROLES, type Finding, type Role } from "@/lib/types";
 
 interface Rec {
-  draft: { title: string; text: string; status: string; version: number; images: { name: string; alt: string }[]; intent: { goal: string; audience: string; cta: string } };
+  draft: { title: string; text: string; status: string; version: number; images: { name: string; alt: string }[]; assets?: { name: string }[]; intent: { goal: string; audience: string; cta: string } };
   findings: Finding[];
   events: { id: number; actor: string; action: string; detail: Record<string, unknown>; at: string }[];
   receipt: { id: string; text_hash: string; approved_text: string; kit_version: number; approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> } | null;
@@ -46,9 +46,10 @@ export default function Record() {
       <table className="mt-2 w-full border-collapse text-left">
         <thead><tr className="border-b border-ink text-[11px] uppercase tracking-wide text-muted"><th className="py-1.5 pr-3">Rule</th><th className="py-1.5 pr-3">Words</th><th className="py-1.5 pr-3">Outcome</th><th className="py-1.5">By</th></tr></thead>
         <tbody>
+          {d.findings.length === 0 && <tr><td colSpan={4} className="py-2 text-muted">None. The draft passed every check in force when it was approved.</td></tr>}
           {d.findings.map((f) => (
             <tr key={f.id} className="border-b border-line align-top">
-              <td className="py-1.5 pr-3 font-mono text-[11px]">{f.rule_id}{f.location && f.location !== "text" ? ` · image ${f.location.slice(6)}` : ""}</td>
+              <td className="py-1.5 pr-3 font-mono text-[11px]">{f.rule_id}{f.location?.startsWith("image:") ? ` · image ${f.location.slice(6)}` : f.location?.startsWith("asset:") ? ` · ${d.draft.assets?.[Number(f.location.slice(6)) - 1]?.name ?? `document ${f.location.slice(6)}`}` : ""}</td>
               <td className="py-1.5 pr-3">“{f.quote}”{f.state === "accepted" && f.fix ? <> → “{f.fix}”</> : null}</td>
               <td className="py-1.5 pr-3">{STATE[f.state ?? "open"] ?? f.state}{f.dismiss_reason ? `: ${f.dismiss_reason}` : ""}</td>
               <td className="py-1.5">{f.resolved_by && f.resolved_by !== "edit" ? f.resolved_by : "–"}</td>

@@ -11,7 +11,7 @@ import { wordDiff } from "@/lib/diff";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
-  id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[] };
+  id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[]; demo?: string };
   images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null; vision?: { text: string; people: { description: string; kind: string }[] } | null }[];
   assets?: { name: string; text: string }[];
   impact?: { reason: string; at: string } | null;
@@ -160,7 +160,12 @@ export default function ReviewPage() {
         {draft.intent.confidential && <Badge tone="ink">Confidential · never sent to AI</Badge>}
       </div>
 
-      <DemoGuide s={{
+      {draft.intent.demo === "approved-before" && draft.status === "approved" ? (
+        <Card className="mb-4 border-brand/40 p-3.5 text-sm">
+          <b>Approved before you arrived, so you can see change impact.</b>{" "}
+          This post uses fact F-3 (4,200+ selections). On <Link href="/facts" className="font-medium text-brand-dark underline underline-offset-2">Facts and assets</Link>, act as Meera, click Edit on F-3, change the figure and save: Guidewise re-checks this post and sends it back for re-approval with the reason.
+        </Card>
+      ) : <DemoGuide s={{
         hasImages: events.some((e) => e.action === "images_updated") || (draft.images?.length ?? 0) > 0,
         isSample: (draft.images ?? []).some((i) => i.name.startsWith("sample-creative")) || draft.title.startsWith("Instagram post: December JEE batch"),
         accepted: findings.filter((f) => f.state === "accepted").length,
@@ -168,7 +173,7 @@ export default function ReviewPage() {
         submitted: events.some((e) => e.action === "submitted"),
         approved: draft.status === "approved",
         routedTo: inReview ? draft.status : null,
-      }} />
+      }} />}
 
       {/* What happens next, and who does it */}
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-3.5 text-sm">
