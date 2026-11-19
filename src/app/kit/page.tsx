@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
+import { Badge, Button, Card, Field, PageHead, inputCls } from "@/components/ui";
+import { Toast } from "@/components/Toast";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { CONTENT_TYPES, type Rule } from "@/lib/types";
 
@@ -26,8 +27,11 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
   const run = async (action: string) => {
     setBusy(true);
     try {
-      await api(`/api/rules/${rule.id}`, { action });
-      onChange(action === "promote" ? `${rule.id} is now enforced.` : action === "demote" ? `${rule.id} is now advisory.` : undefined);
+      const out = await api<{ run?: { passed: boolean; results: { ok: boolean }[] } }>(`/api/rules/${rule.id}`, { action });
+      const wrong = out.run?.results.filter((r) => !r.ok).length ?? 0;
+      onChange(action === "promote" ? `${rule.id} is now enforced.` : action === "demote" ? `${rule.id} is now advisory: it shows as a suggestion and never blocks approval.`
+        : !out.run ? undefined : out.run.results.length === 0 ? `${rule.id} has no test sentences to run.`
+        : out.run.passed ? `${rule.id}: all ${out.run.results.length} test sentences give the expected result.` : `${rule.id}: ${wrong} of ${out.run.results.length} test sentences give the wrong result. See the table in the rule.`);
     } catch (e) {
       onChange(undefined, e instanceof Error ? e.message : String(e));
     } finally {
@@ -39,7 +43,7 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
     <Card className="p-3.5 text-sm">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="font-mono text-xs text-muted">{rule.id}</span>
-        <button className="font-medium underline-offset-2 hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{rule.title}</button>
+        <button className="font-medium underline-offset-2 hover:underline" aria-expanded={open} title={open ? "Hide details" : "Show source, settings and test sentences"} onClick={() => setOpen(!open)}><span aria-hidden className="mr-1 inline-block w-2.5 text-muted">{open ? "▾" : "▸"}</span>{rule.title}</button>
         <Badge tone={rule.status === "enforced" ? "green" : "major"}>{rule.status === "enforced" ? "Enforced" : "Advisory"}</Badge>
         <Badge>{rule.kind === "code" ? "Code check" : rule.config.patterns?.length ? "AI check + code patterns" : "AI check"}</Badge>
         <Badge tone={rule.severity}>{rule.severity}</Badge>
@@ -68,7 +72,7 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
           {rule.config.guidance && <p className="text-muted">{rule.kind === "judgment" ? "Guidance for the AI check" : "Note"}: {rule.config.guidance}</p>}
           {rule.precedent && <p className="rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-xs"><b>Precedent:</b> {rule.precedent.order}. {rule.precedent.note} <a className="underline" href={rule.precedent.source} target="_blank" rel="noreferrer">Press report</a></p>}
           <table className="w-full text-left">
-            <caption className="pb-1 text-left text-xs font-medium uppercase tracking-wide text-muted">Test sentences{t ? ` · last run ${fmtDate(t.at)} · ${t.mode}` : " · not run yet"}</caption>
+            <caption className="pb-1 text-left !font-sans !text-xs font-medium uppercase !tracking-wide text-muted">Test sentences{t ? ` · last run ${fmtDate(t.at)} · ${t.mode}` : " · not run yet"}</caption>
             <tbody>
               {rule.tests.length === 0 && <tr><td className="text-muted">No test sentences, so this rule can't be enforced.</td></tr>}
               {rule.tests.map((x, i) => {
@@ -83,7 +87,13 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
               })}
             </tbody>
           </table>
-          {manager && <Button variant="danger" disabled={busy} onClick={async () => { if (window.confirm(`Delete rule ${rule.id}?`)) { await api(`/api/rules/${rule.id}`, undefined, "DELETE"); onChange(`${rule.id} deleted.`); } }}>Delete rule</Button>}
+          {manager && <Button variant="danger" disabled={busy} onClick={async () => {
+            if (!window.confirm(`Delete rule ${rule.id}? Drafts are no longer checked against it. This cannot be undone, except by Reset demo.`)) return;
+            setBusy(true);
+            try { await api(`/api/rules/${rule.id}`, undefined, "DELETE"); onChange(`${rule.id} deleted.`); }
+            catch (e) { onChange(undefined, e instanceof Error ? e.message : String(e)); }
+            finally { setBusy(false); }
+          }}>Delete rule</Button>}
         </div>
       )}
     </Card>
@@ -181,7 +191,8 @@ export default function KitPage() {
     try {
       if (file.size > 2 * 1024 * 1024) throw new Error("That file is larger than 2 MB.");
       let parsed: unknown;
-      try { parsed = JSON.parse(await file.text()); } catch { throw new Error("That file is not valid JSON."); }
+      try { parsed = JSON.parse(await file.text()); } catch { throw new Error(`"${file.name}" is not a Brand Kit file (it is not valid JSON). Use a file made with Export Brand Kit.`); }
+      if ((parsed as { format?: unknown } | null)?.format !== "guidewise-brand-kit") throw new Error(`"${file.name}" is not a Guidewise Brand Kit. Use a file made with Export Brand Kit; nothing was changed.`);
       const out = await api<{ rules: { imported: number; unchanged: number }; facts: number; kit_version: number }>("/api/kit/import", parsed);
       await onChange(`Imported: ${out.rules.imported} new or changed rule${out.rules.imported === 1 ? "" : "s"} (added as advisory until their tests pass), ${out.rules.unchanged} unchanged, ${out.facts} fact${out.facts === 1 ? "" : "s"}. Brand Kit is now version ${out.kit_version}.`);
     } catch (e) {
@@ -192,7 +203,10 @@ export default function KitPage() {
   }
 
   async function confirm(p: Proposal, i: number) {
-    const n = (state?.rules.length ?? 0) + 1;
+    // The next free G- number: counting rules could reuse an ID after a delete and silently replace that rule.
+    const taken = new Set(state?.rules.map((r) => r.id));
+    let n = (state?.rules.length ?? 0) + 1;
+    while (taken.has(`G-${String(n).padStart(2, "0")}`)) n++;
     const ok = await save({
       id: `G-${String(n).padStart(2, "0")}`, title: p.title, description: p.description, severity: p.severity, kind: p.kind, category: p.category,
       source: "Compiled from pasted guide text",
@@ -204,13 +218,15 @@ export default function KitPage() {
 
   if (!state) return <p className="text-sm text-muted">Loading the Brand Kit…</p>;
   const enforced = state.rules.filter((r) => r.status === "enforced");
+  const existing = state.rules.find((r) => r.id === form.id.trim().toUpperCase().replace(/[^A-Z0-9-]/g, ""));
+  const idBad = form.id.trim() !== "" && !/^[A-Za-z0-9-]{1,24}$/.test(form.id.trim());
   const advisory = state.rules.filter((r) => r.status === "advisory");
 
   return (
     <>
       <PageHead
         title={`Brand Kit · version ${state.kit.version}`}
-        sub="Each rule carries test sentences. A rule starts as advisory and can only be enforced when its own check passes those tests. Every change makes a new Brand Kit version, and each review records the version it was checked against."
+        sub="The Brand Kit is this brand's rules, facts and assets. Each rule carries test sentences: it starts as advisory (a suggestion that never blocks approval) and can only be enforced when its own check passes those tests. Every change makes a new numbered version, and each review records the version it was checked against."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={exportKit} disabled={busy}>Export Brand Kit</Button>
@@ -225,11 +241,13 @@ export default function KitPage() {
           </div>
         }
       />
-      {msg && <div className="mb-3"><Notice tone="ok">{msg}</Notice></div>}
-      {err && <div className="mb-3"><Notice tone="error">{err}</Notice></div>}
+      <Toast msg={msg} err={err} onClose={() => { setMsg(null); setErr(null); }} />
 
       <h2 className="mb-2">Enforced rules ({enforced.length})</h2>
-      <div className="space-y-2">{enforced.map((r) => <RuleCard key={r.id} rule={r} manager={manager} onChange={onChange} />)}</div>
+      <div className="space-y-2">
+        {enforced.length === 0 && <p className="text-sm text-muted">None. Nothing blocks approval until a rule is enforced: run an advisory rule&apos;s tests below, then enforce it.</p>}
+        {enforced.map((r) => <RuleCard key={r.id} rule={r} manager={manager} onChange={onChange} />)}
+      </div>
       <h2 className="mb-2 mt-6">Advisory rules ({advisory.length})</h2>
       <p className="mb-2 text-sm text-muted">Advisory rules show as suggestions and never block approval.</p>
       <div className="space-y-2">
@@ -244,9 +262,11 @@ export default function KitPage() {
           <form onSubmit={submit} className="mt-3 space-y-3">
             <fieldset disabled={!manager || busy} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[7rem_1fr]">
-                <Field label="ID"><input required className={inputCls} value={form.id} onChange={(e) => set("id", e.target.value)} placeholder="TERM-7" /></Field>
+                <Field label="ID"><input required maxLength={24} aria-invalid={idBad} className={inputCls} value={form.id} onChange={(e) => set("id", e.target.value)} placeholder="TERM-7" /></Field>
                 <Field label="Title"><input required className={inputCls} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder={'Say "mentor", not "teacher"'} /></Field>
               </div>
+              {idBad ? <p className="text-xs text-crit">Use only letters, digits and hyphens in the ID, like TERM-7.</p>
+                : existing ? <p className="text-xs text-major">{existing.id} already exists (&ldquo;{existing.title}&rdquo;). Saving replaces it and makes it advisory again. Choose a new ID to add a separate rule.</p> : null}
               <Field label="What the rule says"><textarea required rows={2} className={inputCls} value={form.description} onChange={(e) => set("description", e.target.value)} /></Field>
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Type"><select className={inputCls} value={form.type} onChange={(e) => set("type", e.target.value)}>{KINDS.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}</select></Field>
@@ -283,7 +303,7 @@ export default function KitPage() {
                 <Field label="A sentence that should be flagged"><input required className={inputCls} value={form.flag} onChange={(e) => set("flag", e.target.value)} /></Field>
                 <Field label="A sentence that should pass"><input required className={inputCls} value={form.pass} onChange={(e) => set("pass", e.target.value)} /></Field>
               </div>
-              <Button variant="primary" type="submit">{busy ? "Saving…" : "Save as advisory"}</Button>
+              <Button variant="primary" type="submit" disabled={idBad}>{busy ? "Saving…" : existing ? `Replace ${existing.id} (as advisory)` : "Save as advisory"}</Button>
             </fieldset>
           </form>
         </Card>
@@ -294,7 +314,7 @@ export default function KitPage() {
           <label className="sr-only" htmlFor="guide">Brand guide text</label>
           <textarea id="guide" rows={6} className={inputCls + " mt-3"} value={guide} onChange={(e) => setGuide(e.target.value)} placeholder={'Example: "Always call our teachers mentors. Never promise a rank. Keep the tone warm and engaging."'} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button variant="primary" disabled={!manager || busy || !state.ai.available} onClick={compile}>{busy ? "Working…" : "Propose rules"}</Button>
+            <Button variant="primary" disabled={!manager || busy || !state.ai.available || guide.trim().length < 40} onClick={compile}>{busy ? "Working…" : "Propose rules"}</Button>
             <label className={`cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-mist ${busy ? "pointer-events-none opacity-50" : ""}`}>
               Upload PDF or DOCX
               <input type="file" accept=".pdf,.docx" className="sr-only" onChange={async (e) => {
@@ -312,7 +332,8 @@ export default function KitPage() {
                 setBusy(false);
               }} />
             </label>
-            {!state.ai.available ? <span className="text-sm text-muted">Needs the AI service, which is off. Add rules by hand.</span> : !manager ? <span className="text-sm text-muted">Only the brand manager can do this.</span> : null}
+            {!state.ai.available ? <span className="text-sm text-muted">Needs the AI service, which is off. Add rules by hand.</span> : !manager ? <span className="text-sm text-muted">Only the brand manager can do this.</span>
+              : guide.trim().length < 40 ? <span className="text-sm text-muted">Paste at least a few sentences (40 characters) first.</span> : null}
           </div>
           {warnings.length > 0 && (
             <div className="mt-3">
@@ -322,7 +343,7 @@ export default function KitPage() {
           )}
           {proposals && (
             <ul className="mt-3 space-y-2 text-sm">
-              {proposals.length === 0 && <li className="text-muted">No more proposals.</li>}
+              {proposals.length === 0 && <li className="text-muted">{warnings.length ? "No rules could be proposed from that text; see the passages above." : "No more proposals. Confirmed rules are listed under Advisory rules."}</li>}
               {proposals.map((p, i) => (
                 <li key={i} className="rounded-md border border-line p-2.5">
                   <div className="flex flex-wrap items-center gap-1.5"><b>{p.title}</b><Badge>{p.kind === "code" ? "Code check" : "AI check"}</Badge><Badge tone={p.severity}>{p.severity}</Badge></div>

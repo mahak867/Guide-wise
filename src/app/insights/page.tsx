@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, Button, Card, Notice, PageHead } from "@/components/ui";
+import { Toast } from "@/components/Toast";
 import { api, useApp } from "@/lib/client";
 
 interface Ins {
@@ -48,9 +49,9 @@ export default function Insights() {
   return (
     <>
       <PageHead title="Insights" sub="What the brand manager learns from reviews in this workspace: which rules people break most, which rules they push back on, and which approved facts are about to stop being true." />
-      {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
-      {msg && <div className="mb-4"><Notice tone="ok">{msg}</Notice></div>}
-      {!d ? <p className="text-sm text-muted">Loading…</p> : (
+      {error && !d && <div className="mb-4"><Notice tone="error">Insights could not be loaded: {error} <button className="ml-1 underline" onClick={() => { setError(null); load(); }}>Try again</button></Notice></div>}
+      <Toast msg={msg} err={d ? error : null} onClose={() => { setMsg(null); setError(null); }} />
+      {!d ? (!error && <p className="text-sm text-muted">Loading…</p>) : (
         <>
           <dl className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-4">
             {[["Drafts reviewed", d.totals.drafts], ["Approved", d.totals.approved], ["Findings raised", d.totals.findings], ["Dismissed with a reason", d.totals.dismissed]].map(([k, v]) => (
@@ -63,7 +64,7 @@ export default function Insights() {
                 <caption className="px-4 pt-4 text-left">Rules by how often they fire</caption>
                 <thead className="border-b border-line text-[11px] uppercase tracking-wide text-muted"><tr><th className="px-4 py-2">Rule</th><th className="px-4 py-2">Raised</th><th className="px-4 py-2">Fixed</th><th className="px-4 py-2">Dismissed</th><th className="px-4 py-2">Signal</th></tr></thead>
                 <tbody>
-                  {d.perRule.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-muted">No findings yet. <Link className="underline" href="/">Review the sample post</Link> to see data here.</td></tr>}
+                  {d.perRule.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-muted">No findings yet in this workspace. <Link className="underline" href="/">Review the sample post</Link> from the Reviews page, then come back: each rule it breaks is counted here. Dismiss a finding with a reason to see Guidewise draft clearer wording for that rule.</td></tr>}
                   {d.perRule.map((r) => (
                     <tr key={r.id} className="border-b border-line align-top last:border-0">
                       <td className="px-4 py-2.5"><span className="font-mono text-xs text-muted">{r.id}</span> {r.title}</td>
@@ -100,7 +101,7 @@ export default function Insights() {
                     <div><dt className="text-[11px] uppercase tracking-wide text-muted">Proposed wording</dt><dd className="mt-0.5">{amend.proposal.description}{amend.proposal.guidance && <span className="block text-muted">Still allowed: {amend.proposal.guidance}</span>}</dd></div>
                   </dl>
                   <table className="mt-3 w-full text-left">
-                    <caption className="pb-1 text-left text-[11px] uppercase tracking-wide text-muted">Every test sentence, run on the amended rule</caption>
+                    <caption className="pb-1 text-left !font-sans !text-[11px] uppercase !tracking-wide text-muted">Every test sentence, run on the amended rule</caption>
                     <tbody>
                       {amend.run.results.map((t, i) => (
                         <tr key={i} className="border-t border-line align-top">

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
+import { Badge, Button, Card, Field, PageHead, inputCls } from "@/components/ui";
+import { Toast } from "@/components/Toast";
 import { api, useApp } from "@/lib/client";
 import type { Fact } from "@/lib/types";
 
@@ -21,16 +22,19 @@ function validity(f: Fact, today: string): { label: string; tone: string } {
 
 /** Shrink an uploaded logo to at most 400 pixels, kept as PNG so its transparency survives. */
 async function logoDataUrl(file: File): Promise<string> {
-  if (file.size > 5 * 1024 * 1024) throw new Error("That logo file is larger than 5 MB.");
+  if (!/^image\/(png|webp)$/.test(file.type)) throw new Error(`"${file.name}" is not a PNG or WebP image. Choose the logo as a PNG (ideally with a transparent background).`);
+  if (file.size > 5 * 1024 * 1024) throw new Error("That logo file is larger than 5 MB. Export a smaller PNG and try again.");
   const url = URL.createObjectURL(file);
   try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file could not be read as an image.")); i.src = url; });
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file could not be read as an image. Choose a PNG or WebP logo.")); i.src = url; });
     const k = Math.min(1, 400 / Math.max(img.width, img.height));
     const c = document.createElement("canvas");
     c.width = Math.max(1, Math.round(img.width * k));
     c.height = Math.max(1, Math.round(img.height * k));
     c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL("image/png");
+    const out = c.toDataURL("image/png");
+    if (out.length > 400_000) throw new Error("That logo is too detailed to store, even at 400 pixels. Use a simpler PNG, such as the mark on a transparent background.");
+    return out;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -49,6 +53,12 @@ export default function FactsPage() {
   const manager = role === "manager";
   const today = new Date().toISOString().slice(0, 10);
   const set = (k: keyof typeof blank, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // Checked as you type, so the form says what to fix before anything is sent.
+  const figureBad = form.value.trim() !== "" && !Number.isFinite(Number(form.value.replace(/,/g, "").trim()));
+  const datesBad = !!form.valid_from && !!form.valid_until && form.valid_until < form.valid_from;
+  // Only once a name is typed, so the default colour picker value is not flagged before anyone uses the form.
+  const hexClash = color.name.trim() ? state?.kit.palette.find((c) => c.hex.toUpperCase() === color.hex.toUpperCase()) : undefined;
+  const nameClash = state?.kit.palette.find((c) => c.name.trim().toLowerCase() === color.name.trim().toLowerCase() && color.name.trim());
 
   async function call(fn: () => Promise<unknown>, ok: string) {
     setBusy(true);
@@ -79,17 +89,17 @@ export default function FactsPage() {
         sub="Approved facts carry evidence, an owner, a start date, an end date and any disclosure that must appear with them. A figure used before its start date is flagged as a leak; after its end date, as outdated."
         action={!canEdit ? <Button onClick={() => setRole("manager")}>Act as Meera to edit</Button> : undefined}
       />
-      {msg && <div className="mb-3"><Notice tone="ok">{msg}</Notice></div>}
-      {err && <div className="mb-3"><Notice tone="error">{err}</Notice></div>}
+      <Toast msg={msg} err={err} onClose={() => { setMsg(null); setErr(null); }} />
 
-      {/* Focusable so a keyboard user can scroll the table sideways on a phone. */}
-      <Card className="overflow-x-auto" tabIndex={0} label="Facts Register">
+      {/* Focusable so a keyboard user can scroll the table sideways on a phone; relative keeps the screen-reader-only header inside the scrolling card. */}
+      <Card className="relative overflow-x-auto" tabIndex={0} label="Facts Register">
         <table className="w-full text-left text-sm">
           <caption className="px-4 pt-3 text-left font-semibold">Facts Register</caption>
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr><th className="px-4 py-2 font-medium">ID</th><th className="px-4 py-2 font-medium">Approved statement</th><th className="px-4 py-2 font-medium">Status today</th><th className="px-4 py-2 font-medium">Evidence and owner</th><th className="px-4 py-2 font-medium">Must appear with</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
+            {facts.length === 0 && <tr><td colSpan={6} className="px-4 py-5 text-muted">No facts yet. {canEdit ? "Add one with the form below" : "Act as Meera to add one"}, or use Reset demo to restore the PrepPath facts. Without facts, every figure in a draft is flagged as unsupported.</td></tr>}
             {facts.map((f) => {
               const v = validity(f, today);
               return (
@@ -99,7 +109,7 @@ export default function FactsPage() {
                   <td className="px-4 py-2.5"><Badge tone={v.tone}>{v.label}</Badge>{f.valid_from && <div className="mt-0.5 text-xs text-muted">from {f.valid_from}</div>}{f.meta?.superseded_by && <div className="mt-0.5 text-xs text-muted">Replaced by {f.meta.superseded_by}</div>}</td>
                   <td className="px-4 py-2.5 text-muted">{f.evidence}<div className="text-xs">{f.owner}</div></td>
                   <td className="px-4 py-2.5 text-muted">{f.disclosure || "–"}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5">{canEdit && <Button disabled={busy} onClick={() => { setForm(toForm(f)); setMsg(null); document.getElementById("fact-form")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Edit</Button>} {canEdit && <Button variant="danger" disabled={busy} onClick={() => window.confirm(`Delete fact ${f.id}?`) && call(() => api(`/api/facts/${f.id}`, undefined, "DELETE"), `${f.id} deleted.`)}>Delete</Button>}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5">{canEdit && <Button disabled={busy} onClick={() => { setForm(toForm(f)); setMsg(null); document.getElementById("fact-form")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Edit</Button>} {canEdit && <Button variant="danger" disabled={busy} onClick={() => window.confirm(`Delete fact ${f.id}? Drafts that cite it are re-checked.`) && call(() => api(`/api/facts/${f.id}`, undefined, "DELETE"), `${f.id} deleted.`).then((ok) => { if (ok && form.id.trim().toUpperCase() === f.id) setForm(blank); })}>Delete</Button>}</td>
                 </tr>
               );
             })}
@@ -107,9 +117,11 @@ export default function FactsPage() {
         </table>
       </Card>
 
-      <Card className="mt-5 overflow-x-auto" tabIndex={0} label="Student records">
-        <table className="w-full text-left text-sm">
-          <caption className="px-4 pt-3 text-left font-semibold">Student records <span className="font-normal text-muted">· a named result needs a course and written consent dated after the result</span></caption>
+      <Card className="relative mt-5 overflow-x-auto" tabIndex={0} label="Student records">
+        <h2 aria-hidden className="px-4 pt-3">Student records</h2>
+        <p className="px-4 text-sm text-muted">A named result needs a course and written consent dated after the result.</p>
+        <table className="mt-1 w-full text-left text-sm">
+          <caption className="sr-only">Student records</caption>
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr><th className="px-4 py-2 font-medium">ID</th><th className="px-4 py-2 font-medium">Student</th><th className="px-4 py-2 font-medium">Course taken</th><th className="px-4 py-2 font-medium">Consent</th><th className="px-4 py-2 font-medium">Record</th></tr>
           </thead>
@@ -132,27 +144,28 @@ export default function FactsPage() {
           <h2 id="fact-form">{editing ? `Edit fact ${editing.id}` : "Add a fact"}</h2>
           {editing && <p className="mt-1 text-sm text-muted">Saving re-checks every draft that uses {editing.id}. An approved piece that no longer passes goes back for re-approval. <button type="button" className="underline hover:text-ink" onClick={() => setForm(blank)}>Cancel</button></p>}
           {!canEdit && <p className="mt-1 text-sm text-muted">Only the brand manager or compliance reviewer can add facts.</p>}
-          <form className="mt-3" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/facts", { ...form, meta: { ...editing?.meta, superseded_by: form.superseded_by.trim().toUpperCase() || undefined } }), `${form.id.toUpperCase()} saved. Reviews now check against it.`)) setForm(blank); }}>
+          <form className="mt-3" onSubmit={async (e) => { e.preventDefault(); if (figureBad || datesBad) return; if (await call(() => api("/api/facts", { ...form, meta: { ...editing?.meta, superseded_by: form.superseded_by.trim().toUpperCase() || undefined } }), `${form.id.toUpperCase()} saved. Reviews now check against it.`)) setForm(blank); }}>
             <fieldset disabled={!canEdit || busy} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[6rem_1fr]">
                 <Field label="ID"><input required className={inputCls} value={form.id} onChange={(e) => set("id", e.target.value)} placeholder="F-12" /></Field>
                 <Field label="Approved statement"><input required className={inputCls} value={form.statement} onChange={(e) => set("statement", e.target.value)} placeholder="1,150+ NEET selections in 2025 from our classroom programme" /></Field>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Figure" hint="(as a number)"><input className={inputCls} inputMode="decimal" value={form.value} onChange={(e) => set("value", e.target.value)} placeholder="1150" /></Field>
+                <Field label="Figure" hint="(as a number)"><input className={inputCls} inputMode="decimal" aria-invalid={figureBad} aria-describedby={figureBad ? "figure-err" : undefined} value={form.value} onChange={(e) => set("value", e.target.value)} placeholder="1150" />{figureBad && <span id="figure-err" className="mt-1 block text-xs text-crit">Write the figure as digits only, like 4200 or 92 (no % or +).</span>}</Field>
                 <Field label="What it counts" hint="(words, comma separated)"><input className={inputCls} value={form.keywords} onChange={(e) => set("keywords", e.target.value)} placeholder="selections, selected" /></Field>
               </div>
               <Field label="Evidence"><input required className={inputCls} value={form.evidence} onChange={(e) => set("evidence", e.target.value)} placeholder="Where the figure comes from" /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Valid from"><input type="date" className={inputCls} value={form.valid_from} onChange={(e) => set("valid_from", e.target.value)} /></Field>
-                <Field label="Valid until"><input type="date" className={inputCls} value={form.valid_until} onChange={(e) => set("valid_until", e.target.value)} /></Field>
+                <Field label="Valid until"><input type="date" className={inputCls} min={form.valid_from || undefined} aria-invalid={datesBad} aria-describedby={datesBad ? "dates-err" : undefined} value={form.valid_until} onChange={(e) => set("valid_until", e.target.value)} />{datesBad && <span id="dates-err" className="mt-1 block text-xs text-crit">This is before the start date. Choose a later end date, or clear it.</span>}</Field>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Must appear with" hint="(optional)"><input className={inputCls} value={form.disclosure} onChange={(e) => set("disclosure", e.target.value)} placeholder="Name the course" /></Field>
                 <Field label="Words that satisfy it"><input className={inputCls} value={form.disclosure_keywords} onChange={(e) => set("disclosure_keywords", e.target.value)} placeholder="classroom programme" /></Field>
               </div>
               <Field label="Replaced by" hint="(optional: the fact ID to point to once this one expires)"><input className={inputCls + " sm:w-40"} value={form.superseded_by} onChange={(e) => set("superseded_by", e.target.value)} placeholder="F-14" /></Field>
-              <Button variant="primary" type="submit">{busy ? "Saving…" : editing ? `Save ${editing.id}` : "Save fact"}</Button>
+              <p className="text-xs text-muted">Leave both dates empty for a fact that is always valid.</p>
+              <Button variant="primary" type="submit" disabled={figureBad || datesBad}>{busy ? "Saving…" : editing ? `Save ${editing.id}` : "Save fact"}</Button>
             </fieldset>
           </form>
         </Card>
@@ -170,19 +183,21 @@ export default function FactsPage() {
           <div>
             <h2>Palette</h2>
             <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-              {kit.palette.map((c) => (
-                <li key={c.hex + c.name} className="flex items-center gap-2 rounded-md border border-line py-1 pl-1 pr-2">
+              {kit.palette.length === 0 && <li className="text-muted">No colours yet, so creatives are not checked against a palette.{manager ? " Add one below." : ""}</li>}
+              {kit.palette.map((c, i) => (
+                <li key={i} className="flex items-center gap-2 rounded-md border border-line py-1 pl-1 pr-2">
                   <span className="h-6 w-6 rounded border border-line" style={{ background: c.hex }} aria-hidden />
                   {c.name} <span className="font-mono text-xs text-muted">{c.hex}</span>
-                  {manager && <button aria-label={`Remove ${c.name}`} className="text-muted hover:text-crit" onClick={() => call(() => api("/api/kit", { palette: kit.palette.filter((x) => x !== c) }), "Palette updated.")}>×</button>}
+                  {manager && <button aria-label={`Remove ${c.name}`} disabled={busy} className="text-muted hover:text-crit" onClick={() => call(() => api("/api/kit", { palette: kit.palette.filter((x) => x !== c) }), `${c.name} removed from the palette.`)}>×</button>}
                 </li>
               ))}
             </ul>
             {manager && (
-              <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={async (e) => { e.preventDefault(); if (await call(() => api("/api/kit", { palette: [...kit.palette, { name: color.name, hex: color.hex.toUpperCase() }] }), "Palette updated.")) setColor({ name: "", hex: "#0F6B5F" }); }}>
-                <Field label="Colour name"><input required className={inputCls} value={color.name} onChange={(e) => setColor({ ...color, name: e.target.value })} /></Field>
+              <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={async (e) => { e.preventDefault(); if (hexClash || nameClash) return; if (await call(() => api("/api/kit", { palette: [...kit.palette, { name: color.name.trim(), hex: color.hex.toUpperCase() }] }), `${color.name.trim()} (${color.hex.toUpperCase()}) added to the palette.`)) setColor({ name: "", hex: "#0F6B5F" }); }}>
+                <Field label="Colour name"><input required maxLength={60} className={inputCls} value={color.name} onChange={(e) => setColor({ ...color, name: e.target.value })} placeholder="Sky blue" /></Field>
                 <Field label="Colour"><input type="color" className="h-[34px] w-14 rounded-md border border-line" value={color.hex} onChange={(e) => setColor({ ...color, hex: e.target.value })} /></Field>
-                <Button type="submit" disabled={busy}>Add colour</Button>
+                <Button type="submit" disabled={busy || !!hexClash || !!nameClash}>Add colour</Button>
+                {(hexClash || nameClash) && <p className="basis-full text-xs text-major">{hexClash ? `${color.hex.toUpperCase()} is already in the palette as ${hexClash.name}. Pick a different colour.` : `A colour is already called ${nameClash!.name}. Use a different name.`}</p>}
               </form>
             )}
             <p className="mt-2 text-xs text-muted">Every colour covering a meaningful part of a creative is compared with these (CIELAB colour difference).</p>
@@ -205,7 +220,7 @@ export default function FactsPage() {
                       if (f) await call(async () => api("/api/kit", { logo: await logoDataUrl(f) }), "Logo updated. New images are checked against it.");
                     }} />
                   </label>
-                  {kit.logo && <Button onClick={() => call(() => api("/api/kit", { logo: null }), "Logo removed.")}>Remove</Button>}
+                  {kit.logo && <Button disabled={busy} onClick={() => window.confirm("Remove the logo? Creatives will no longer be checked for it.") && call(() => api("/api/kit", { logo: null }), "Logo removed. Creatives are no longer checked for a logo.")}>Remove</Button>}
                 </>
               )}
             </div>
@@ -214,9 +229,10 @@ export default function FactsPage() {
           <div>
             <h2>Approved disclaimers</h2>
             <ul className="mt-2 space-y-1.5 text-sm">
+              {kit.disclaimers.length === 0 && <li className="text-muted">No approved disclaimers yet.{manager ? " Add one below." : ""}</li>}
               {kit.disclaimers.map((d) => (
                 <li key={d.id} className="rounded-md border border-line px-2 py-1.5"><span className="font-mono text-xs text-muted">{d.id}</span> {d.text}<div className="text-xs text-muted">Use: {d.when}
-                  {manager && <button className="ml-2 underline hover:text-crit" onClick={() => call(() => api("/api/kit", { disclaimers: kit.disclaimers.filter((x) => x.id !== d.id) }), "Disclaimers updated.")}>Remove</button>}</div></li>
+                  {manager && <button className="ml-2 underline hover:text-crit" disabled={busy} onClick={() => call(() => api("/api/kit", { disclaimers: kit.disclaimers.filter((x) => x.id !== d.id) }), `${d.id} removed.`)}>Remove</button>}</div></li>
               ))}
             </ul>
             {manager && (
