@@ -137,6 +137,48 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("impact: saving the same change twice reopens nothing more", again, (r) => r.s === 200 && !r.j.impact.affected.some((a) => a.outcome === "reapproval"));
 }
 
+// Round 3 improvement 2, API and MCP server: scoped keys, get_brief, check_draft (same findings as the app),
+// a real MCP client over Streamable HTTP, and an audit entry per call.
+{
+  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+  const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
+  const made = await call("POST", "/api/keys", { role: "manager", body: { name: "Probe assistant", scopes: ["brief:read", "draft:check"] } });
+  expect("api: manager creates a key, shown once", made, (r) => r.s === 200 && /^gw_[0-9a-f]{48}$/.test(r.j.key));
+  expect("api: a creator cannot create keys", await call("POST", "/api/keys", { body: { name: "x", scopes: ["brief:read"] } }), is(403));
+  const key = made.j.key;
+  const v1 = async (method, path, body, k = key) => {
+    const r = await fetch(L + path, { method, headers: { authorization: `Bearer ${k}`, "content-type": "application/json" }, body: body && JSON.stringify(body) });
+    return { s: r.status, j: await r.json().catch(() => null) };
+  };
+  const brief = await v1("GET", "/api/v1/brief?content_type=ad");
+  expect("api: brief lists rules in force and only facts valid today", brief, (r) => r.s === 200 && r.j.rules.length > 5 && r.j.facts.length > 0 && !r.j.facts.some((f) => f.id === "F-9" || f.id === "F-11"));
+  const text = "India's #1 JEE coaching. 100% selection guaranteed!! Join 50,000+ toppers who cracked JEE with PrepPath.";
+  const checked = await v1("POST", "/api/v1/check", { text, content_type: "social", use_ai: false });
+  const appDraft = (await call("POST", "/api/drafts", { body: { title: "API parity", content_type: "social", text, useAI: false } })).j.id;
+  const appFindings = (await call("GET", `/api/drafts/${appDraft}`)).j.findings.map((f) => `${f.rule_id}|${f.quote}`).sort();
+  const apiFindings = (checked.j?.findings ?? []).map((f) => `${f.rule_id}|${f.quote}`).sort();
+  expect("api: check_draft gives the same findings as the app", checked, (r) => r.s === 200 && apiFindings.length > 3 && JSON.stringify(apiFindings) === JSON.stringify(appFindings));
+  expect("api: no key is refused", await v1("GET", "/api/v1/brief", undefined, ""), is(401));
+  expect("api: a wrong key is refused", await v1("GET", "/api/v1/brief", undefined, "gw_" + "0".repeat(48)), is(401));
+  expect("api: too-short draft is a clear 400", await v1("POST", "/api/v1/check", { text: "hi" }), is(400));
+  const narrow = (await call("POST", "/api/keys", { role: "manager", body: { name: "Brief only", scopes: ["brief:read"] } })).j;
+  expect("api: a key without the scope is refused", await v1("POST", "/api/v1/check", { text }, narrow.key), is(403));
+  // A real MCP client, connected over Streamable HTTP with the key.
+  const client = new Client({ name: "probe", version: "1.0.0" });
+  await client.connect(new StreamableHTTPClientTransport(new URL(L + "/api/mcp"), { requestInit: { headers: { authorization: `Bearer ${key}` } } }));
+  const tools = (await client.listTools()).tools.map((t) => t.name).sort();
+  expect("mcp: lists get_brief and check_draft", { s: 200, j: tools }, (r) => JSON.stringify(r.j) === JSON.stringify(["check_draft", "get_brief"]));
+  const res = await client.callTool({ name: "check_draft", arguments: { text, content_type: "social", use_ai: false } });
+  const mcpFindings = (res.structuredContent?.findings ?? []).map((f) => `${f.rule_id}|${f.quote}`).sort();
+  expect("mcp: check_draft gives the same findings as the app", { s: 200, j: mcpFindings }, (r) => !res.isError && JSON.stringify(r.j) === JSON.stringify(appFindings));
+  await client.close();
+  const listed = (await call("GET", "/api/keys")).j;
+  expect("api: every call is in the audit trail", { s: 200, j: listed }, (r) => r.j.calls.some((c) => c.detail.via === "mcp" && c.detail.endpoint === "check_draft" && c.detail.status === 200) && r.j.calls.some((c) => c.detail.endpoint === "GET /api/v1/brief" && c.detail.status === 200));
+  await call("DELETE", `/api/keys/${made.j.row.id}`, { role: "manager" });
+  expect("api: a revoked key stops working at once", await v1("GET", "/api/v1/brief"), is(401));
+  expect("api: another workspace cannot see these keys", { s: 200, j: await (await fetch(L + "/api/keys", { headers: { "x-workspace": "probe-" + randomUUID().slice(0, 12) } })).json() }, (r) => r.j.keys.length === 0);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));
