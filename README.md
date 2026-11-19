@@ -4,7 +4,7 @@
 
 **Brand rules that run.** Guidewise checks marketing copy and creatives against a team's approved brand rules and dated facts before they are published. Every finding quotes the exact words and the rule it breaks, every suggested fix is re-tested before it is offered, risky content is routed to the right reviewer, and a person approves the final version.
 
-**Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace · [100-second captioned walkthrough](https://guidewise-kohl.vercel.app/demo.webm) recorded on the live site
+**Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace · [100-second captioned walkthrough](https://guidewise-kohl.vercel.app/demo.webm) of the Round 2 journey, recorded on the live site
 
 Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026 finalist. Round 2 code was written in its window (13–16 November 2026); the Round 3 work in its window (from 18 November 2026, 11:59 PM IST). The commit history shows both.
 
@@ -32,14 +32,16 @@ Then try to break it: **New review → Try a hard case** offers seven drafts bui
 
 **Reset demo** starts again. A guided tour on each review ticks itself off as you go.
 
+The three Round 3 improvements each take under a minute from the home page: **Review a whole campaign**, **See what a change touches** (edit fact F-3) and **Check drafts from AI tools** (the API page). Details [below](#round-3-the-three-improvements-delivered).
+
 ## What runs
 
 | Area | What it does |
 | --- | --- |
-| Review pipeline | 1 personal data masked → 2 code checks → 3 AI checks, one rule per call, run twice when they find something → 4 AI vision on creatives → 5 code checks on campaign documents → 6 prices, dates and codes compared across everything → 7 verifier → 8 fixes re-tested → 9 risk routing by a fixed table → approval receipt |
+| Review pipeline | 1 personal data masked → 2 code checks → 3 AI checks, one rule per call, run twice when they find something → 4 AI vision on creatives → 5 code and AI checks on every campaign document and the text in each creative → 6 prices, dates and codes compared across everything → 7 verifier → 8 fixes re-tested → 9 risk routing by a fixed table → approval receipt |
 | Code checks | Preferred terms, banned phrases, approved contacts, student results (course and dated consent), results disclaimer (same-language check for Hindi), brand-name spelling, capitals for emphasis, length per content type, sentence length, inclusive wording, invisible characters that could hide a banned phrase, and every figure compared with the Facts Register by subject first, value second (lakh and crore understood) |
-| Image checks | In the browser, with no AI: OCR (self-hosted tesseract.js) so every code check runs on the words in the image, dominant colours vs the palette (CIELAB colour difference), WCAG contrast, alt text, and the Brand Kit logo found by masked cross-correlation at many sizes, then checked for minimum size and clear space. Figures are compared across the caption and every creative, and a mismatch is flagged |
-| Verifier | Plain code drops any finding whose quote is not in the draft or image, or whose rule or fact does not exist: "no source, no flag" |
+| Image checks | In the browser, with no AI: OCR (self-hosted tesseract.js) so every code check runs on the words in the image, dominant colours vs the palette (CIELAB colour difference), WCAG contrast, alt text, and the Brand Kit logo found by masked cross-correlation at many sizes, then checked for minimum size and clear space. Figures are compared across the caption and every creative, and a mismatch is flagged. AI vision then reads stylised text OCR missed and flags people shown for a consent check |
+| Verifier | Plain code drops any finding whose quote is not in the draft, image or document it cites, or whose rule or fact does not exist: "no source, no flag" |
 | Facts Register | Evidence, owner, valid-from, valid-until and a required disclosure. A figure used before its start date is flagged as embargoed; after its end date, as outdated; for the wrong subject, as a contradiction |
 | Brand Kit | Every rule carries test sentences. It starts as advisory and can only be enforced when its own check passes them. Rules can apply to some content types only. Every change creates a new version. The whole kit exports and imports as one JSON file |
 | Guide compiler | Paste brand-guide text or upload a PDF or Word file; get proposed rules with test sentences, and warnings about vague or contradictory passages. The manager confirms each one |
@@ -55,7 +57,7 @@ Then try to break it: **New review → Try a hard case** offers seven drafts bui
 - **Sign-in:** planned Supabase Auth; replaced by a private workspace per visitor so judges can open the link directly. Roles are still enforced on the server.
 - **Image review:** planned for Round 3; a first version ships now (palette, contrast, alt text, OCR, logo).
 - **Writing-style libraries** (alex, write-good): replaced by Brand Kit rules with test sentences.
-- **Hands-on tests with students:** not done in Round 2; moved to the start of Round 3.
+- **Hands-on tests with students:** not done in Round 2; moved to Round 3 and not yet run (see [known issue 13](docs/KNOWN_ISSUES.md)).
 - **Round 1 penalty figure** ("up to ₹10 lakh / ₹50 lakh"): withdrawn, because we could not confirm it.
 
 Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md).
