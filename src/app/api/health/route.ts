@@ -1,4 +1,4 @@
-import { aiAvailable, aiDiagnostics, aiModel, extractClaims, geminiModels, judgeRule, probeProvider } from "@/lib/engine/ai";
+import { aiAvailable, aiDiagnostics, aiModel, extractClaims, geminiLatency, geminiModels, judgeRule, probeProvider } from "@/lib/engine/ai";
 import { SEED_RULES } from "@/lib/seed";
 
 export const maxDuration = 60;
@@ -20,6 +20,7 @@ export async function GET(req: Request) {
   }
   const probe = new URL(req.url).searchParams.get("probe");
   if (probe) out.probe = await probeProvider(probe);
+  if (new URL(req.url).searchParams.get("gemini_latency")) out.geminiLatency = await geminiLatency();
   if (new URL(req.url).searchParams.get("models") === "1") {
     out.geminiModels = await geminiModels().catch((e) => `error: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}`);
   }
