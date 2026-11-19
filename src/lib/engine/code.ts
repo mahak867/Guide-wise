@@ -207,6 +207,23 @@ export function subjectWindow(text: string, c: NumberClaim): string {
   return `${before} ${after}`;
 }
 
+/**
+ * The fact that replaces an expired one (meta.superseded_by), followed along a chain of replacements
+ * to the first that is valid today. Null when there is none, or the chain loops.
+ */
+export function successor(f: Fact, facts: Fact[], t = today()): Fact | null {
+  const seen = new Set([f.id]);
+  let id = f.meta?.superseded_by;
+  while (id && !seen.has(id)) {
+    seen.add(id);
+    const next = facts.find((x) => x.id === id && x.kind === "fact");
+    if (!next) return null;
+    if ((!next.valid_from || next.valid_from <= t) && (!next.valid_until || next.valid_until >= t)) return next;
+    id = next.meta?.superseded_by;
+  }
+  return null;
+}
+
 /** Compare numeric claims with the Facts Register. The AI never decides whether two numbers match. */
 export function claimHits(rule: Rule, text: string, facts: Fact[], claims: NumberClaim[], skipQuotes: string[]): Finding[] {
   const out: Finding[] = [];
@@ -235,6 +252,17 @@ export function claimHits(rule: Rule, text: string, facts: Fact[], claims: Numbe
         continue;
       }
       if (f.valid_until && f.valid_until < t) {
+        const next = successor(f, facts, t);
+        if (next) {
+          const whole = sent.text.trim().length <= 160;
+          out.push({
+            ...b, severity: "major", fact_id: f.id, quote: whole ? sent.text.trim() : c.quote,
+            message: `Outdated fact. ${f.id} ("${f.statement}") expired on ${f.valid_until}. Use ${next.id} instead: "${next.statement}".`,
+            fix: whole ? next.statement : null,
+            fix_note: `${next.id} replaces ${f.id} in the Facts Register${next.valid_until ? ` (valid until ${next.valid_until})` : ""}.${whole ? "" : ` Rewrite the sentence with: "${next.statement}".`}`,
+          });
+          continue;
+        }
         out.push({
           ...b, severity: "major", fact_id: f.id, quote: c.quote,
           message: `Outdated fact. ${f.id} ("${f.statement}") expired on ${f.valid_until}. Ask ${f.owner || "the owner"} for the current figure.`,
@@ -456,8 +484,206 @@ function hiddenHits(rule: Rule, text: string): Finding[] {
   return out;
 }
 
+/**
+ * A trigger needs one of the required words somewhere in the same text: paid content needs "#ad",
+ * an offer needs an end date or "T&C apply". With `append`, the fix adds those words after the sentence.
+ */
+function requiresHits(rule: Rule, text: string): Finding[] {
+  const present = (rule.config.requires ?? []).some((src) => {
+    try { return new RegExp(src, "i").test(text); } catch { return false; }
+  });
+  if (present) return [];
+  const missing = rule.config.missing ?? "the required words";
+  const out: Finding[] = [];
+  const sentences = new Set<number>();
+  for (const entry of rule.config.patterns ?? []) {
+    const re = safeRegex(typeof entry === "string" ? entry : entry.re);
+    if (!re) continue;
+    for (const m of text.matchAll(re)) {
+      const word = m[0].trim();
+      if (!word) continue;
+      const s = sentenceAt(text, m.index ?? 0);
+      if (sentences.has(s.start)) continue; // one finding per sentence
+      sentences.add(s.start);
+      const b = base(rule, "code");
+      if (rule.config.append) {
+        // One label fixes the whole post, so one finding is enough.
+        if (out.length) continue;
+        const quote = (s.text + (text.slice(s.end).match(/^[.!?]+/)?.[0] ?? "")).trim();
+        out.push({
+          ...b, quote,
+          message: `"${word}" reads as paid or partner content, but the post has no ${missing}.`,
+          fix: `${quote} ${rule.config.append}`,
+          fix_note: `Adds ${rule.config.append} after the sentence. A label at the start of the post is clearer still.`,
+        });
+      } else {
+        out.push({
+          ...b, quote: word,
+          message: `"${word}" is an offer, but the text gives no ${missing}. A reader cannot tell when it ends or what it excludes.`,
+          fix: null,
+          fix_note: `Add ${missing}, in the same text as the offer.`,
+        });
+      }
+    }
+  }
+  return out.sort((a, b) => text.indexOf(a.quote) - text.indexOf(b.quote));
+}
+
+/** Another coaching institute named in our copy. Comparative claims are the brand manager's decision. */
+function competitorHits(rule: Rule, text: string): Finding[] {
+  const out: Finding[] = [];
+  for (const name of rule.config.names ?? []) {
+    const parts = name.trim().split(/\s+/).filter(Boolean).map(esc);
+    if (!parts.length) continue;
+    const re = new RegExp(`(?<![\\w@./-])${parts.join("[\\s-]*")}(?![\\w-])`, "gi");
+    const seen = new Set<string>();
+    for (const m of text.matchAll(re)) {
+      if (seen.has(m[0])) continue;
+      seen.add(m[0]);
+      out.push({
+        ...base(rule, "code"), quote: m[0],
+        message: `"${m[0]}" is another coaching institute. Naming a competitor makes this a comparative claim, which needs the brand manager's approval and evidence on file.`,
+        fix: null,
+        fix_note: "Remove the name, or ask the brand manager to approve the comparison with evidence.",
+      });
+    }
+  }
+  return out;
+}
+
+/** "Click here", "tap here" and "read more" that do not say where they lead. Screen readers list links out of context. */
+function linkTextHits(rule: Rule, text: string): Finding[] {
+  const out: Finding[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/\b(?:click|tap)\s+here\b|\bread\s+more\b/gi)) {
+    const after = text.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 60);
+    // "Click here to download the timetable", "Read more about the crash course": the words say what it is.
+    if (/^[^\w.!?\n]{0,8}(?:to|for|about|on)\s+\S/i.test(after)) continue;
+    if (seen.has(m[0])) continue;
+    seen.add(m[0]);
+    out.push({
+      ...base(rule, "code"), quote: m[0],
+      message: `"${m[0]}" does not say what it leads to. Screen readers often read links on their own, and a reader skimming the post cannot tell what they get.`,
+      fix: null,
+      fix_note: "Say what the link gives the reader, for example \"Download the December timetable\" or \"See the fees at preppath.in/fees\".",
+    });
+  }
+  return out;
+}
+
+// Words for splitting lower-case hashtags into their parts. Three letters or more, so short words cannot carve up a longer one.
+const HASHTAG_WORDS = (
+  "jee neet iit nit aiims cbse icse kcet bitsat upsc main mains advanced exam exams prep preparation path academy coaching class classes " +
+  "classroom batch batches crash course courses test tests mock series paper papers result results topper toppers student students " +
+  "dropper droppers aspirant aspirants study studies tips tip day days daily week weekly month life success story stories journey goal goals " +
+  "dream dreams college colleges school doctor doctors engineer engineers engineering medical year plan hard work smart revision revise " +
+  "physics chemistry maths math biology science online offline live doubt doubts session sessions mentor mentors faculty teacher teachers " +
+  "new december january february march april june july august september october november morning night motivation focus practice " +
+  "adaptive learn learning ready rank ranks seat seats admission admissions open fee fees free scholarship family parents talk talks " +
+  "india chennai delhi mumbai bangalore kota hyderabad pune kolkata"
+).split(" ");
+
+/** Split a run of lower-case letters into known words, fewest words first. Ambiguous splits give no fix. */
+function splitWords(run: string, dict: Set<string>): { words: string[] | null; ambiguous: boolean } {
+  const n = run.length;
+  const best: { count: number; ways: number; prev: number }[] = Array.from({ length: n + 1 }, () => ({ count: Infinity, ways: 0, prev: -1 }));
+  best[0] = { count: 0, ways: 1, prev: -1 };
+  for (let i = 1; i <= n; i++) {
+    for (let j = Math.max(0, i - 20); j <= i - 3; j++) {
+      if (best[j].count === Infinity || !dict.has(run.slice(j, i))) continue;
+      const c = best[j].count + 1;
+      if (c < best[i].count) best[i] = { count: c, ways: best[j].ways, prev: j };
+      else if (c === best[i].count) best[i].ways = Math.min(2, best[i].ways + best[j].ways);
+    }
+  }
+  if (best[n].count === Infinity) return { words: null, ambiguous: false };
+  const words: string[] = [];
+  for (let i = n; i > 0; i = best[i].prev) words.unshift(run.slice(best[i].prev, i));
+  return { words, ambiguous: best[n].ways > 1 };
+}
+
+/** A hashtag of several words in lower case (#jeepreparation) is read by screen readers as one long word. */
+function hashtagHits(rule: Rule, text: string, skipQuotes: string[]): Finding[] {
+  const dict = new Set([...HASHTAG_WORDS, ...(rule.config.words ?? []).map((w) => w.toLowerCase())]);
+  const out: Finding[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/(?<![\w&#/])#([a-z0-9]+)(?![\w])/g)) {
+    if (seen.has(m[0])) continue;
+    seen.add(m[0]);
+    // Another rule already flags words inside this tag (e.g. the brand name in #preppath): its fix comes first.
+    if (skipQuotes.some((q) => q && m[0].toLowerCase().includes(q.toLowerCase()))) continue;
+    const runs = m[1].match(/[a-z]+|\d+/g) ?? [];
+    let words = 0, ambiguous = false, unknown = false;
+    const fixed = runs.map((r) => {
+      if (/^\d/.test(r)) return r;
+      const s = splitWords(r, dict);
+      if (!s.words) { unknown = true; return r; }
+      words += s.words.length;
+      ambiguous ||= s.ambiguous;
+      return s.words.map((w) => w[0].toUpperCase() + w.slice(1)).join("");
+    }).join("");
+    if (unknown || words < 2) continue; // a single word, or one we cannot split safely
+    out.push({
+      ...base(rule, "code"), quote: m[0],
+      message: `"${m[0]}" runs ${words} words together in lower case. Screen readers read it as one long word; a capital at the start of each word fixes that.`,
+      fix: ambiguous ? null : `#${fixed}`,
+      fix_note: ambiguous ? "Capitalise the first letter of each word." : "Same hashtag with a capital at the start of each word (CamelCase).",
+    });
+  }
+  return out;
+}
+
+// One emoji, counted as the reader sees it: a flag, a skin tone or a joined sequence counts once.
+const EMOJI = /[\u{1F1E6}-\u{1F1FF}]{2}|(?:[\u{1F000}-\u{1FAFF}]|[☀-➿]|[⬀-⯿])️?(?:[\u{1F3FB}-\u{1F3FF}]|‍(?:[\u{1F000}-\u{1FAFF}]|[☀-➿])️?)*/gu;
+
+/** Stacked "!!" or "?!", and more emoji than the rule allows. */
+function excessHits(rule: Rule, text: string, skipQuotes: string[]): Finding[] {
+  const out: Finding[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/[!?]{2,}/g)) {
+    // Another rule (the tone rule on "!!") already flags these characters with its own fix.
+    if (seen.has(m[0]) || skipQuotes.some((q) => q && (q === m[0] || m[0].includes(q) || q.includes(m[0])))) continue;
+    seen.add(m[0]);
+    out.push({
+      ...base(rule, "code"), quote: m[0],
+      message: `"${m[0]}" stacks punctuation. One mark reads as calm and sure; several read as hype.`,
+      fix: m[0].includes("?") ? "?" : ".",
+      fix_note: "A single mark.",
+    });
+  }
+  const max = rule.config.maxEmoji ?? 3;
+  const emoji = [...text.matchAll(EMOJI)];
+  if (emoji.length > max) {
+    // Quote from the first emoji to the last (or from the first extra one, if that is too long to read),
+    // and offer the same words with the extra emoji taken out.
+    const last = emoji[emoji.length - 1];
+    const end = (last.index ?? 0) + last[0].length;
+    const from = end - (emoji[0].index ?? 0) <= 160 ? 0 : max;
+    const start = emoji[from].index ?? 0;
+    const span = text.slice(start, end);
+    const short = span.length <= 160;
+    let fixed = "";
+    if (short) {
+      let kept = from;
+      fixed = span.replace(EMOJI, (e) => (kept++ < max ? e : "")).replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+    }
+    out.push({
+      ...base(rule, "code"), quote: short ? span : emoji[max][0],
+      message: `${emoji.length} emoji in one post. More than ${max} crowd the message, and screen readers read each one aloud by name.`,
+      fix: fixed || null,
+      fix_note: fixed ? `Keeps the first ${max} emoji and removes the rest.` : `Keep ${max} emoji at most.`,
+    });
+  }
+  return out;
+}
+
 export function runCodeRule(rule: Rule, text: string, facts: Fact[], kit: Kit, claims?: NumberClaim[], skipQuotes: string[] = []): Finding[] {
   switch (rule.category) {
+    case "requires": return requiresHits(rule, text);
+    case "competitor": return competitorHits(rule, text);
+    case "link-text": return linkTextHits(rule, text);
+    case "hashtag": return hashtagHits(rule, text, skipQuotes);
+    case "excess": return excessHits(rule, text, skipQuotes);
     case "hidden": return hiddenHits(rule, text);
     case "brand-name": return brandNameHits(rule, text);
     case "caps": return capsHits(rule, text);
@@ -479,7 +705,8 @@ export function runCodeChecks(text: string, rules: Rule[], facts: Fact[], kit: K
   for (const rule of ordered) {
     if (rule.kind === "judgment") out.push(...patternHits(rule, text, facts));
     // Only a finding that is itself about the claim (e.g. a guarantee) suppresses the number check on those words.
-    else out.push(...runCodeRule(rule, text, facts, kit, claims, out.filter((f) => f.check_type === "claims").map((f) => f.quote)));
+    // Style checks that overlap older rules (stacked "!!", the brand name in a hashtag) step aside for any earlier finding.
+    else out.push(...runCodeRule(rule, text, facts, kit, claims, out.filter((f) => f.check_type === "claims" || rule.category === "hashtag" || rule.category === "excess").map((f) => f.quote)));
   }
   return dedupe(out);
 }

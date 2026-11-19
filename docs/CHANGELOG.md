@@ -12,6 +12,7 @@
 - **AI availability:** Groq limits each model separately, so its smaller model (gpt-oss-20b) now takes over text checks while the main one is rate-limited, before falling back to Gemini or to code checks only.
 - **Demo over the judging period:** the embargoed fee in the demo would have become valid on 1 December 2026, while judging may still be going on, removing the sample's embargo finding; it now lifts on 1 March 2027, and a test runs the sample at three future dates.
 - **Robustness:** a fuzz test (26 hostile inputs) now runs in CI; it found that the email pattern took quadratic time on very long words (about 1 s), now bounded (25 ms).
+- **Brand Kit coverage:** six new code rules in the demo kit (30 rules in all), each with at least three flag and three pass test sentences: paid partnerships need #ad, #sponsored or "Paid partnership" (AD-PAID); offers need an end date or "T&C apply" (OFFER-1, advisory); competitor names go to the brand manager (COMP-1); "click here" and "read more" must say where they lead (LINK-2); lower-case multi-word hashtags get a CamelCase fix (TAG-1); stacked "!!" and more than 3 emoji in a social post (STY-EMOJI). An expired fact can name its successor (`meta.superseded_by`, no new column), and the finding then says "Use F-12 instead" and offers F-12's wording; F-11 now points to F-12. The planted-error score is unchanged and the new rules raise nothing on its 60 drafts.
 - **Docs:** architecture, testing, known issues, roadmap, API reference, contributions.
 
 ## Round 2 — The Build (13–16 November 2026)

@@ -1,10 +1,10 @@
 # Testing
 
-Latest full run against the live site (19 Nov 2026 build): **95 unit tests, 20 of 20 journey steps, 52 of 52 sweep steps, 102 of 102 API probe checks**, no server or page errors.
+Latest full run against the live site (19 Nov 2026 build): **116 unit tests, 20 of 20 journey steps, 52 of 52 sweep steps, 102 of 102 API probe checks**, no server or page errors.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |
-| Unit tests (Vitest) | `npm test` | Engine rules, fact matching, logo matching on real images, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback, change impact, campaign consistency, input validation, every rule's own test sentences | Locally and in CI on every push |
+| Unit tests (Vitest) | `npm test` | Engine rules, fact matching, logo matching on real images, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback, change impact, campaign consistency, input validation, every rule's own test sentences, the Round 3 kit-coverage rules and fact successors (`kit-coverage.test.ts`) | Locally and in CI on every push |
 | Evaluation | `npm run eval` | Precision and recall on 60 planted-error drafts (40 held out), with 95% Wilson intervals | Locally, CI, and live on the Results page |
 | Browser journey (Playwright) | `BASE_URL=… npm run e2e` | The main journey end to end: review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, AI phrasings, Brand Kit export and import | Against the live site |
 | UI sweep (Playwright) | `BASE_URL=… npm run e2e:sweep` | Every page at desktop and phone size (console errors, server errors, broken images, sideways scroll, broken links) and every control: facts, palette, logo, rules of each type, hard cases, campaign, API page, request changes, approval, reset | Against the live site |
