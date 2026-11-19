@@ -77,17 +77,19 @@ Each one is tested live against exactly what we promised at Round 2 ([`docs/TEST
 ## Team
 
 - **Mahak Fahad** (team leader): backend and AI/ML — review pipeline, Facts Register, visual checks, evaluation, API, database, deployment.
-- **Roshini R:** frontend and design.
+- **Roshini R:** frontend and design — directed the home page, the visual style and the review page ([details](docs/CONTRIBUTIONS.md)).
 
 ## Stack
 
-Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres, Vercel (functions in Mumbai, next to the database). Open source used: supabase-js, groq-sdk, @google/genai, Anthropic SDK, Zod, mammoth (DOCX), unpdf (PDF), tesseract.js (OCR), Vitest, Playwright.
+Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres, Vercel (functions in Mumbai, next to the database). Open source used: supabase-js, Model Context Protocol SDK, groq-sdk, @google/genai, Anthropic SDK, Zod, mammoth (DOCX), unpdf (PDF), tesseract.js (OCR), Vitest, Playwright.
 
 ## Tests
 
 ```bash
 npm test                                                     # 86 unit tests, including a deliberately wrong AI
 npm run eval                                                 # accuracy on the held-out set (code checks)
+npm run eval:images                                          # 20 creatives with planted colour, contrast and logo errors
+npm run eval:privacy                                         # personal data and confidential canaries never reach the AI
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api   # bad input, wrong roles and cross-workspace access on every API route
@@ -121,5 +123,5 @@ Apply the migrations in `supabase/migrations/` (001 to 008, in order) to a Supab
 
 ## Disclosures
 
-- Claude (Anthropic) was used to help write the code during the build window.
+- Claude (Anthropic) was used to help write the code during the build windows.
 - PrepPath Academy, its rules, facts and students are fictional and were written by the team.
