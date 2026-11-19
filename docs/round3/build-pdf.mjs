@@ -138,6 +138,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>UI sweep (live)</td><td>51 of 51</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
 <tr><td>API probe (live)</td><td>93 of 93</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end, including a real MCP client</td></tr>
 <tr><td>Fuzzing (CI)</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, prompt injection, an 11,000-letter word: no crash, no invented quote, slowest review 25 ms. It found a slow email pattern (about 1 s on a long word), now fixed</td></tr>
+<tr><td>Over the judging period</td><td>3 dates</td><td>The sample post and the whole unit suite run with the clock set weeks ahead: the embargoed and expired examples still work. This found an embargo that would have lifted on 1 December, during judging; moved to 1 March 2027</td></tr>
 </table>
 <h3>Accuracy and privacy</h3>
 <table>
