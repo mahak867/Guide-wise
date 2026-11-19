@@ -26,10 +26,11 @@ function dates(text: string): { quote: string; value: string; index: number }[] 
 }
 const CODE = /\b(?:code|coupon|promo(?:\s*code)?)\s*[:\-]?\s*["“]?([A-Z][A-Z0-9]{3,14})\b/g;
 
+// OCR often reads the rupee sign as "$" ("Fee $12,999"); a figure right after "$" is treated as a price so it is still compared.
 function mentions(src: Source): Mention[] {
   const out: Mention[] = [];
   for (const c of extractNumberClaims(src.text)) {
-    out.push({ quote: c.quote, value: String(c.value), unit: /₹|rs/i.test(c.quote) ? "₹" : /%/.test(c.quote) ? "%" : "count", subject: words(subjectWindow(src.text, c)), src });
+    out.push({ quote: c.quote, value: String(c.value), unit: /₹|rs/i.test(c.quote) || /[$₹]\s?$/.test(src.text.slice(Math.max(0, c.index - 2), c.index)) ? "₹" : /%/.test(c.quote) ? "%" : "count", subject: words(subjectWindow(src.text, c)), src });
   }
   for (const d of dates(src.text)) {
     const fake: NumberClaim = { quote: d.quote, value: 0, index: d.index };

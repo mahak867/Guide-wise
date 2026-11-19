@@ -17,6 +17,16 @@ describe("campaign review", () => {
     expect(f.risk).toBe("high");
   });
 
+  it("reads an OCR'd \"$\" as the rupee sign, so image prices are still compared", async () => {
+    const img = (ocr: string) => [{ name: "c.png", alt: "Crash course creative", colours: [], ocr }];
+    const same = await run("JEE crash course. Fee ₹12,999.", [], img("JEE Crash Course\nFee $12,999"));
+    expect(same.findings.filter((x) => x.rule_id === "CONS-1")).toEqual([]);
+    const diff = await run("JEE crash course. Fee ₹12,999.", [], img("JEE Crash Course\nFee $14,999"));
+    const f = diff.findings.find((x) => x.rule_id === "CONS-1");
+    expect(f?.location).toBe("image:1");
+    expect(f?.quote).toBe("14,999");
+  });
+
   it("flags dates and promo codes that disagree across documents", async () => {
     const { findings } = await run("Crash course starts 5 January. Use code EARLY20.", [
       { name: "landing page", text: "The crash course starts on 12 January. Use code EARLY10 at checkout." },

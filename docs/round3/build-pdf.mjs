@@ -45,7 +45,7 @@ code { font-size: 8.8pt; }
 <h2>At a glance</h2>
 <div class="grid2">
 <div class="box"><b>All three promised improvements are live.</b><p>Change impact, the API and MCP server, and campaign review with AI vision. Each was tested on the live site against the exact test we wrote down at Round 2 (next pages).</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>Text: ${pct(ai.precision)} precision and ${pct(ai.recall)} recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. ${tests} unit tests; a 20-step journey, 50-step sweep and 93-check probe pass on the live site.</p></div>
+<div class="box"><b>Measured, not claimed.</b><p>Text: ${pct(ai.precision)} precision and ${pct(ai.recall)} recall with AI on 40 held-out drafts. Images: 20 of 20 planted errors caught, no false alarms. Privacy: 0 leaks in 144 AI prompts. ${tests} unit tests; a 20-step journey, 51-step sweep and 93-check probe pass on the live site.</p></div>
 </div>
 <div style="width:78%">${img("01-home.png", "Home page", "The home page: the sample post, the sample campaign and every review in this visitor's private workspace.")}</div>
 
@@ -133,7 +133,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><th>Suite</th><th>Result</th><th>What it covers</th></tr>
 <tr><td>Unit tests (Vitest, CI)</td><td>${tests} pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI (8 tests), provider fallback and circuit breaker, change impact, campaign consistency, input validation, every rule's own tests</td></tr>
 <tr><td>Browser journey (live)</td><td>20 of 20</td><td>Review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
-<tr><td>UI sweep (live)</td><td>50 of 50</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
+<tr><td>UI sweep (live)</td><td>51 of 51</td><td>Every page at desktop and phone size (console and server errors, broken images and links, sideways scroll) and every control, including the API page and campaign</td></tr>
 <tr><td>API probe (live)</td><td>93 of 93</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end, including a real MCP client</td></tr>
 <tr><td>Fuzzing</td><td>26 inputs</td><td>12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters: no crash, no invented quote, slowest review 0.6 s</td></tr>
 </table>
