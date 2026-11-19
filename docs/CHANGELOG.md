@@ -12,6 +12,7 @@
 - **AI availability:** Groq limits each model separately, so its smaller model (gpt-oss-20b) now takes over text checks while the main one is rate-limited, before falling back to Gemini or to code checks only.
 - **Demo over the judging period:** the embargoed fee in the demo would have become valid on 1 December 2026, while judging may still be going on, removing the sample's embargo finding; it now lifts on 1 March 2027, and a test runs the sample at three future dates.
 - **Robustness:** a fuzz test (26 hostile inputs) now runs in CI; it found that the email pattern took quadratic time on very long words (about 1 s), now bounded (25 ms).
+- **Measured:** the UI sweep now runs axe-core on every page at desktop and phone size and fails on serious or critical violations (its first run found the role switcher unnamed and the facts tables unreachable by keyboard on phones, both fixed); `npm run eval:helpers` measures the guide compiler (16 of 17 expected rules, 7 of 8 planted vague or contradictory passages warned, 0 false warnings) and the rule-amendment helper (7 of 8 accepted by the code gate, but the dismissed text is still flagged afterwards), in `docs/EVAL_HELPERS.md`.
 - **Docs:** architecture, testing, known issues, roadmap, API reference, contributions.
 
 ## Round 2 — The Build (13–16 November 2026)

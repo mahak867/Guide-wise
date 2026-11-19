@@ -81,7 +81,8 @@ export default function FactsPage() {
       {msg && <div className="mb-3"><Notice tone="ok">{msg}</Notice></div>}
       {err && <div className="mb-3"><Notice tone="error">{err}</Notice></div>}
 
-      <Card className="overflow-x-auto">
+      {/* Focusable so a keyboard user can scroll the table sideways on a phone. */}
+      <Card className="overflow-x-auto" tabIndex={0} label="Facts Register">
         <table className="w-full text-left text-sm">
           <caption className="px-4 pt-3 text-left font-semibold">Facts Register</caption>
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
@@ -105,7 +106,7 @@ export default function FactsPage() {
         </table>
       </Card>
 
-      <Card className="mt-5 overflow-x-auto">
+      <Card className="mt-5 overflow-x-auto" tabIndex={0} label="Student records">
         <table className="w-full text-left text-sm">
           <caption className="px-4 pt-3 text-left font-semibold">Student records <span className="font-normal text-muted">· a named result needs a course and written consent dated after the result</span></caption>
           <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">

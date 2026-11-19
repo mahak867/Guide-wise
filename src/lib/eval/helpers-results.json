@@ -1,0 +1,1654 @@
+{
+  "date": "2026-11-19T21:20:08.671Z",
+  "base_url": "https://guidewise-kohl.vercel.app",
+  "ai_model": "Groq (openai/gpt-oss-120b), then Groq (openai/gpt-oss-20b), then Gemini (gemini-3.5-flash-lite)",
+  "compiler": {
+    "summary": {
+      "passages": 10,
+      "compile_calls_ok": 10,
+      "expected_rules": 17,
+      "expected_rules_found": 16,
+      "expected_rules_found_pct": 94,
+      "proposed_rules": 18,
+      "proposed_rules_saved": 17,
+      "proposed_rules_pass_own_tests": 15,
+      "proposed_rules_pass_own_tests_pct": 83,
+      "proposed_rules_not_in_key": 2,
+      "rules_from_planted_vague_passages": 2,
+      "planted_problems": 8,
+      "planted_warned": 7,
+      "planted_warned_pct": 88,
+      "planted_vague": 5,
+      "planted_vague_warned": 5,
+      "planted_contradictions": 3,
+      "planted_contradictions_warned": 2,
+      "warnings": 8,
+      "false_warnings": 0,
+      "dropped_by_source_check": 1
+    },
+    "passages": [
+      {
+        "id": "P1",
+        "text": "Call our teachers mentors, never tutors. Write \"online classes\", not \"e-learning\". Never describe our fees as cheap; say affordable.",
+        "rules": [
+          {
+            "kind": "preferred term",
+            "src": [
+              "never tutors"
+            ],
+            "avoid": [
+              "tutor"
+            ]
+          },
+          {
+            "kind": "preferred term",
+            "src": [
+              "e-learning"
+            ],
+            "avoid": [
+              "e-learning"
+            ]
+          },
+          {
+            "kind": "banned term",
+            "src": [
+              "fees as cheap"
+            ],
+            "avoid": [
+              "cheap"
+            ]
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P2",
+        "text": "Never promise a guaranteed rank or a guaranteed seat. Be professional where appropriate. Any post that mentions results must end with: Past results do not guarantee future selection.",
+        "rules": [
+          {
+            "kind": "claim",
+            "src": [
+              "guaranteed rank",
+              "guaranteed seat"
+            ]
+          },
+          {
+            "kind": "required disclaimer",
+            "src": [
+              "must end with",
+              "past results do not guarantee"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "professional where appropriate"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P3",
+        "text": "Spell the brand name as BrightPath, one word, never Bright Path. Always use emoji in Instagram captions to feel friendly. Never use emoji in any post.",
+        "rules": [
+          {
+            "kind": "brand name",
+            "src": [
+              "one word",
+              "never bright path"
+            ],
+            "avoid": [
+              "bright path"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "always use emoji",
+              "never use emoji"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P4",
+        "text": "Only publish the approved admissions contacts: admissions@brightpath.in and 1800 123 4567. Never share a teacher's personal phone number or email. Keep it engaging.",
+        "rules": [
+          {
+            "kind": "contact",
+            "src": [
+              "approved admissions contacts",
+              "personal phone number"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "keep it engaging"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P5",
+        "text": "Do not use countdowns or phrases like \"last chance\" or \"only a few seats left\". Give the real start date instead. Do not use more than one exclamation mark in a sentence.",
+        "rules": [
+          {
+            "kind": "banned phrase (urgency)",
+            "src": [
+              "countdowns",
+              "last chance",
+              "few seats left",
+              "real start date"
+            ],
+            "avoid": [
+              "last chance",
+              "only a few seats left"
+            ]
+          },
+          {
+            "kind": "tone (exclamation marks)",
+            "src": [
+              "exclamation mark"
+            ]
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P6",
+        "text": "Headlines must be under eight words. Headlines should be long and descriptive, at least twelve words, so they rank in search. Write numbers as digits, not words.",
+        "rules": [
+          {
+            "kind": "style (numbers as digits)",
+            "src": [
+              "numbers as digits"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "under eight words",
+              "at least twelve words",
+              "long and descriptive"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P7",
+        "text": "Do not call students weak or slow learners; say students who need more support. Address the reader as \"you\". Avoid \"hey guys\"; write \"hi everyone\".",
+        "rules": [
+          {
+            "kind": "preferred term",
+            "src": [
+              "weak or slow learners"
+            ],
+            "avoid": [
+              "weak",
+              "slow learner"
+            ]
+          },
+          {
+            "kind": "tone (second person)",
+            "src": [
+              "address the reader"
+            ]
+          },
+          {
+            "kind": "preferred term",
+            "src": [
+              "hey guys"
+            ],
+            "avoid": [
+              "hey guys"
+            ]
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P8",
+        "text": "Do not call us the best or number one coaching institute unless an approved fact supports it. Use a modern, premium feel. Mention the fee only with the line: Fees are subject to the published fee policy.",
+        "rules": [
+          {
+            "kind": "claim (superlatives)",
+            "src": [
+              "number one coaching",
+              "the best or number one"
+            ]
+          },
+          {
+            "kind": "required disclaimer",
+            "src": [
+              "mention the fee only",
+              "fees are subject to"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "modern, premium feel"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P9",
+        "text": "Content should resonate with our audience. Try to sound on-brand at all times. Never use the word \"revolutionary\" about our courses.",
+        "rules": [
+          {
+            "kind": "banned term",
+            "src": [
+              "revolutionary"
+            ],
+            "avoid": [
+              "revolutionary"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "resonate with our audience"
+            ]
+          },
+          {
+            "type": "vague",
+            "src": [
+              "on-brand at all times"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "P10",
+        "text": "Write every post in English only. Posts for Hindi-speaking parents must be written in Hindi. Never mention a competitor by name.",
+        "rules": [
+          {
+            "kind": "claim (competitors)",
+            "src": [
+              "competitor by name"
+            ]
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "english only",
+              "written in hindi"
+            ]
+          }
+        ]
+      }
+    ],
+    "results": [
+      {
+        "id": "P1",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-01",
+            "title": "Teacher Title",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "tutor",
+              "tutors"
+            ],
+            "prefer": "mentor",
+            "source_passage": "Call our teachers mentors, never tutors.",
+            "flag_example": "Our tutors are available 24/7 to help students.",
+            "pass_example": "Our mentors are available 24/7 to help students.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-02",
+            "title": "Product Naming",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "e‑learning",
+              "e-learning"
+            ],
+            "prefer": "online classes",
+            "source_passage": "Write \"online classes\", not \"e-learning\".",
+            "flag_example": "Enroll in our e‑learning platform today.",
+            "pass_example": "Enroll in our online classes today.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-03",
+            "title": "Fee Description",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "cheap",
+              "cheapest",
+              "cheaper"
+            ],
+            "prefer": "affordable",
+            "source_passage": "Never describe our fees as cheap; say affordable.",
+            "flag_example": "Our courses are cheap and perfect for any budget.",
+            "pass_example": "Our courses are affordable and perfect for any budget.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [],
+        "expected": [
+          {
+            "kind": "preferred term",
+            "found": true,
+            "by": "EV-01",
+            "category": "term"
+          },
+          {
+            "kind": "preferred term",
+            "found": true,
+            "by": "EV-02",
+            "category": "term"
+          },
+          {
+            "kind": "banned term",
+            "found": true,
+            "by": "EV-03",
+            "category": "term"
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P2",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-04",
+            "title": "No Guaranteed Promises",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "guaranteed rank",
+              "guaranteed seat",
+              "guaranteed"
+            ],
+            "prefer": "",
+            "source_passage": "Never promise a guaranteed rank or a guaranteed seat.",
+            "flag_example": "Enroll now and get a guaranteed seat in our program!",
+            "pass_example": "Enroll now and secure a spot in our program.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-05",
+            "title": "Results Disclaimer Requirement",
+            "kind": "judgment",
+            "category": "claim",
+            "avoid": [],
+            "prefer": "",
+            "source_passage": "Any post that mentions results must end with: Past results do not guarantee future selection.",
+            "flag_example": "Our students have a 95% placement rate. Join us today!",
+            "pass_example": "Our students have a 95% placement rate. Past results do not guarantee future selection.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [
+          {
+            "passage": "Be professional where appropriate.",
+            "problem": "The instruction is vague; it does not specify measurable criteria, so it cannot be turned into a concrete rule.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "claim",
+            "found": true,
+            "by": "EV-04",
+            "category": "term"
+          },
+          {
+            "kind": "required disclaimer",
+            "found": true,
+            "by": "EV-05",
+            "category": "claim"
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "professional where appropriate"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P3",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-06",
+            "title": "Brand name spelling",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "Bright Path"
+            ],
+            "prefer": "BrightPath",
+            "source_passage": "Spell the brand name as BrightPath, one word, never Bright Path.",
+            "flag_example": "Our new service is offered by Bright Path.",
+            "pass_example": "Our new service is offered by BrightPath.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [
+          {
+            "passage": "Always use emoji in Instagram captions to feel friendly. Never use emoji in any post.",
+            "problem": "The guidance about emoji is contradictory: one sentence says to always use emoji in Instagram captions, while the next says never use emoji in any post. It's unclear what the correct rule should be.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "brand name",
+            "found": true,
+            "by": "EV-06",
+            "category": "term"
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "always use emoji",
+              "never use emoji"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P4",
+        "status": 200,
+        "error": null,
+        "dropped": 1,
+        "rules": [],
+        "warnings": [
+          {
+            "passage": "Keep it engaging.",
+            "problem": "The instruction is vague; it does not define measurable criteria for engagement, so it cannot be turned into a concrete rule.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "contact",
+            "found": false,
+            "by": null,
+            "category": null
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "keep it engaging"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P5",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-07",
+            "title": "Banned Urgency Phrases",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "countdown",
+              "last chance",
+              "only a few seats left"
+            ],
+            "prefer": "",
+            "source_passage": "Do not use countdowns or phrases like \"last chance\" or \"only a few seats left\". Give the real start date instead.",
+            "flag_example": "Hurry! Only a few seats left – registration ends tomorrow!",
+            "pass_example": "Registration opens on November 30, 2026.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-08",
+            "title": "Excessive Exclamation Marks",
+            "kind": "code",
+            "category": "pattern",
+            "avoid": [
+              "!!"
+            ],
+            "prefer": "",
+            "source_passage": "Do not use more than one exclamation mark in a sentence.",
+            "flag_example": "Join us now!! Limited spots available!",
+            "pass_example": "Join us now! Limited spots available.",
+            "saved": true,
+            "tests_passed": false,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "pass"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [],
+        "expected": [
+          {
+            "kind": "banned phrase (urgency)",
+            "found": true,
+            "by": "EV-07",
+            "category": "term"
+          },
+          {
+            "kind": "tone (exclamation marks)",
+            "found": true,
+            "by": "EV-08",
+            "category": "pattern"
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P6",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-09",
+            "title": "Use digits for numbers",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "one",
+              "two",
+              "three",
+              "four",
+              "five",
+              "six",
+              "seven",
+              "eight",
+              "nine",
+              "ten"
+            ],
+            "prefer": "",
+            "source_passage": "Write numbers as digits, not words.",
+            "flag_example": "Our product increased sales by seven percent last quarter.",
+            "pass_example": "Our product increased sales by 7% last quarter.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [
+          {
+            "passage": "Headlines must be under eight words.",
+            "problem": "Contradicts the later instruction that headlines should be at least twelve words; the requirement is ambiguous.",
+            "planted": true
+          },
+          {
+            "passage": "Headlines should be long and descriptive, at least twelve words, so they rank in search.",
+            "problem": "Contradicts the earlier instruction that headlines must be under eight words; unclear which rule should apply.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "style (numbers as digits)",
+            "found": true,
+            "by": "EV-09",
+            "category": "term"
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "under eight words",
+              "at least twelve words",
+              "long and descriptive"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P7",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-10",
+            "title": "Student Language",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "weak",
+              "slow learners"
+            ],
+            "prefer": "students who need more support",
+            "source_passage": "Do not call students weak or slow learners; say students who need more support.",
+            "flag_example": "Some students are weak and need extra help.",
+            "pass_example": "Some students who need more support need extra help.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-11",
+            "title": "Reader Address",
+            "kind": "judgment",
+            "category": "tone",
+            "avoid": [],
+            "prefer": "",
+            "source_passage": "Address the reader as \"you\".",
+            "flag_example": "One might find this tool useful.",
+            "pass_example": "You will find this tool useful.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-12",
+            "title": "Greeting",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "hey guys"
+            ],
+            "prefer": "hi everyone",
+            "source_passage": "Avoid \"hey guys\"; write \"hi everyone\".",
+            "flag_example": "Hey guys, welcome to the workshop.",
+            "pass_example": "Hi everyone, welcome to the workshop.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [],
+        "expected": [
+          {
+            "kind": "preferred term",
+            "found": true,
+            "by": "EV-10",
+            "category": "term"
+          },
+          {
+            "kind": "tone (second person)",
+            "found": true,
+            "by": "EV-11",
+            "category": "tone"
+          },
+          {
+            "kind": "preferred term",
+            "found": true,
+            "by": "EV-12",
+            "category": "term"
+          }
+        ],
+        "planted": []
+      },
+      {
+        "id": "P8",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-13",
+            "title": "No Unsubstantiated Superlatives",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "best",
+              "number one"
+            ],
+            "prefer": "",
+            "source_passage": "Do not call us the best or number one coaching institute unless an approved fact supports it.",
+            "flag_example": "We are the best coaching institute in the country.",
+            "pass_example": "We are a leading coaching institute with a 95% pass rate, as verified by our latest audit.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          },
+          {
+            "id": "EV-14",
+            "title": "Standard Fee Disclosure",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "fee",
+              "fees"
+            ],
+            "prefer": "Fees are subject to the published fee policy.",
+            "source_passage": "Mention the fee only with the line: Fees are subject to the published fee policy.",
+            "flag_example": "Our courses start at just $299 per month.",
+            "pass_example": "Fees are subject to the published fee policy.",
+            "saved": true,
+            "tests_passed": false,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "pass"
+              },
+              {
+                "expect": "pass",
+                "got": "flag"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [
+          {
+            "passage": "Use a modern, premium feel.",
+            "problem": "The instruction is vague; it does not specify concrete language or elements to enforce, so no rule can be generated.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "claim (superlatives)",
+            "found": true,
+            "by": "EV-13",
+            "category": "term"
+          },
+          {
+            "kind": "required disclaimer",
+            "found": true,
+            "by": "EV-14",
+            "category": "term"
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "modern, premium feel"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P9",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-15",
+            "title": "Avoid \"revolutionary\" for courses",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              "revolutionary"
+            ],
+            "prefer": "",
+            "source_passage": "Never use the word \"revolutionary\" about our courses.",
+            "flag_example": "Our new data‑science course is revolutionary and will change your career.",
+            "pass_example": "Our new data‑science course is innovative and will change your career.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [
+          {
+            "passage": "Content should resonate with our audience.",
+            "problem": "The instruction is vague; it does not specify concrete criteria that can be automatically checked.",
+            "planted": true
+          },
+          {
+            "passage": "Try to sound on-brand at all times.",
+            "problem": "The instruction is subjective and lacks specific, testable guidelines.",
+            "planted": true
+          }
+        ],
+        "expected": [
+          {
+            "kind": "banned term",
+            "found": true,
+            "by": "EV-15",
+            "category": "term"
+          }
+        ],
+        "planted": [
+          {
+            "type": "vague",
+            "src": [
+              "resonate with our audience"
+            ],
+            "warned": true
+          },
+          {
+            "type": "vague",
+            "src": [
+              "on-brand at all times"
+            ],
+            "warned": true
+          }
+        ]
+      },
+      {
+        "id": "P10",
+        "status": 200,
+        "error": null,
+        "dropped": 0,
+        "rules": [
+          {
+            "id": "EV-16",
+            "title": "English‑Only Posts",
+            "kind": "judgment",
+            "category": "tone",
+            "avoid": [],
+            "prefer": "",
+            "source_passage": "Write every post in English only.",
+            "flag_example": "¡Descubre cómo mejorar la salud de tu bebé con nuestra nueva fórmula!",
+            "pass_example": "Discover how to improve your baby’s health with our new formula.",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": true
+          },
+          {
+            "id": "EV-17",
+            "title": "Hindi Posts for Hindi‑Speaking Parents",
+            "kind": "judgment",
+            "category": "tone",
+            "avoid": [],
+            "prefer": "",
+            "source_passage": "Posts for Hindi-speaking parents must be written in Hindi.",
+            "flag_example": "Learn how to keep your child safe – written in English.",
+            "pass_example": "अपने बच्चे को सुरक्षित रखने के तरीकों को जानें।",
+            "saved": true,
+            "tests_passed": true,
+            "test_results": [
+              {
+                "expect": "flag",
+                "got": "flag"
+              },
+              {
+                "expect": "pass",
+                "got": "pass"
+              }
+            ],
+            "from_vague_passage": true
+          },
+          {
+            "id": "EV-18",
+            "title": "No Competitor Mentions",
+            "kind": "code",
+            "category": "term",
+            "avoid": [
+              ""
+            ],
+            "prefer": "",
+            "source_passage": "Never mention a competitor by name.",
+            "flag_example": "Our product works better than BrandX’s solution.",
+            "pass_example": "Our product offers superior performance.",
+            "saved": "That rule can't be saved (config.avoid.0: Too small: expected string to have >=1 characters).",
+            "tests_passed": null,
+            "test_results": null,
+            "from_vague_passage": false
+          }
+        ],
+        "warnings": [],
+        "expected": [
+          {
+            "kind": "claim (competitors)",
+            "found": true,
+            "by": "EV-18",
+            "category": "term"
+          }
+        ],
+        "planted": [
+          {
+            "type": "contradiction",
+            "src": [
+              "english only",
+              "written in hindi"
+            ],
+            "warned": false
+          }
+        ]
+      }
+    ]
+  },
+  "amendment": {
+    "summary": {
+      "rules": 8,
+      "rules_with_dismissals": 8,
+      "dismissals": 16,
+      "amendments_drafted": 8,
+      "amendments_adding_two_new_tests": 5,
+      "amendments_repeating_existing_tests": 3,
+      "new_tests_correct": 7,
+      "new_tests_correct_pct": 88,
+      "all_tests_pass": 7,
+      "all_tests_pass_pct": 88,
+      "accepted_by_gate": 7,
+      "accepted_by_gate_pct": 88,
+      "rerun_passed_after_apply": 7,
+      "dismissed_text_still_flagged_after_apply": 7
+    },
+    "rules": [
+      {
+        "rule": "TERM-2",
+        "drafts": [
+          "Cheap tricks do not crack JEE. Steady weekly practice does.",
+          "Skip the cheap shortcuts: our mock tests follow the real paper."
+        ],
+        "reasons": [
+          "The rule is unclear",
+          "The rule does not apply to this content"
+        ]
+      },
+      {
+        "rule": "TERM-4",
+        "drafts": [
+          "Our exam hall bans AI-powered gadgets during mock tests.",
+          "Parents ask about AI-driven cheating apps. Our mock tests are held offline, on paper."
+        ],
+        "reasons": [
+          "The rule does not apply to this content",
+          "The rule is unclear"
+        ]
+      },
+      {
+        "rule": "STY-CAPS",
+        "drafts": [
+          "Read the NCERT textbook before the December batch starts.",
+          "Our syllabus follows NCERT and the NTA exam pattern."
+        ],
+        "reasons": [
+          "The flag is wrong",
+          "The rule is unclear"
+        ]
+      },
+      {
+        "rule": "INC-1",
+        "drafts": [
+          "We never call anyone weak students. Every student gets a mentor.",
+          "Hey guys, a parent asked us not to write this, so from now on it is hi everyone."
+        ],
+        "reasons": [
+          "The flag is wrong",
+          "The rule is unclear"
+        ]
+      },
+      {
+        "rule": "R-10",
+        "drafts": [
+          "No need to hurry: admissions stay open until 31 March.",
+          "This is not your last chance. You can join the batch in any month."
+        ],
+        "reasons": [
+          "The flag is wrong",
+          "The rule is unclear"
+        ]
+      },
+      {
+        "rule": "T-2",
+        "drafts": [
+          "Happy Diwali!! Classes resume on 4 November.",
+          "Congratulations, Diya!! Your mentor is proud of you."
+        ],
+        "reasons": [
+          "The rule is unclear",
+          "Approved exception"
+        ]
+      },
+      {
+        "rule": "R-DISC",
+        "drafts": [
+          "Weekly tests show your rank in the batch so you can track your progress.",
+          "Each mock test gives you a rank within your own batch."
+        ],
+        "reasons": [
+          "The rule does not apply to this content",
+          "The rule is unclear"
+        ]
+      },
+      {
+        "rule": "R-08",
+        "drafts": [
+          "How to choose the best coaching institute for you: five questions to ask.",
+          "Families often ask which is the leading coaching institute in their city. Ask to see audited results."
+        ],
+        "reasons": [
+          "The rule is unclear",
+          "The flag is wrong"
+        ]
+      }
+    ],
+    "results": [
+      {
+        "rule": "TERM-2",
+        "title": "Say \"affordable\", not \"cheap\"",
+        "before": "Describe fees as affordable. \"Cheap\" undersells the programme.",
+        "kind": "code",
+        "dismissals": [
+          {
+            "text": "Cheap tricks do not crack JEE. Steady weekly practice does.",
+            "triggered": true,
+            "quote": "Cheap",
+            "reason": "The rule is unclear",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Skip the cheap shortcuts: our mock tests follow the real paper.",
+            "triggered": true,
+            "quote": "cheap",
+            "reason": "The rule does not apply to this content",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Use the adjective \"affordable\" (or a synonym that conveys reasonable cost) when describing fees; never use \"cheap\" or \"cheapest\" because they imply low quality.",
+          "guidance": "",
+          "flag_example": "Our programme is the cheapest option for learning JavaScript.",
+          "pass_example": "Our programme is an affordable option for learning JavaScript.",
+          "what_changed": "Clarified that any use of the words \"cheap\" or \"cheapest\" is prohibited, regardless of context, and that only \"affordable\" (or equivalent) is acceptable for describing cost."
+        },
+        "new_tests": [
+          {
+            "text": "Our programme is the cheapest option for learning JavaScript.",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Our programme is an affordable option for learning JavaScript.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 2
+      },
+      {
+        "rule": "TERM-4",
+        "title": "Say \"adaptive practice\", not \"AI-powered\"",
+        "before": "The product term is \"adaptive practice\".",
+        "kind": "code",
+        "dismissals": [
+          {
+            "text": "Our exam hall bans AI-powered gadgets during mock tests.",
+            "triggered": true,
+            "quote": "AI-powered",
+            "reason": "The rule does not apply to this content",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Parents ask about AI-driven cheating apps. Our mock tests are held offline, on paper.",
+            "triggered": true,
+            "quote": "AI-driven",
+            "reason": "The rule is unclear",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Use the approved product term \"adaptive practice\" whenever describing the product; any mention of \"AI-powered\", \"AI powered\", or \"AI-driven\" in that context is prohibited.",
+          "guidance": "",
+          "flag_example": "Our AI-powered classes adjust to you.",
+          "pass_example": "Our adaptive practice classes adjust to you.",
+          "what_changed": "Clarified that the rule applies specifically to any AI-related modifiers used to describe the product, removing ambiguity that led reviewers to think the rule might not apply."
+        },
+        "new_tests": [
+          {
+            "text": "Our AI-powered classes adjust to you.",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Our adaptive practice classes adjust to you.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 0
+      },
+      {
+        "rule": "STY-CAPS",
+        "title": "No capitals for emphasis",
+        "before": "Words are not set in capitals to shout. Exam names and short acronyms (JEE, NEET, AIR, IIT) are fine.",
+        "kind": "code",
+        "dismissals": [
+          {
+            "text": "Read the NCERT textbook before the December batch starts.",
+            "triggered": true,
+            "quote": "NCERT",
+            "reason": "The flag is wrong",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Our syllabus follows NCERT and the NTA exam pattern.",
+            "triggered": true,
+            "quote": "NCERT",
+            "reason": "The rule is unclear",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Do not use all-caps words for emphasis; only all-caps that are officially recognized acronyms, exam names, or brand names (e.g., JEE, NEET, AIR, IIT, NCERT) are permitted.",
+          "guidance": "",
+          "flag_example": "GET READY NOW, seats are LIMITED!",
+          "pass_example": "Enroll for JEE and NEET with IIT faculty.",
+          "what_changed": "Clarified that capitalisation is allowed only for established acronyms, exam names, or brand names, fixing the ambiguity around terms like NCERT."
+        },
+        "new_tests": [
+          {
+            "text": "GET READY NOW, seats are LIMITED!",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Enroll for JEE and NEET with IIT faculty.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 2
+      },
+      {
+        "rule": "INC-1",
+        "title": "Respectful, inclusive language",
+        "before": "Describe students by what they need, not by labels. Address everyone, not only boys.",
+        "kind": "code",
+        "dismissals": [
+          {
+            "text": "We never call anyone weak students. Every student gets a mentor.",
+            "triggered": true,
+            "quote": "weak students",
+            "reason": "The flag is wrong",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Hey guys, a parent asked us not to write this, so from now on it is hi everyone.",
+            "triggered": true,
+            "quote": "Hey guys",
+            "reason": "The rule is unclear",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Do not refer to learners with ability-based labels or gendered slang; use neutral, need-focused language that treats all students equally.",
+          "guidance": "",
+          "flag_example": "Special batch for weak students.",
+          "pass_example": "Extra classes for students who need more support.",
+          "what_changed": "Clarified that any ability-based label (e.g., \"weak\") and any gendered colloquial address (e.g., \"guys\") are prohibited, so the boundary is unmistakable."
+        },
+        "new_tests": [
+          {
+            "text": "Special batch for weak students.",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Extra classes for students who need more support.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 0
+      },
+      {
+        "rule": "R-10",
+        "title": "No false urgency",
+        "before": "Do not pressure the reader with scarcity or countdowns. State the real date or the real number of seats instead.",
+        "kind": "judgment",
+        "dismissals": [
+          {
+            "text": "No need to hurry: admissions stay open until 31 March.",
+            "triggered": true,
+            "quote": "hurry",
+            "reason": "The flag is wrong",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "This is not your last chance. You can join the batch in any month.",
+            "triggered": true,
+            "quote": "last chance",
+            "reason": "The rule is unclear",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Do not create artificial urgency; only mention a deadline, start date, seat count, or other time-limited fact that is true and verifiable for this offering.",
+          "guidance": "",
+          "flag_example": "Enroll now—only 3 seats left!",
+          "pass_example": "The next batch starts on 1 December and has 20 seats available.",
+          "what_changed": "Clarified that the rule bans any fabricated scarcity or countdown language, not just the words 'hurry' or 'last chance', by tying the prohibition to false, unverified urgency claims."
+        },
+        "new_tests": [
+          {
+            "text": "Enroll now—only 3 seats left!",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "The next batch starts on 1 December and has 20 seats available.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 2
+      },
+      {
+        "rule": "T-2",
+        "title": "Confident, never hype",
+        "before": "PrepPath sounds calm and sure of itself. No shouting, no stacked exclamation marks, no words in capitals for emphasis.",
+        "kind": "judgment",
+        "dismissals": [
+          {
+            "text": "Happy Diwali!! Classes resume on 4 November.",
+            "triggered": true,
+            "quote": "!!",
+            "reason": "The rule is unclear",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Congratulations, Diya!! Your mentor is proud of you.",
+            "triggered": true,
+            "quote": "!!",
+            "reason": "Approved exception",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Do not use multiple consecutive exclamation marks, all-caps words, or ALL-CAPS for emphasis; a single exclamation mark is allowed only in a friendly, informal greeting.",
+          "guidance": "",
+          "flag_example": "Results are OUT!! Unbelievable scores!!!",
+          "pass_example": "Results are out. We're proud of every student.",
+          "what_changed": "Clarified that any run of two or more exclamation marks and any all-caps word are prohibited, while a single exclamation is permitted only in a greeting, eliminating the previous vague \"no shouting\" wording."
+        },
+        "new_tests": [
+          {
+            "text": "Results are OUT!! Unbelievable scores!!!",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Results are out. We're proud of every student.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 0
+      },
+      {
+        "rule": "R-DISC",
+        "title": "Results need the approved disclaimer",
+        "before": "A post that mentions selections, ranks or results must carry disclaimer D-1, in the same language as the claim.",
+        "kind": "code",
+        "dismissals": [
+          {
+            "text": "Weekly tests show your rank in the batch so you can track your progress.",
+            "triggered": true,
+            "quote": "Weekly tests show your rank in the batch so you can track your progress.",
+            "reason": "The rule does not apply to this content",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Each mock test gives you a rank within your own batch.",
+            "triggered": true,
+            "quote": "Each mock test gives you a rank within your own batch.",
+            "reason": "The rule is unclear",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Any copy that states a specific selection count, rank, score, or result for a test, exam, or program must include the approved disclaimer D-1 in the same language as the claim.",
+          "guidance": "",
+          "flag_example": "Our students achieved a 95% pass rate in the 2024 JEE exam.",
+          "pass_example": "Our students achieved a 95% pass rate in the 2024 JEE exam. Disclaimer D-1: Past results do not guarantee future performance.",
+          "what_changed": "Clarified that the rule covers any explicit mention of selections, ranks, scores, or results—not just aggregated numbers—so reviewers can see that statements about batch ranks also require the disclaimer."
+        },
+        "new_tests": [
+          {
+            "text": "Our students achieved a 95% pass rate in the 2024 JEE exam.",
+            "expect": "flag",
+            "got": "pass",
+            "ok": false
+          },
+          {
+            "text": "Our students achieved a 95% pass rate in the 2024 JEE exam. Disclaimer D-1: Past results do not guarantee future performance.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": false,
+        "all_tests_pass_at_draft": false,
+        "failing_tests": [
+          {
+            "text": "Our students achieved a 95% pass rate in the 2024 JEE exam.",
+            "expect": "flag",
+            "got": "pass",
+            "new": true
+          }
+        ],
+        "gate": "refused",
+        "tests_added": 2
+      },
+      {
+        "rule": "R-08",
+        "title": "Superlatives need an approved fact",
+        "before": "Words like \"#1\", \"best\" or \"top\" may only be used when an approved fact in the register supports them.",
+        "kind": "judgment",
+        "dismissals": [
+          {
+            "text": "How to choose the best coaching institute for you: five questions to ask.",
+            "triggered": true,
+            "quote": "best coaching",
+            "reason": "The rule is unclear",
+            "by": "brand",
+            "dismissed": true
+          },
+          {
+            "text": "Families often ask which is the leading coaching institute in their city. Ask to see audited results.",
+            "triggered": true,
+            "quote": "leading coaching",
+            "reason": "The flag is wrong",
+            "by": "compliance",
+            "dismissed": true
+          }
+        ],
+        "triggered": 2,
+        "draft_status": 200,
+        "proposal": {
+          "description": "Only use superlative or ranking words such as \"#1\", \"best\", \"top\", \"leading\", etc. when an approved, verifiable fact in the register directly supports the specific claim.",
+          "guidance": "",
+          "flag_example": "Our coaching is the best in India.",
+          "pass_example": "Our coaching is highly regarded, with a 95% pass rate among students.",
+          "what_changed": "Added \"leading\" to the list of prohibited superlatives and clarified that any ranking word requires a registered, verifiable fact, fixing the ambiguity that caused \"best coaching\" and \"leading coaching\" to be inconsistently flagged."
+        },
+        "new_tests": [
+          {
+            "text": "Our coaching is the best in India.",
+            "expect": "flag",
+            "got": "flag",
+            "ok": true
+          },
+          {
+            "text": "Our coaching is highly regarded, with a 95% pass rate among students.",
+            "expect": "pass",
+            "got": "pass",
+            "ok": true
+          }
+        ],
+        "new_tests_correct": true,
+        "all_tests_pass_at_draft": true,
+        "failing_tests": [],
+        "gate": "accepted",
+        "rerun_passed": true,
+        "dismissed_text_still_flagged": true,
+        "tests_added": 2
+      }
+    ]
+  },
+  "ai_calls_counted": 26,
+  "note": "tests_added and the two amendments_* test counts were computed after the run from the same proposals and the seeded rules' tests (no further AI calls); the script now computes them during the run."
+}

@@ -13,8 +13,9 @@ export function Button({ variant = "secondary", className, ...p }: ButtonHTMLAtt
   return <button {...p} className={cx("inline-flex items-center justify-center gap-1.5 rounded-[5px] border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45", v, className)} />;
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={cx("rounded-md border border-line bg-white shadow-[0_1px_0_rgba(28,27,24,0.03)]", className)}>{children}</section>;
+/** A panel. `tabIndex` and `label` make a sideways-scrolling panel reachable and named for keyboard and screen-reader users. */
+export function Card({ children, className, tabIndex, label }: { children: ReactNode; className?: string; tabIndex?: number; label?: string }) {
+  return <section className={cx("rounded-md border border-line bg-white shadow-[0_1px_0_rgba(28,27,24,0.03)]", className)} tabIndex={tabIndex} aria-label={label}>{children}</section>;
 }
 
 const TONES: Record<string, string> = {

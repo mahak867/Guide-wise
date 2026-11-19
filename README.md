@@ -90,8 +90,9 @@ npm test                                                     # 95 unit tests, in
 npm run eval                                                 # accuracy on the held-out set (code checks)
 npm run eval:images                                          # 20 creatives with planted colour, contrast and logo errors
 npm run eval:privacy                                         # personal data and confidential canaries never reach the AI
+npm run eval:helpers                                         # the guide compiler and the rule-amendment helper, live (about 60 AI calls)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e       # 20-step journey
-BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep # every page and control, desktop and phone, with axe-core
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api   # bad input, wrong roles and cross-workspace access on every API route
 ```
 
