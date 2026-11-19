@@ -37,7 +37,7 @@ The three we promised, all live and tested against the exact tests written at Ro
 2. API and MCP server. Scoped keys, get_brief (only the facts valid today) and check_draft (the same findings as the app), over REST and MCP, with a playground and an audit trail.
 3. Campaign review with AI vision. Caption, creatives and documents are reviewed together. Price, date and promo-code mismatches across them are found and cited. People shown in creatives are flagged for consent and routed to compliance.
 
-Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker). We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. Three new rules were added, and the documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
+Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker). We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. One new rule (people shown in a creative) was added and the consistency rule was extended to dates, promo codes and documents. The documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
 
 ## Testing details
 - 77 unit tests (CI on every push).

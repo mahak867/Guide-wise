@@ -87,7 +87,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="print:hidden border-t border-line px-4 py-3 text-center text-xs text-muted">
-        Guidewise · CodeNova India 2026, Round 2 · PrepPath Academy is a fictional brand written for this demo · Guidewise supports reviewers; it does not give legal advice.
+        Guidewise · CodeNova India 2026 · PrepPath Academy is a fictional brand written for this demo · Guidewise supports reviewers; it does not give legal advice.
       </footer>
     </div>
   );
