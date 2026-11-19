@@ -17,7 +17,7 @@ const SAMPLE_CAMPAIGN = {
   caption: "JEE crash course for droppers: 60 days of full-length tests and evening doubt sessions. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol at admissions@preppath.in.",
   docs: [
     { name: "brochure", text: "PrepPath JEE Crash Course. Fee ₹14,999 including printed test papers. Classes start on 5 January at our Anna Nagar centre. Finish every mock test and an IIT seat is as good as yours. Early-bird code EARLY20." },
-    { name: "landing page", text: "Join the PrepPath JEE crash course. Starts 12 January. Early-bird code EARLY10 for the first 50 students." },
+    { name: "landing page", text: "Join the PrepPath JEE crash course. Starts 12 January. Use early-bird code EARLY10 when you enrol." },
   ],
 };
 
