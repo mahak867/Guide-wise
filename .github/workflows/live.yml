@@ -1,6 +1,6 @@
 name: Live site check
 
-# Once a day, the 93-check API probe runs against the live site: every route with bad input, wrong roles and another
+# Once a day, the API probe runs against the live site: every route with bad input, wrong roles and another
 # visitor's workspace, plus the three Round 3 improvements end to end. A failure emails the repository owner.
 on:
   schedule:

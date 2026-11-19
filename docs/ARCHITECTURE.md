@@ -32,7 +32,7 @@ AI writing tools (MCP clients, scripts) ──────►            └─ 
 
 - **Change impact** (`src/lib/impact.ts`): after any fact or rule change, every draft that used it (`factsUsed`: by value, by subject, by named student; or a finding that cites it) is re-checked against the new Brand Kit. An approved piece that now fails is moved back to review with the reason (`drafts.impact`). The result is shown in the Impact panel and logged (`events.action = impact_assessed`).
 - **API and MCP** (`src/lib/governance.ts`, `src/lib/apikeys.ts`, `src/app/api/v1/*`, `src/app/api/mcp`): keys are shown once and stored as SHA-256; scopes `brief:read` and `draft:check`; 30 calls a minute per key; every call is audited (`events.action = api_call`). The MCP server uses the official TypeScript SDK (`WebStandardStreamableHTTPServerTransport`, stateless). `get_brief` returns only facts valid today.
-- **Campaign review with AI vision**: `drafts.assets` holds up to 4 documents; `DraftImage.vision` stores what vision read.
+- **Campaign review with AI vision**: `drafts.assets` holds up to 4 documents (pasted, uploaded, or read from a live page by `src/lib/webpage.ts`: main content only; http(s) on standard ports, every resolved address and every redirect checked so private and metadata addresses are refused, 8 s, 2 MB); `DraftImage.vision` stores what vision read.
 
 ## AI providers (`src/lib/engine/ai.ts`)
 

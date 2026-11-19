@@ -15,3 +15,4 @@ Stated plainly, with where each one lives in the code.
 11. **API rate limit is per server instance.** 30 calls a minute per key, counted in memory, so it is approximate across instances (`src/lib/apikeys.ts:31`).
 12. **Penalty precedents** are cited as reported in press coverage; we have not read the orders themselves.
 13. **No hands-on tests with real users yet.** At Round 2 we moved hands-on tests with students to Round 3; they had not been run when this was written. Usability rests on our own browser tests at desktop and phone sizes. The December pilot on the roadmap is where real marketers use it.
+14. **The web page reader reads the HTML the server sends.** A page built entirely in JavaScript shows little text; copy its text from the browser instead. Addresses are checked before every request and redirect, but a host whose DNS answer changes between the check and the request is not re-checked (`src/lib/webpage.ts`).

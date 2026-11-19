@@ -17,7 +17,7 @@ docs/round3/Guidewise_Round3.pdf (upload the file; it is also in the repository)
 - AI checks: one rule per call, run twice when they find something; Claude → Groq → Gemini fallback with time caps, a circuit breaker and an answer cache.
 - Verifier: no source, no flag. A finding whose quote, rule or fact does not exist is dropped.
 - Images: OCR, palette, WCAG contrast, alt text and logo size and clear space, all in the browser; AI vision for stylised text and for people shown.
-- Campaign review (new): every code check and AI check on every document and on the text in each creative; prices, figures, dates and promo codes compared across the caption, images and documents.
+- Campaign review (new): documents pasted, uploaded as PDF or Word, or read from a live web page by its address; every code check and AI check on every document and on the text in each creative; prices, figures, dates and promo codes compared across the caption, images and documents.
 - Facts Register: evidence, owner, valid dates and disclosures; flags embargoed, expired and wrong-subject figures.
 - Change impact (new): changing a fact or rule re-checks every draft that used it and sends broken approved pieces back for re-approval.
 - API and MCP server (new): scoped, hashed, revocable keys; get_brief and check_draft over REST and MCP; a playground and an audit trail.
@@ -40,8 +40,8 @@ The three we promised, all live and tested against the exact tests written at Ro
 Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker), and Groq's smaller model takes over while the main one is rate-limited. We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. One new rule (people shown in a creative) was added and the consistency rule was extended to dates, promo codes and documents. The documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
 
 ## Testing details
-- 86 unit tests (CI on every push).
-- On the live site: a 20-step browser journey, a 51-step sweep of every page and control at desktop and phone sizes, and a 93-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
+- 94 unit tests (CI on every push).
+- On the live site: a 20-step browser journey, a 52-step sweep of every page and control at desktop and phone sizes, and a 98-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only.
 - Images: 20 of 20 planted errors caught, with 0 false alarms.
 - Privacy: 0 leaks in 144 AI prompts.

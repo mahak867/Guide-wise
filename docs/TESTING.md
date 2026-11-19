@@ -1,6 +1,6 @@
 # Testing
 
-Latest full run against the live site (19 Nov 2026 build): **86 unit tests, 20 of 20 journey steps, 51 of 51 sweep steps, 93 of 93 API probe checks**, no server or page errors.
+Latest full run against the live site (19 Nov 2026 build): **94 unit tests, 20 of 20 journey steps, 52 of 52 sweep steps, 98 of 98 API probe checks**, no server or page errors.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |
@@ -9,6 +9,8 @@ Latest full run against the live site (19 Nov 2026 build): **86 unit tests, 20 o
 | Browser journey (Playwright) | `BASE_URL=… npm run e2e` | The main journey end to end: review, edit a fix, accept all, replace an image, route, approve, record, PDF upload, channels, confidential, AI phrasings, Brand Kit export and import | Against the live site |
 | UI sweep (Playwright) | `BASE_URL=… npm run e2e:sweep` | Every page at desktop and phone size (console errors, server errors, broken images, sideways scroll, broken links) and every control: facts, palette, logo, rules of each type, hard cases, campaign, API page, request changes, approval, reset | Against the live site |
 | API probe | `BASE_URL=… npm run e2e:api` | Every route with bad input, wrong roles and another visitor's workspace; change impact; API keys, REST and a real MCP client; campaign review with AI vision | Against the live site |
+
+**Every day:** the API probe also runs against the live site from GitHub Actions every morning at 03:17 UTC (`.github/workflows/live.yml`), so a break in the site, the database or the AI service is reported while judging is under way.
 
 ## Accuracy and privacy evaluations
 
