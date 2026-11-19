@@ -47,7 +47,7 @@ export default function Results() {
         sub="Guidewise is run on drafts with errors planted in known places, and every finding is compared with the answer key. This page re-runs the code checks live each time it loads."
         action={
           <div className="flex items-center gap-2">
-            <label className="text-sm"><span className="sr-only">Split</span>
+            <label className="text-sm"><span className="sr-only">Which drafts to run</span>
               <select className="rounded-md border border-line bg-white px-2 py-1.5 text-sm" value={split} onChange={(e) => { const s = e.target.value as typeof split; setSplit(s); load(s); }}>
                 <option value="test">Held-out set (40 drafts)</option>
                 <option value="dev">Development set (20 drafts)</option>
@@ -58,10 +58,11 @@ export default function Results() {
           </div>
         }
       />
-      {error && <Notice tone="error">{error}</Notice>}
-      {!r ? <p className="text-sm text-muted">Running the evaluation…</p> : (
+      {error && <div className="mb-4"><Notice tone="error">The evaluation could not run: {error} Use Run again to retry.</Notice></div>}
+      {!r ? (!error && <p className="text-sm text-muted">Running the evaluation on {split === "test" ? "the 40 held-out drafts" : split === "dev" ? "the 20 development drafts" : "all 60 drafts"}…</p>) : (
         <>
           <h2 className="mb-2 flex flex-wrap items-center gap-2 font-semibold">Code checks only <Badge>{r.docs} drafts · {r.planted} planted errors · {r.ms} ms</Badge><span className="text-xs font-normal text-muted">Test set fingerprint <code className="font-mono">{r.fingerprint}</code></span></h2>
+          <p className="mb-3 max-w-3xl text-sm text-muted"><b className="font-medium text-ink">Precision</b> is the share of Guidewise&apos;s findings that were real planted errors (few false alarms). <b className="font-medium text-ink">Recall</b> is the share of planted errors it caught (few misses).</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label="Precision" value={pct(r.precision)} sub={`${r.correct} of ${r.predicted} findings were planted errors. 95% interval ${ci(r.precisionCI)}.`} />
             <Metric label="Recall" value={pct(r.recall)} sub={`${r.caught} of ${r.planted} planted errors caught. 95% interval ${ci(r.recallCI)}.`} />

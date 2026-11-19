@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { Card, PageHead } from "@/components/ui";
 import { useApp } from "@/lib/client";
 
@@ -28,9 +29,9 @@ export default function About() {
       <Card className="mt-6 p-4 text-sm">
         <h2>Around the review</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
-          <li><b>Change impact.</b> Changing, expiring or deleting a fact, or changing a rule, re-checks every draft that used it. An approved piece that no longer passes goes back for re-approval with the reason. The demo starts with one approved post that cites F-3: edit F-3 on Facts and assets to see it.</li>
-          <li><b>API and MCP server.</b> AI writing tools fetch the brief (rules in force, only the facts valid today) and check a draft before handing it over, with scoped keys and an audit trail. See the API page.</li>
-          <li><b>Insights.</b> Rules that are dismissed most get clearer wording drafted for them; code re-runs every test, the manager approves, and the dismissal rate before and after is shown.</li>
+          <li><b>Change impact.</b> Changing, expiring or deleting a fact, or changing a rule, re-checks every draft that used it. An approved piece that no longer passes goes back for re-approval with the reason. The demo starts with one approved post that cites F-3: edit F-3 on <Link className="underline" href="/facts">Facts and assets</Link> to see it.</li>
+          <li><b>API and MCP server.</b> AI writing tools fetch the brief (rules in force, only the facts valid today) and check a draft before handing it over, with scoped keys and an audit trail. MCP (Model Context Protocol) is the open standard AI assistants use to call outside tools. See the <Link className="underline" href="/developers">API page</Link>.</li>
+          <li><b><Link className="underline" href="/insights">Insights</Link>.</b> Rules that are dismissed most get clearer wording drafted for them; code re-runs every test, the manager approves, and the dismissal rate before and after is shown.</li>
         </ul>
       </Card>
 
@@ -45,7 +46,7 @@ export default function About() {
             <li>The verifier confirms that a finding is grounded in a real rule and real words. It does not prove the judgment is right, which is why any finding can be dismissed with a reason and a person approves.</li>
             <li>There is no sign-in in this version, so judges can open it directly. The four roles are switched with "Acting as". Role rules are still enforced on the server.</li>
             <li>Guidewise supports reviewers. It does not give legal advice. Regulation rules cite public sources and must be confirmed by the organisation.</li>
-            <li>Accuracy is measured on a planted-error test set written by the team; see the Results page for the numbers, the method and why they are optimistic. The AI checks were measured on all 40 held-out drafts, twice.</li>
+            <li>Accuracy is measured on a planted-error test set written by the team; see the <Link className="underline" href="/results">Results page</Link> for the numbers, the method and why they are optimistic. The AI checks were measured on all 40 held-out drafts, twice.</li>
           </ul>
         </Card>
         <Card className="p-4 text-sm">
