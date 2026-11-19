@@ -171,10 +171,11 @@ export async function reviewDraft(
   // AI vision reads each creative once (cached by image): text OCR may miss, and any people shown.
   let images = opts.images ?? [];
   let visionRead = 0;
+  let visionError: string | undefined;
   if (useAI && images.some((i) => i.dataUrl && i.vision === undefined)) {
     images = await Promise.all(images.map(async (img) => {
       if (!img.dataUrl || img.vision !== undefined) return img;
-      try { aiCalls++; visionRead++; return { ...img, vision: await readCreative(img.dataUrl, call(1)) }; } catch { return img; }
+      try { aiCalls++; visionRead++; return { ...img, vision: await readCreative(img.dataUrl, call(1)) }; } catch (e) { visionError = e instanceof Error ? e.message.slice(0, 200) : String(e); return img; }
     }));
   }
   // Campaign documents beyond the caption (landing page, brochure, email): every text rule, quoted from that document.
@@ -207,6 +208,7 @@ export async function reviewDraft(
       images: images.length,
       assets: assets.length,
       visionRead,
+      visionError,
       people: images.reduce((n, i) => n + (i.vision?.people?.length ?? 0), 0),
       aiFindings: aiKept.length,
       droppedByVerifier: dropped,

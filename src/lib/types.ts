@@ -129,6 +129,7 @@ export interface ReviewStats {
   images?: number;
   assets?: number;
   visionRead?: number;
+  visionError?: string;
   people?: number;
   aiFindings: number;
   droppedByVerifier: { reason: string; quote: string; rule_id: string }[];
