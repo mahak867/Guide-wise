@@ -41,7 +41,7 @@ Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and 
 
 ## Testing details
 - 94 unit tests (CI on every push).
-- On the live site: a 20-step browser journey, a 52-step sweep of every page and control at desktop and phone sizes, and a 98-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
+- On the live site: a 20-step browser journey, a 52-step sweep of every page and control at desktop and phone sizes, and a 102-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only.
 - Images: 20 of 20 planted errors caught, with 0 false alarms.
 - Privacy: 0 leaks in 144 AI prompts.
