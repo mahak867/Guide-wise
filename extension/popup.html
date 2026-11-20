@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check with Guidewise</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header class="top">
+    <img src="icons/icon-32.png" width="24" height="24" alt="">
+    <h1>Check with Guidewise</h1>
+  </header>
+
+  <main>
+    <details id="settings" class="settings">
+      <summary>Settings</summary>
+      <form id="settings-form" class="stack" novalidate>
+        <label for="site">Guidewise site</label>
+        <input id="site" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://guidewise-kohl.vercel.app">
+        <label for="key">API key <span class="hint">(scope draft:check)</span></label>
+        <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="gw_…" aria-describedby="key-help">
+        <p id="key-help" class="hint">Create one on the <a id="api-page" href="https://guidewise-kohl.vercel.app/developers" target="_blank" rel="noopener noreferrer">API page</a> (brand manager). It is kept in this browser only and sent only to the site above.</p>
+        <div class="row">
+          <button type="submit" class="secondary">Save settings</button>
+          <button type="button" id="forget" class="link">Forget key</button>
+        </div>
+        <p id="settings-status" class="hint" role="status" aria-live="polite"></p>
+      </form>
+    </details>
+
+    <div class="row two">
+      <div class="stack">
+        <label for="type">Content type</label>
+        <select id="type"></select>
+      </div>
+      <label class="toggle" for="ai"><input id="ai" type="checkbox"> AI checks <span class="hint">(slower)</span></label>
+    </div>
+
+    <label for="text">Draft text <span id="count" class="hint"></span></label>
+    <textarea id="text" rows="5" placeholder="Select text on the page, or paste a draft here."></textarea>
+
+    <div class="row">
+      <button type="button" id="check-selection" class="primary">Check selected text</button>
+      <button type="button" id="check-text" class="secondary">Check text in the box</button>
+    </div>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <div id="result" aria-live="polite"></div>
+  </main>
+</body>
+</html>

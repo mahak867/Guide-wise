@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Check with Guidewise",
+  "version": "1.0.0",
+  "description": "Check a draft against your brand rules where you write it: select text on LinkedIn, Gmail or X and get Guidewise's cited findings and fixes.",
+  "action": {
+    "default_title": "Check with Guidewise",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" }
+  },
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://guidewise-kohl.vercel.app/*"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" }
+}

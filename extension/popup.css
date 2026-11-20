@@ -1,0 +1,63 @@
+:root {
+  --paper: #f8f5ee; --white: #fffdf9; --ink: #1c1b18; --muted: #6b665c; --line: #e2dccf; --mist: #f3efe6;
+  --brand: #1f4d3f; --brand-soft: #e7ede5; --crit: #a8281c; --crit-soft: #f7e4df; --major: #8a5a0b; --major-soft: #f5ead3;
+  --minor: #2f5d8a; --minor-soft: #e3ebf2;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1b1a17; --white: #24221e; --ink: #f1ede4; --muted: #b3ac9f; --line: #3a362f; --mist: #2c2a25;
+    --brand: #8fc4ad; --brand-soft: #23362e; --crit: #f0a093; --crit-soft: #3d2420; --major: #e3bb6f; --major-soft: #3a2f1b;
+    --minor: #9cc0e4; --minor-soft: #1f2c3a;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; width: 400px; max-width: 100vw; background: var(--paper); color: var(--ink); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.top { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--white); }
+h1 { margin: 0; font-size: 15px; font-weight: 600; }
+main { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+label { font-weight: 500; }
+.hint, .note { color: var(--muted); font-weight: 400; font-size: 12px; margin: 0; }
+.stack { display: flex; flex-direction: column; gap: 4px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.row.two { align-items: end; justify-content: space-between; }
+.row.two .stack { flex: 1; }
+input[type="url"], input[type="password"], input[type="text"], select, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+}
+textarea { resize: vertical; min-height: 90px; }
+.toggle { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
+.toggle input { width: 16px; height: 16px; accent-color: var(--brand); }
+button { font: inherit; cursor: pointer; border-radius: 6px; padding: 6px 12px; border: 1px solid var(--line); background: var(--white); color: var(--ink); }
+button.primary { background: var(--brand); border-color: var(--brand); color: var(--white); font-weight: 600; }
+button.link { border: 0; background: none; padding: 0; text-decoration: underline; color: var(--muted); }
+button:disabled { opacity: 0.5; cursor: progress; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+a { color: inherit; }
+.settings { border: 1px solid var(--line); border-radius: 8px; background: var(--white); padding: 6px 10px; }
+.settings summary { cursor: pointer; font-weight: 500; }
+.settings form { margin: 8px 0 4px; }
+.status { margin: 0; min-height: 1em; }
+.status.error { color: var(--crit); }
+.verdict { margin: 0 0 8px; padding: 8px 10px; border-radius: 6px; font-weight: 600; }
+.verdict-fix { background: var(--crit-soft); color: var(--crit); }
+.verdict-ok { background: var(--brand-soft); color: var(--brand); }
+.findings { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.finding { border: 1px solid var(--line); border-radius: 8px; background: var(--white); padding: 8px 10px; }
+.finding p { margin: 0; }
+.finding-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.rule-id { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
+.rule-title { font-weight: 600; }
+.badge { margin-left: auto; font-size: 11px; border-radius: 999px; padding: 0 8px; }
+.badge-critical { background: var(--crit-soft); color: var(--crit); }
+.badge-major { background: var(--major-soft); color: var(--major); }
+.badge-minor { background: var(--minor-soft); color: var(--minor); }
+.quote { margin: 6px 0; padding: 2px 8px; border-left: 3px solid var(--line); font-style: italic; word-break: break-word; }
+.message { word-break: break-word; }
+.fix { margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--mist); display: flex; gap: 8px; align-items: flex-start; }
+.fix-text { flex: 1; word-break: break-word; }
+.fix-label { font-weight: 600; }
+.fix .copy { flex: none; padding: 2px 8px; font-size: 12px; }
+.finding .note { margin-top: 4px; }
