@@ -3,6 +3,7 @@ import { isLapsed, parseException } from "./approval";
 import { BadInput, db, loadKit, must } from "./db";
 import { today } from "./engine/code";
 import { reviewDraft, riskTier } from "./engine/review";
+import { summarisePrecedents, type DismissEvent, type Precedent, type PrecedentRow } from "./review-extras";
 import type { Finding, Intent } from "./types";
 import type { DraftImage } from "./engine/visual";
 
@@ -99,6 +100,29 @@ export async function runReview(ws: string, draft: DraftRow, useAI: boolean, kee
     kit_version: kit.version, risk_tier: risk.tier, risk_reasons: risk.reasons,
     updated_at: new Date().toISOString(),
   }).eq("id", draft.id));
+}
+
+/**
+ * Precedents for the rules on a draft: how this workspace's other drafts settled the same rules (fixed, or dismissed
+ * and why, by whom, when). One query for the findings of every rule at once, grouped by rule in code, and one for the
+ * dismissal events that date them; never a request per finding. A failure here never breaks the review page.
+ */
+export async function loadPrecedents(ws: string, draftId: string, ruleIds: string[]): Promise<Record<string, Precedent>> {
+  const rules = [...new Set(ruleIds)].filter(Boolean).slice(0, 200);
+  if (!rules.length) return {};
+  try {
+    const d = db();
+    const [rows, evs] = await Promise.all([
+      d.from("findings").select("rule_id, state, dismiss_reason, resolved_by, draft_id, quote, created_at, drafts!inner(ws)")
+        .eq("drafts.ws", ws).neq("draft_id", draftId).in("rule_id", rules).in("state", ["accepted", "resolved", "dismissed"]).limit(5000),
+      d.from("events").select("draft_id, detail, at")
+        .eq("ws", ws).eq("action", "finding_dismissed").neq("draft_id", draftId).in("detail->>rule", rules).order("at", { ascending: false }).limit(2000),
+    ]);
+    return summarisePrecedents(must(rows) as unknown as PrecedentRow[], must(evs) as DismissEvent[]);
+  } catch (e) {
+    console.error("[guidewise] precedents", e);
+    return {};
+  }
 }
 
 export async function saveText(draft: DraftRow, text: string, note: string): Promise<DraftRow> {

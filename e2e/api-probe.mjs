@@ -309,6 +309,67 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("bulk: an unknown content type refused", await call("POST", "/api/bulk", { body: { posts: [{ ...post, content_type: "fax" }] } }), (r) => is4xx(r) && r.s === 400);
 }
 
+// Undo after accepting a fix: the text before it comes back as a new version and the finding reopens; refused once the
+// text has changed, while the draft is with a reviewer, and from another workspace. "Accept all" is undone as one step.
+{
+  const text = "100% selection guaranteed!! Call 98765 43210 to join Preppath.";
+  const { j: du } = await call("POST", "/api/drafts", { body: { title: "Undo probe", content_type: "social", text, useAI: false } });
+  const get = async () => (await call("GET", `/api/drafts/${du.id}`)).j;
+  const fixable = (d) => d.findings.find((f) => f.state === "open" && f.fix !== null && f.fix !== undefined && (f.location ?? "text") === "text");
+  const f = fixable(await get());
+  expect("undo: the probe draft has a fix to accept", { s: 200, j: f }, (r) => !!r.j);
+  const acc = await call("POST", `/api/drafts/${du.id}`, { body: { action: "accept", finding_id: f.id } });
+  expect("undo: accepting a fix returns the version it made", acc, (r) => r.s === 200 && r.j.version === 2);
+  expect("undo: a finding_id that is not accepted is refused", await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", finding_id: randomUUID() } }), is4xx);
+  const other = await fetch(L + `/api/drafts/${du.id}`, { method: "POST", headers: { "x-workspace": "probe-" + randomUUID().slice(0, 12), "x-role": "creator", "content-type": "application/json" }, body: JSON.stringify({ action: "undo_accept", finding_id: f.id }) });
+  expect("undo: another workspace cannot undo the fix", { s: other.status, j: await other.json().catch(() => null) }, (r) => r.s === 404 || r.s === 403);
+  const un = await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", finding_id: f.id } });
+  expect("undo: undo succeeds", un, (r) => r.s === 200 && r.j.version === 3 && r.j.reopened.includes(f.id));
+  const after = await get();
+  expect("undo: the text is restored as a new version and the finding is open again", { s: 200, j: after }, (r) => r.j.draft.text === text && r.j.draft.version === 3
+    && r.j.versions[0].text === text && r.j.findings.find((x) => x.id === f.id)?.state === "open"
+    && r.j.events.some((e) => e.action === "fix_undone" && e.detail.undid_version === 2 && e.detail.restored_version === 1));
+  expect("undo: the same fix cannot be undone twice", await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", finding_id: f.id } }), (r) => r.s === 409);
+  // Accept again, then change the text: undo must refuse rather than overwrite the edit.
+  await call("POST", `/api/drafts/${du.id}`, { body: { action: "accept", finding_id: f.id } });
+  await call("POST", `/api/drafts/${du.id}`, { body: { action: "edit", text: (await get()).draft.text + " Classes start 1 December.", useAI: false } });
+  expect("undo: refused with 409 once the text has changed since the accept", await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", finding_id: f.id } }),
+    (r) => r.s === 409 && /text has changed/.test(r.j?.error ?? ""));
+  // Accept all is one step, and undoing it restores the version before it.
+  const before = (await get()).draft;
+  const all = await call("POST", `/api/drafts/${du.id}`, { body: { action: "accept_all" } });
+  if (all.s === 200) {
+    const ua = await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", version: all.j.version } });
+    const back = await get();
+    expect("undo: Accept all is undone as one step", ua, (r) => r.s === 200 && back.draft.text === before.text && !back.findings.some((x) => x.state === "accepted" && x.draft_version === all.j.version));
+  }
+  await call("POST", `/api/drafts/${du.id}`, { body: { action: "accept", finding_id: fixable(await get()).id } });
+  await call("POST", `/api/drafts/${du.id}`, { body: { action: "submit" } });
+  const acceptedNow = (await get()).findings.find((x) => x.state === "accepted");
+  expect("undo: refused with 409 while the draft is with a reviewer", await call("POST", `/api/drafts/${du.id}`, { body: { action: "undo_accept", finding_id: acceptedNow?.id } }), is(409));
+}
+
+// Precedents: after a finding is dismissed on one draft, a second draft with the same rule shows it, and the draft itself does not.
+{
+  const text = "For the December batch, call 98765 43210 today.";
+  const mk = async () => (await call("POST", "/api/drafts", { body: { title: "Precedent probe", content_type: "social", text, useAI: false } })).j.id;
+  const first = await mk();
+  const f = (await call("GET", `/api/drafts/${first}`)).j.findings.find((x) => x.rule_id === "R-15" && x.state === "open");
+  expect("precedents: the first draft has the contact finding", { s: 200, j: f }, (r) => !!r.j);
+  await call("POST", `/api/drafts/${first}`, { role: "compliance", body: { action: "dismiss", finding_id: f?.id, reason: "The rule does not apply to this content" } });
+  const second = (await call("GET", `/api/drafts/${await mk()}`)).j;
+  const p = second.precedents?.["R-15"];
+  expect("precedents: the second draft shows the dismissal, its reason, who and when", { s: 200, j: p }, (r) => r.j?.dismissed >= 1
+    && r.j.last?.reason === "The rule does not apply to this content" && r.j.last.by === "Kavya" && typeof r.j.last.at === "string");
+  const firstAgain = await call("GET", `/api/drafts/${first}`);
+  expect("precedents: a draft's own dismissal is not its own precedent", firstAgain, (r) => r.s === 200 && r.j.precedents?.["R-15"]?.last?.reason !== "The rule does not apply to this content");
+  // Another workspace's draft with the same rule has no history from this one.
+  const h = { "x-workspace": "probe-" + randomUUID().slice(0, 12), "x-role": "creator", "content-type": "application/json" };
+  const made = await (await fetch(L + "/api/drafts", { method: "POST", headers: h, body: JSON.stringify({ title: "Precedent isolation", content_type: "social", text, useAI: false }) })).json();
+  const elsewhere = await (await fetch(L + `/api/drafts/${made.id}`, { headers: h })).json();
+  expect("precedents: another workspace's draft shows none of this workspace's history", { s: 200, j: elsewhere }, (r) => !!r.j.draft && !r.j.precedents?.["R-15"]);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));
