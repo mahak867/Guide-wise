@@ -23,17 +23,21 @@ export function verify(text: string, findings: Finding[], rules: Rule[], facts: 
     if (!f.quote || !f.quote.trim()) { drop("no quoted words"); continue; }
     const imgIdx = f.location?.startsWith("image:") ? Number(f.location.slice(6)) - 1 : -1;
     if (imgIdx >= 0) {
-      // An image finding must point at a colour measured in that image, its alt text, or words read from it.
+      // An image finding must point at a colour measured in that image, its alt text, its logo, or words read from it
+      // (the OCR text, or one of the lines OCR read with its box).
       const img = images[imgIdx];
       const grounded = !!img && (
         img.colours.some((c) => c.hex === f.quote) ||
         f.quote === `Image ${imgIdx + 1}: alt text` ||
         (f.quote === `Image ${imgIdx + 1}: logo` && !!img.logo) ||
         (img.ocr ?? "").includes(f.quote) ||
+        (img.lines ?? []).some((l) => l.text === f.quote) ||
         (img.vision?.text ?? "").includes(f.quote) ||
         (f.quote === `Image ${imgIdx + 1}: people` && !!img.vision?.people?.length)
       );
       if (!grounded) { drop("not found in the image it cites"); continue; }
+      // A region must lie inside the image; one that does not is removed (the finding itself is grounded above).
+      if (f.region && !(f.region.x >= 0 && f.region.y >= 0 && f.region.w > 0 && f.region.h > 0 && f.region.x + f.region.w <= 1.0001 && f.region.y + f.region.h <= 1.0001)) f.region = null;
     } else if (f.location?.startsWith("asset:")) {
       // A finding on another campaign document must quote that document.
       const a = assets[Number(f.location.slice(6)) - 1];
