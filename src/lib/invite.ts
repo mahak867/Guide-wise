@@ -59,19 +59,26 @@ export async function listInvites(ws: string): Promise<Invite[]> {
 }
 
 /** Create a join link to the workspace. Null when it already has MAX_ACTIVE_INVITES active links. */
-export async function createInvite(ws: string, draftId: string | null, by: { name: string; role: string }, origin: string) {
+/**
+ * Create a join link to the workspace. Null when it already has MAX_ACTIVE_INVITES active links. In an organisation's
+ * workspace, `org` registers the link in the closed org_invites table first (as the signed-in manager); only that row
+ * can add a member. The event row is still written, for the list and the join page.
+ */
+export async function createInvite(ws: string, draftId: string | null, by: { name: string; role: string }, origin: string, memberRole = "creator",
+  org?: (hash: string, role: string, expiresAt: string) => Promise<string>) {
   if ((await listInvites(ws)).filter((i) => i.active).length >= MAX_ACTIVE_INVITES) return null;
   const token = newInviteToken();
   const expires_at = inviteExpiry();
+  const orgInviteId = org ? await org(hashInviteToken(token), memberRole, expires_at) : null;
   const row = must(await db().from("events").insert({
     ws, draft_id: draftId, actor: by.name, role: by.role, action: "invite_created",
-    detail: { hash: hashInviteToken(token), expires_at, created_by: by.name },
+    detail: { hash: hashInviteToken(token), expires_at, created_by: by.name, member_role: memberRole, ...(orgInviteId ? { org_invite_id: orgInviteId } : {}) },
   }).select("id, at").single()) as { id: number; at: string };
   const invite: Invite = { id: row.id, created_at: row.at, created_by: by.name, expires_at, draft_id: draftId, revoked_at: null, revoked_by: null, active: true };
   return { url: inviteUrl(origin, token), expires_at, invite };
 }
 
-export interface FoundInvite { id: number; ws: string; draft_id: string | null; draft_title: string | null; created_by: string; created_at: string; expires_at: string }
+export interface FoundInvite { id: number; ws: string; draft_id: string | null; draft_title: string | null; created_by: string; created_at: string; expires_at: string; member_role: string }
 
 /** The invite a token opens, or null when it is unknown, malformed, expired or revoked (all look the same). */
 export async function lookupInvite(token: string, now: Date = new Date()): Promise<FoundInvite | null> {
@@ -86,5 +93,6 @@ export async function lookupInvite(token: string, now: Date = new Date()): Promi
   return {
     id: ev.id, ws: ev.ws, draft_id: draft ? ev.draft_id : null, draft_title: draft?.title ?? null,
     created_by: String(ev.detail?.created_by ?? ""), created_at: ev.at, expires_at: String(ev.detail?.expires_at ?? ""),
+    member_role: typeof ev.detail?.member_role === "string" ? ev.detail.member_role : "creator",
   };
 }

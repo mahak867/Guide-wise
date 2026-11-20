@@ -84,7 +84,7 @@ Without any AI key, the code checks and the whole workflow still run, and the ap
 ## Changes from the Round 1 plan (summary)
 
 - **AI provider:** planned on Claude; built as one adapter (Claude, Groq, Gemini) so judges get AI checks on free tiers.
-- **Sign-in:** planned Supabase Auth; replaced by a private workspace per visitor so judges can open the link directly. Roles are still enforced on the server.
+- **Sign-in (optional):** Supabase Auth with email and password. Nobody has to sign in: the demo is still a private workspace per visitor. Signing up claims the current workspace as an organisation's (you become its manager); from then on only its members open it, each with the role stored for them, and invite links add members. Roles are enforced on the server either way.
 - **Image review:** planned for Round 3; a first version shipped in Round 2 (palette, contrast, alt text, OCR, logo), and AI vision in Round 3.
 - **Writing-style libraries** (alex, write-good): replaced by Brand Kit rules with test sentences.
 - **Hands-on tests with students:** moved from Round 2 to Round 3; one outside student tested every feature unaided in about 12 minutes (see [known issue 13](docs/KNOWN_ISSUES.md)).

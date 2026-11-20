@@ -13,8 +13,8 @@ The live site is built so a judge can open it with no sign-in: every visitor get
 
 | Demo today | For a real team | Effort |
 | --- | --- | --- |
-| A random workspace id per browser; anyone with the link gets a copy | Supabase Auth: email sign-in, an **organisation** per centre, invitations by email, the four roles stored per member. Every table already carries a workspace id, so the workspace becomes the organisation id and row-level security policies (`ws = organisation of the signed-in user`) replace today's open demo policy | About a week, plus a security test like the existing cross-workspace probe checks run per organisation |
-| "Acting as" switches role | Each person has one role in their organisation; the switcher disappears; approvals record the real person | Part of the above |
+| A random workspace id per browser; anyone with the link gets a copy | **Built (optional):** Supabase Auth email and password sign-in; signing up claims the workspace as an **organisation**, invite links add members with a role the inviter picks, and the server refuses a claimed workspace to anyone who is not a signed-in member (migration 010, `src/proxy.ts`). **Still planned:** row-level security per organisation in the database (today the check is in the server, and every table still has the open demo policy), invitations by email, password reset | Row-level security: a few days, plus the existing cross-workspace probe checks run per organisation |
+| "Acting as" switches role | **Built:** in an organisation's workspace each member has one stored role, the switcher is replaced by "Signed in as", a manager changes roles and removes members on /team, and approvals, sign-offs and the activity log record the signed-in person ("Approved by Asha (signed in)") | Done |
 | The fictional PrepPath Brand Kit | The team's own brand book through the guide compiler (PDF or Word in, proposed rules with test sentences out, each confirmed by the manager), their facts with evidence and owners, their logo and palette | A first session of about 2 hours per brand with the brand manager; measured in the December pilot |
 | Free AI tiers (Groq, Gemini) with code-only fallback | A paid key first, free tiers as fallback, a monthly AI budget per organisation with a warning at 80%; confidential drafts still never leave | Configuration; about ₹1,500 a month for a centre doing 1,500 drafts (estimate in the roadmap) |
 | Accuracy measured on drafts we wrote | Precision and recall re-measured on 50 real, anonymised drafts per pilot centre and published beside the synthetic numbers | The December pilot |
@@ -30,6 +30,6 @@ The live site is built so a judge can open it with no sign-in: every visitor get
 
 ## Honest gaps before a paid pilot
 
-- No sign-in or organisations yet (above).
+- Sign-in and organisations exist, but isolation between organisations is enforced by the server, not yet by row-level security in the database (above).
 - Visual checks are stronger on colour, contrast, text in images and the logo file than on layout and typography; fonts are not identified ([KNOWN_ISSUES.md](KNOWN_ISSUES.md)).
 - All accuracy numbers come from our own test set; the pilot is where they are tested for real.

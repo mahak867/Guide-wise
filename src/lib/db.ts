@@ -28,10 +28,17 @@ export function wsOf(req: Request): string {
   return /^[a-z0-9-]{8,48}$/.test(w) ? w : "public";
 }
 
-export function actor(req: Request): { role: Role; name: string } {
+/**
+ * Who is acting. In a demo workspace, the "Acting as" persona (x-role). In a claimed workspace, src/proxy.ts has
+ * already checked the member's sign-in, replaced x-role with the member's role and set x-gw-member-*; it strips
+ * those headers from every incoming request, so a caller cannot set them.
+ */
+export function actor(req: Request): { role: Role; name: string; userId?: string } {
   const r = (req.headers.get("x-role") ?? "creator") as Role;
   const role: Role = r in ROLES ? r : "creator";
-  return { role, name: ROLES[role].name };
+  const userId = req.headers.get("x-gw-member-id") || undefined;
+  const member = userId ? decodeURIComponent(req.headers.get("x-gw-member-name") ?? "") : "";
+  return userId ? { role, name: member || ROLES[role].name, userId } : { role, name: ROLES[role].name };
 }
 
 export async function seed(ws: string, wipe: boolean): Promise<void> {
@@ -123,7 +130,7 @@ export async function bumpKit(ws: string): Promise<number> {
 
 export async function log(req: Request, draft_id: string | null, action: string, detail: Record<string, unknown> = {}): Promise<void> {
   const a = actor(req);
-  must(await db().from("events").insert({ ws: wsOf(req), draft_id, actor: a.name, role: a.role, action, detail }));
+  must(await db().from("events").insert({ ws: wsOf(req), draft_id, actor: a.name, role: a.role, action, detail: a.userId ? { ...detail, user_id: a.userId } : detail }));
 }
 
 /** A problem with what the caller sent. Reported as 400 with its message, never as a server error. */

@@ -135,7 +135,7 @@ export default function Record() {
       <h1 className="mt-1">{d.draft.title}</h1>
       <dl className="mt-5 grid grid-cols-2 gap-x-8 gap-y-3 border-y border-line py-4">
         <div><dt className="text-[11px] uppercase tracking-wide text-muted">Approved by</dt><dd>{approvers.map((x, i) => (
-          <span key={i} className="block">{x.name}, {ROLES[x.role as Role]?.title ?? x.role}{approvers.length > 1 ? ` · ${fmtDate(x.at)}` : ""}</span>
+          <span key={i} className="block">{x.name}{x.user_id ? " (signed in)" : ""}, {ROLES[x.role as Role]?.title ?? x.role}{approvers.length > 1 ? ` · ${fmtDate(x.at)}` : ""}</span>
         ))}</dd></div>
         <div><dt className="text-[11px] uppercase tracking-wide text-muted">Date</dt><dd>{fmtDate(r.at)}{approvers.length > 1 ? " (two sign-offs: compliance, then brand)" : ""}</dd></div>
         <div><dt className="text-[11px] uppercase tracking-wide text-muted">Checked against</dt><dd>Brand Kit version {r.kit_version}, draft version {String(r.findings_summary.draft_version)}</dd></div>

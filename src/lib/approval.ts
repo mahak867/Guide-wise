@@ -59,12 +59,12 @@ const RESETS = new Set(["submitted", "changes_requested", "reapproval_needed", "
  * The compliance sign-off that still stands on a high-risk draft, derived from the events log
  * (action "approved_partial" with role "compliance"), or null when there is none.
  */
-export function complianceSignOff(events: SignEvent[]): { actor: string; at: string } | null {
+export function complianceSignOff(events: SignEvent[]): { actor: string; at: string; user_id?: string } | null {
   const ordered = [...events].sort((a, b) => (a.id !== undefined && b.id !== undefined ? a.id - b.id : a.at.localeCompare(b.at)));
-  let signed: { actor: string; at: string } | null = null;
+  let signed: { actor: string; at: string; user_id?: string } | null = null;
   for (const e of ordered) {
     if (RESETS.has(e.action)) signed = null;
-    else if (e.action === "approved_partial" && e.role === "compliance") signed = { actor: e.actor, at: e.at };
+    else if (e.action === "approved_partial" && e.role === "compliance") signed = { actor: e.actor, at: e.at, ...(typeof e.detail?.user_id === "string" ? { user_id: e.detail.user_id } : {}) };
   }
   return signed;
 }
@@ -72,9 +72,9 @@ export function complianceSignOff(events: SignEvent[]): { actor: string; at: str
 interface ReceiptLike { approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> }
 
 /** Everyone who signed a receipt, in order. Receipts from before dual sign-off name one approver. */
-export function approversOf(r: ReceiptLike): { name: string; role: string; at: string }[] {
+export function approversOf(r: ReceiptLike): { name: string; role: string; at: string; user_id?: string }[] {
   const list = r.findings_summary?.approvers;
-  if (Array.isArray(list) && list.length) return list as { name: string; role: string; at: string }[];
+  if (Array.isArray(list) && list.length) return list as { name: string; role: string; at: string; user_id?: string }[];
   return [{ name: r.approver, role: r.approver_role, at: r.at }];
 }
 

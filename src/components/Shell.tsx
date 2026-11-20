@@ -1,4 +1,5 @@
 "use client";
+import { AccountMenu } from "./AccountMenu";
 import { ImpactPanel } from "./ImpactPanel";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,7 +21,7 @@ const NAV = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { role, setRole, state, error, refresh } = useApp();
+  const { account, role, setRole, state, error, refresh } = useApp();
   const path = usePathname();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -67,7 +68,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </span>
             )}
             {state && <span className="hidden xl:inline"><Badge>{state.kit.name} · Kit v{state.kit.version}</Badge></span>}
-            <label className="flex items-center gap-1.5">
+            {!account?.member && <label className="flex items-center gap-1.5">
               <span className="hidden text-muted md:inline">Acting as</span>
               <select aria-label="Acting as" value={role} onChange={(e) => setRole(e.target.value as Role)} className="min-w-0 max-w-[60vw] rounded-md border border-line bg-white px-2 py-1.5 font-medium sm:max-w-none">
                 {(Object.keys(ROLES) as Role[]).map((r) => (
@@ -76,7 +77,8 @@ export function Shell({ children }: { children: ReactNode }) {
                   </option>
                 ))}
               </select>
-            </label>
+            </label>}
+            <AccountMenu />
             <Button onClick={reset} disabled={busy}>{busy ? "Resetting…" : "Reset demo"}</Button>
           </div>
         </div>

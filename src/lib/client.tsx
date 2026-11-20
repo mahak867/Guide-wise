@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { authHeader, loadSession } from "./auth-client";
 import type { Fact, Kit, Role, Rule } from "./types";
 
 export interface AppState {
@@ -11,6 +12,16 @@ export interface AppState {
 
 let currentRole: Role = "creator";
 let workspace = "";
+
+/** Switch this browser to another workspace (after sign-in or sign-out). The caller reloads the page. */
+export function setWorkspace(ws: string): void {
+  workspace = ws;
+  try { window.localStorage.setItem("gw-ws", ws); } catch { /* storage blocked */ }
+}
+
+export function currentWorkspace(): string {
+  return getWorkspace();
+}
 
 /** One private demo workspace per browser, so visitors never see or reset each other's work. */
 function getWorkspace(): string {
@@ -31,7 +42,7 @@ export async function api<T = Record<string, unknown>>(path: string, body?: unkn
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   const res = await fetch(path, {
     method: method ?? (body === undefined ? "GET" : "POST"),
-    headers: { "x-role": currentRole, "x-workspace": getWorkspace(), ...(body !== undefined && !isForm ? { "content-type": "application/json" } : {}) },
+    headers: { "x-role": currentRole, "x-workspace": getWorkspace(), ...(await authHeader()), ...(body !== undefined && !isForm ? { "content-type": "application/json" } : {}) },
     body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     cache: "no-store",
   });
@@ -51,7 +62,12 @@ export async function api<T = Record<string, unknown>>(path: string, body?: unkn
   return data as T;
 }
 
+/** The signed-in user, and whether they are a member of the current (claimed) workspace. */
+export interface Account { name: string; role: Role; email: string | null; workspaces: { ws: string; role: Role; name: string; created_at: string }[]; member: boolean; claimed: boolean }
+
 interface Ctx {
+  account: Account | null;
+  loadAccount: () => Promise<void>;
   role: Role;
   setRole: (r: Role) => void;
   state: AppState | null;
@@ -64,6 +80,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>("creator");
   const [state, setState] = useState<AppState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+
+  const loadAccount = useCallback(async () => {
+    if (!loadSession()) { setAccount(null); return; }
+    try {
+      const j = await api<{ user: { email: string | null; name: string | null }; memberships: Account["workspaces"]; current: { role: Role; name: string } | null; claimed: boolean }>("/api/account");
+      const cur = j.current;
+      if (cur) { currentRole = cur.role; setRoleState(cur.role); }
+      setAccount({ name: cur?.name ?? j.user.name ?? j.user.email ?? "", role: cur?.role ?? currentRole, email: j.user.email, workspaces: j.memberships, member: !!cur, claimed: j.claimed });
+    } catch {
+      setAccount(null);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -89,8 +118,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => {
       setRoleState(role);
       if (!shared) refresh();
+      loadAccount();
     });
-  }, [refresh]);
+  }, [refresh, loadAccount]);
 
   const setRole = useCallback((r: Role) => {
     currentRole = r;
@@ -102,7 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRoleState(r);
   }, []);
 
-  return <AppCtx.Provider value={{ role, setRole, state, error, refresh }}>{children}</AppCtx.Provider>;
+  return <AppCtx.Provider value={{ account, loadAccount, role, setRole, state, error, refresh }}>{children}</AppCtx.Provider>;
 }
 
 export function useApp(): Ctx {
