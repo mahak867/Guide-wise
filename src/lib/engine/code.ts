@@ -118,7 +118,7 @@ function termHits(rule: Rule, text: string): Finding[] {
       out.push({
         ...base(rule, "code"),
         quote: m[0],
-        message: `"${m[0]}" is not the preferred term. The Brand Kit says to use "${rule.config.prefer}".`,
+        message: rule.config.prefer ? `"${m[0]}" is not the preferred term. The Brand Kit says to use "${rule.config.prefer}".` : `"${m[0]}" is not used in this brand's content. Remove it or reword the sentence.`,
         fix: rule.config.prefer ?? null,
         fix_note: "Preferred term from the Brand Kit.",
       });

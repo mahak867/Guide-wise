@@ -45,7 +45,7 @@ const id = created?.id;
 console.log("draft", id);
 
 // Malformed and empty bodies on every POST route
-for (const p of ["/api/drafts", `/api/drafts/${id}`, "/api/rules", "/api/rules/R-12", "/api/facts", "/api/kit", "/api/kit/import", "/api/compile"]) {
+for (const p of ["/api/drafts", `/api/drafts/${id}`, "/api/rules", "/api/rules/propose", "/api/rules/R-12", "/api/facts", "/api/kit", "/api/kit/import", "/api/compile"]) {
   expect(`malformed JSON ${p}`, await call("POST", p, { role: "manager", raw: "{not json" }), is4xx);
   expect(`empty body ${p}`, await call("POST", p, { role: "manager", body: {} }), is4xx);
 }
@@ -491,6 +491,30 @@ await call("POST", "/api/reset");
   await Promise.all([1, 2, 3].map(() => inR("POST", `/api/drafts/${fx}`, { body: { action: "accept_all" } })));
   const vs = (await inR("GET", `/api/drafts/${fx}`)).j.versions.map((v) => v.version);
   expect("race: 3 Accept all at once leave unique version numbers", { s: 200, j: vs }, () => new Set(vs).size === vs.length);
+}
+
+// "Make this a rule": propose a rule from selected words (nothing saved), then save it as advisory. A workspace of its own,
+// so the rule it adds changes no counts elsewhere.
+{
+  const mw = { "x-workspace": "probe-make-" + randomUUID().slice(0, 12) };
+  const inM = (method, path, o = {}) => call(method, path, { ...o, headers: { ...mw, ...(o.headers ?? {}) } });
+  const words = { text: "India's #1 coaching", sentence: "Join India's #1 coaching for NEET 2027.", ai: false };
+  const before = (await inM("GET", "/api/state")).j.rules.length;
+  const prop = await inM("POST", "/api/rules/propose", { role: "brand", body: words });
+  expect("make rule: a reviewer gets a pattern rule whose own tests pass by code", prop, (r) => r.s === 200 && r.j.proposal.rule.category === "pattern"
+    && r.j.proposal.rule.status === "advisory" && r.j.run.passed && r.j.run.mode === "code" && r.j.run.results.length >= 4);
+  expect("make rule: proposing saves nothing", await inM("GET", "/api/state"), (r) => r.j.rules.length === before);
+  expect("make rule: a creator cannot propose", await inM("POST", "/api/rules/propose", { body: words }), (r) => is4xx(r) && r.s === 403);
+  expect("make rule: a creator cannot save", await inM("POST", "/api/rules", { body: { made_from_words: words } }), (r) => is4xx(r) && r.s === 403);
+  expect("make rule: too short refused", await inM("POST", "/api/rules/propose", { role: "brand", body: { text: "ab" } }), (r) => is4xx(r) && r.s === 400 && /at least 3/.test(r.j.error));
+  expect("make rule: too long refused", await inM("POST", "/api/rules/propose", { role: "brand", body: { text: "word ".repeat(40) } }), (r) => is4xx(r) && r.s === 400);
+  expect("make rule: a duplicate of TERM-2's word refused, naming the rule", await inM("POST", "/api/rules/propose", { role: "manager", body: { text: "cheap" } }), (r) => is4xx(r) && r.s === 409 && /TERM-2/.test(r.j.error));
+  const saved = await inM("POST", "/api/rules", { role: "compliance", body: { made_from_words: words } });
+  expect("make rule: a reviewer adds it as advisory, with its tests passed", saved, (r) => r.s === 200 && /^W-\d\d$/.test(r.j.id) && r.j.run.passed);
+  const after = (await inM("GET", "/api/state")).j.rules;
+  expect("make rule: one advisory rule added", { s: 200, j: { n: after.length } }, () => after.length === before + 1 && after.find((x) => x.id === saved.j?.id)?.status === "advisory");
+  expect("make rule: the same words again are refused as a duplicate", await inM("POST", "/api/rules", { role: "brand", body: { made_from_words: words } }), (r) => is4xx(r) && r.s === 409 && r.j.error.includes(saved.j?.id ?? "W-"));
+  expect("make rule: a reviewer still cannot change rules the normal way", await inM("POST", "/api/rules", { role: "brand", body: { id: "X-2", title: "t", description: "d" } }), is(403));
 }
 
 console.log(bad ? `${bad} problem(s).` : "No problems.");
