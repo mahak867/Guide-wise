@@ -1,6 +1,6 @@
 import type { Fact, Finding, Intent, Kit, ReviewStats, Rule } from "../types";
 import { aiAvailable, extractClaims, judgeRule, readCreative } from "./ai";
-import { dedupe, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
+import { dedupe, dropExcepted, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
 import { consistencyHits } from "./consistency";
@@ -145,7 +145,8 @@ export async function reviewDraft(
         if (!first.length) return [] as Finding[];
         aiCalls++;
         const second = await judgeRule(rule, safe, intent, call(2)).catch(() => null);
-        return first.map((j) => {
+        // The rule's exceptions (config.except) hold for the AI part of the check too.
+        return dropExcepted(rule, text, first.map((j) => {
           const f = toFinding(rule, restore(j.quote, map), j.explanation, restore(j.fix, map));
           // Disagreement between the two runs downgrades the finding to a suggestion.
           if (second && !second.some((s) => overlaps(restore(s.quote, map), f.quote))) {
@@ -153,7 +154,7 @@ export async function reviewDraft(
             f.message += " (The two AI runs disagreed, so this is shown as a suggestion.)";
           }
           return f;
-        });
+        }));
       }),
     );
     for (const r of results) {
@@ -204,6 +205,7 @@ export async function reviewDraft(
       return first.flatMap((j) => {
         const quote = restore(j.quote, allMap);
         const src = sources.find((x) => x.text.includes(quote));
+        if (src && !dropExcepted(rule, src.text, [{ quote }]).length) return [];
         if (!src) { dropped.push({ reason: "quote is not in any campaign document or image", quote, rule_id: rule.id }); return []; }
         const f = toFinding(rule, quote, j.explanation, restore(j.fix, allMap));
         if (second && !second.some((x) => overlaps(restore(x.quote, allMap), quote))) {

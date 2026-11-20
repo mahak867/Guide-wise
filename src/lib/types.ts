@@ -31,6 +31,7 @@ export interface Precedent {
  *  link-text {}                     ("click here", "tap here", "read more" that do not say what they lead to)
  *  hashtag   { words?: string[] }   (multi-word hashtags in lower case; words extend the built-in dictionary used to split them)
  *  excess    { maxEmoji?: number }  (stacked "!!" or "?!", and more emoji than the limit)
+ * any code rule may carry { except: string[] }: phrases in which its words are allowed (an amendment can add them).
  * judgment rules may also carry { patterns, fixText, fixFactId, guidance } - patterns are
  * the code pre-filter that still works in rules-only mode.
  */
@@ -68,6 +69,10 @@ export interface Rule {
     words?: string[];
     /** excess: the most emoji a post may carry. */
     maxEmoji?: number;
+    /** Any code check (and the code patterns of a judgment rule): phrases in which the rule's words are allowed, e.g. "cheap tricks". */
+    except?: string[];
+    /** requires: the finding's message, for a required line compiled from a guide (the built-in wording is about paid content and offers). */
+    message?: string;
     /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
     channels?: string[];
   };

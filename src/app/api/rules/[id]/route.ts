@@ -1,9 +1,9 @@
 import { actor, bumpKit, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
-import { aiAvailable, draftAmendment } from "@/lib/engine/ai";
-import { redact } from "@/lib/engine/redact";
+import { checkAmendment, dismissedSentence, type Dismissed } from "@/lib/amend";
+import { aiAvailable, draftAmendment, type Amendment } from "@/lib/engine/ai";
+import { redact, restore } from "@/lib/engine/redact";
 import { runRuleTests } from "@/lib/engine/ruletest";
 import { assessImpact } from "@/lib/impact";
-import type { Rule } from "@/lib/types";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
@@ -30,35 +30,43 @@ export async function POST(req: Request, ctx: Ctx) {
     // Guideline Health. "amend_draft" proposes clearer wording from the findings people dismissed and tests it; nothing is saved.
     // "amend_apply" saves the wording the manager approved, only if the rule's check still passes every test.
     if (action === "amend_draft" || action === "amend_apply") {
-      // Plain punctuation only: models like to return curly quotes and non-breaking hyphens.
-      const clip = (v: unknown, n: number) => String(v ?? "").replace(/[\u2010-\u2013]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\u00A0/g, " ").trim().slice(0, n);
-      let p: { description: string; guidance: string; flag_example: string; pass_example: string; what_changed: string };
+      // The dismissed findings, with the sentence each sat in, are read again on apply: the page's copy is not trusted.
+      const mine = must(await db().from("drafts").select("id,text").eq("ws", wsOf(req))) as { id: string; text: string }[];
+      const rows = mine.length
+        ? (must(await db().from("findings").select("quote,dismiss_reason,draft_id").in("draft_id", mine.map((x) => x.id)).eq("rule_id", id).eq("state", "dismissed").limit(12)) as { quote: string; dismiss_reason: string | null; draft_id: string }[])
+        : [];
+      if (!rows.length) return fail("Nobody has dismissed a finding from this rule yet, so there is nothing to learn from.");
+      const dismissed: Dismissed[] = rows.map((f) => ({ quote: f.quote, sentence: dismissedSentence(mine.find((x) => x.id === f.draft_id)?.text ?? "", f.quote), reason: f.dismiss_reason ?? "no reason" }));
+      const before = { description: rule.description, guidance: rule.config.guidance ?? "" };
+
       if (action === "amend_draft") {
         if (!aiAvailable()) return fail("Drafting an amendment needs the AI service, which is off. Edit the rule by hand instead.", 503);
-        const mine = must(await db().from("drafts").select("id").eq("ws", wsOf(req))) as { id: string }[];
-        const dismissed = mine.length
-          ? (must(await db().from("findings").select("quote,dismiss_reason").in("draft_id", mine.map((x) => x.id)).eq("rule_id", id).eq("state", "dismissed").limit(12)) as { quote: string; dismiss_reason: string | null }[])
-          : [];
-        if (!dismissed.length) return fail("Nobody has dismissed a finding from this rule yet, so there is nothing to learn from.");
-        p = await draftAmendment(rule, dismissed.map((f) => ({ quote: redact(f.quote).text, reason: f.dismiss_reason ?? "no reason" })));
-      } else {
-        p = body.proposal ?? {};
+        // Personal data in the dismissed text is masked before it goes to the AI, and put back in its answer.
+        // One redaction over all of it, so each placeholder stands for one value.
+        const { text: safe, map } = redact(dismissed.flatMap((d) => [d.quote, d.sentence]).map((s) => s.replace(/\n/g, " ")).join("\n"));
+        const lines = safe.split("\n");
+        const masked = dismissed.map((d, i) => ({ quote: lines[2 * i] ?? "", sentence: lines[2 * i + 1] ?? "", reason: d.reason }));
+        const r = (s: string) => restore(s, map);
+        const unmask = (a: Amendment): Amendment => ({
+          ...a, description: r(a.description), guidance: r(a.guidance), flag_example: r(a.flag_example), pass_example: r(a.pass_example), what_changed: r(a.what_changed),
+          config_change: { ...a.config_change, except: a.config_change.except.map(r) },
+        });
+        let c = await checkAmendment(rule, unmask(await draftAmendment(rule, masked)), dismissed, facts, kit);
+        // One retry when the tests are not new or not taken from the dismissed text, telling the AI why.
+        const testIssue = c.problems.filter((p) => /repeats|not taken from|no new sentence|are the same/.test(p));
+        if (testIssue.length) c = await checkAmendment(rule, unmask(await draftAmendment(rule, masked, testIssue.join(" "))), dismissed, facts, kit);
+        return Response.json({ ok: true, proposal: c.proposal, before, run: c.run, added: c.added, changes: c.changes, problems: c.problems, dismissed: c.dismissed, resolves: c.resolves, checked_by: c.checked_by });
       }
-      const description = clip(p.description, 1000);
-      if (description.length < 10) return fail("The amended wording is missing.");
-      const extra = [{ text: clip(p.flag_example, 600), expect: "flag" as const }, { text: clip(p.pass_example, 600), expect: "pass" as const }]
-        .filter((t) => t.text && !rule.tests.some((x) => x.text === t.text));
-      const guidance = clip(p.guidance, 1000);
-      const amended: Rule = { ...rule, description, config: { ...rule.config, ...(guidance ? { guidance } : {}) }, tests: [...rule.tests, ...extra].slice(0, 20) };
-      const run = await runRuleTests(amended, facts, kit);
-      const proposal = { description, guidance, flag_example: clip(p.flag_example, 600), pass_example: clip(p.pass_example, 600), what_changed: clip(p.what_changed, 400) };
-      if (action === "amend_draft") return Response.json({ ok: true, proposal, before: { description: rule.description, guidance: rule.config.guidance ?? "" }, run });
-      if (!run.passed) return Response.json({ error: `The amended ${id} does not pass its own test sentences, so it was not saved.`, run }, { status: 409 });
-      must(await db().from("rules").update({ description, config: amended.config, tests: amended.tests, last_test: run, updated_at: new Date().toISOString() }).eq("ws", wsOf(req)).eq("id", id));
+
+      const c = await checkAmendment(rule, body.proposal ?? {}, dismissed, facts, kit);
+      if (c.problems.length) return Response.json({ error: `The amendment to ${id} was not saved: ${c.problems[0]}`, problems: c.problems, run: c.run }, { status: 409 });
+      if (!c.run.passed) return Response.json({ error: `The amended ${id} does not pass its own test sentences, so it was not saved.`, run: c.run }, { status: 409 });
+      const a = c.amended;
+      must(await db().from("rules").update({ description: a.description, config: a.config, tests: a.tests, last_test: c.run, updated_at: new Date().toISOString() }).eq("ws", wsOf(req)).eq("id", id));
       const v = await bumpKit(wsOf(req));
-      await log(req, null, "rule_amended", { rule: id, kit_version: v, from: rule.description, to: description, tests_added: extra.length });
-      const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was amended: "${description}"` });
-      return Response.json({ ok: true, kit_version: v, run, impact });
+      await log(req, null, "rule_amended", { rule: id, kit_version: v, from: rule.description, to: a.description, tests_added: c.added.length, check_changes: c.changes, resolves_dismissals: c.resolves, still_flagged: c.dismissed.filter((d) => d.still_flagged).length });
+      const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was amended: "${a.description}"` });
+      return Response.json({ ok: true, kit_version: v, run: c.run, impact, added: c.added, changes: c.changes, dismissed: c.dismissed, resolves: c.resolves, checked_by: c.checked_by });
     }
     if (action === "promote") {
       // The gate: tests are re-run now, so a stale pass can't be used.
