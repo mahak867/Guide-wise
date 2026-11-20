@@ -100,7 +100,7 @@ figure img { width: auto; max-width: 100%; }
 <h2>At a glance</h2>
 <div class="grid3">
 <div class="box"><b>All three promises are live.</b><p>Change impact, the API and MCP server, and campaign review with AI vision, each tested on the live site against the exact test we wrote down at Round 2.</p></div>
-<div class="box"><b>And more than we promised.</b><p>Bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review, exceptions with end dates and dual sign-off, a database approval gate, 30 Brand Kit rules.</p></div>
+<div class="box"><b>And more than we promised.</b><p>Bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review, exceptions with end dates and dual sign-off, a database approval gate, 31 Brand Kit rules.</p></div>
 <div class="box"><b>Measured, not claimed.</b><p>${pct(ai.precision)} precision, ${pct(ai.recall)} recall with AI on 40 held-out drafts. ${tests} unit tests. Live (${live.date}): journey ${live.journey}, sweep ${live.sweep}, probe ${live.probe}, axe ${live.axe}. Load: 980 requests, 0 failed.</p></div>
 </div>
 
@@ -162,7 +162,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <li><b>Approval bound to the Brand Kit version.</b> If the kit changed since the last check, approval re-checks first, and anything new blocks it.</li>
 <li><b>A database approval gate.</b> A trigger (migration 009) refuses to mark a draft approved while a violation is open, whatever writes to the database.</li>
 <li><b>Web page reader with hidden-text detection.</b> Text a page hides from readers (display:none, zero-size, same colour as the background) is separated, labelled and checked; private and metadata addresses refused.</li>
-<li><b>30 Brand Kit rules,</b> six new: paid-partnership labels, offer end dates, competitor names, vague link text, CamelCase hashtags, stacked "!!" and emoji. An expired fact points to its successor.</li>
+<li><b>31 Brand Kit rules,</b> seven new (one checks text size in images): paid-partnership labels, offer end dates, competitor names, vague link text, CamelCase hashtags, stacked "!!" and emoji. An expired fact points to its successor.</li>
 <li><b>Security headers and a threat model.</b> CSP, no framing, nosniff, HSTS; 15 threats, each mapped to the test that proves it.</li>
 <li><b>Load test.</b> 20 and then 50 concurrent visitors through the full creator journey: 980 requests, 0 failed.</li>
 <li><b>Accessibility checks.</b> axe-core on every page at desktop and phone size in every sweep run.</li>
@@ -179,7 +179,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>Campaigns</td><td>Every check on every document and on the text in each creative; prices, figures, dates and promo codes compared across all sources; documents read from a live web page, hidden text flagged.</td></tr>
 <tr><td>Facts Register</td><td>Evidence, owner, valid-from, valid-until, required disclosure, successor; embargoed, expired and wrong-subject figures flagged; every change shows its impact.</td></tr>
 <tr><td>Fixes</td><td>Each fix applied and re-checked before it is offered; edit before accepting; Accept all; undo for 10 seconds.</td></tr>
-<tr><td>Brand Kit</td><td>30 rules with test sentences and an enforce gate, per-channel rules, versions, JSON export and import, and a guide compiler for pasted text, PDF or Word.</td></tr>
+<tr><td>Brand Kit</td><td>31 rules with test sentences and an enforce gate, per-channel rules, versions, JSON export and import, and a guide compiler for pasted text, PDF or Word.</td></tr>
 <tr><td>Workflow</td><td>Four roles enforced on the server; risk routing by a fixed table; dual sign-off for high risk; time-limited exceptions; approval bound to the kit version and gated in the database; comments, versions with word-level changes, request changes, audit log; keyboard review; precedents per rule; approval record with SHA-256 fingerprint; read-only share links; re-approval when a fact or rule change breaks an approved piece.</td></tr>
 <tr><td>Insights</td><td>Most-flagged and most-dismissed rules, unclear rules, fact expiry watch, AI-drafted rule amendments re-tested by code, dismissal rate before and after each amendment.</td></tr>
 <tr><td>API, MCP, extension, bulk</td><td>Scoped, hashed, revocable keys; <code>get_brief</code> and <code>check_draft</code> over REST and MCP; playground; audit trail; rate limit. The Chrome extension and bulk check (up to 50 posts, CSV in and out) use the same governance module.</td></tr>

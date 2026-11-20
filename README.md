@@ -62,7 +62,7 @@ Each is tested against exactly the test we wrote down at Round 2 ([docs/TESTING.
 - **Time-limited exceptions and dual sign-off**: only a reviewer grants an exception, which reopens when it expires; high-risk drafts need compliance, then brand.
 - **Approval bound to the Brand Kit version, and a database approval gate**: approval re-checks against the current kit, and a trigger (migration 009) refuses approval while a violation is open.
 - **Web page reader with hidden-text detection**: text a page hides from readers is labelled and checked; private and metadata addresses are refused.
-- **30 Brand Kit rules**, each with its own flag and pass test sentences, including paid-partnership labels, offer end dates, competitor names and vague link text.
+- **31 Brand Kit rules**, each with its own flag and pass test sentences, including paid-partnership labels, offer end dates, competitor names and vague link text.
 - **Security headers and a threat model**: CSP, no framing, HSTS; 15 threats, each mapped to the test that proves it ([THREAT_MODEL.md](docs/THREAT_MODEL.md)).
 - **Load test** and **accessibility checks** (axe-core in every sweep), above.
 
@@ -71,7 +71,7 @@ Each is tested against exactly the test we wrote down at Round 2 ([docs/TESTING.
 | Stage | What it does |
 | --- | --- |
 | 1 Redact | Emails, phones, Aadhaar, PAN and card numbers masked before any AI call; confidential drafts never sent |
-| 2 Code checks | 30 Brand Kit rules and every figure compared with the Facts Register (subject first, then value; embargoed, expired and wrong-subject figures flagged) |
+| 2 Code checks | 31 Brand Kit rules and every figure compared with the Facts Register (subject first, then value; embargoed, expired and wrong-subject figures flagged) |
 | 3–5 AI checks, vision, documents | One rule per call, run twice when it finds something; vision for text OCR missed and people shown; every check on each campaign document |
 | 6 Consistency | Prices, figures, dates and promo codes compared across caption, creatives and documents, by code |
 | 7 Verifier | A finding whose quote, rule or fact does not exist is dropped: no source, no flag |

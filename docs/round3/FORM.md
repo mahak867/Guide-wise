@@ -15,7 +15,7 @@ docs/round3/Guidewise_Round3.pdf (upload the file; it is also in the repository)
 Core loop: draft → code checks and AI checks → cited findings with re-tested fixes → routed to the right reviewer → human approval with a fingerprinted record.
 
 - Review: paste copy or upload DOCX/PDF, up to 4 images and 4 campaign documents; goal, audience, channel, locked phrases; confidential mode (never sent to AI); channel previews (Instagram, LinkedIn, Facebook ad, WhatsApp, email, web page) that mark the cut and warn when a disclaimer or call to action falls after it.
-- Code checks: 30 Brand Kit rules, each with its own test sentences (preferred terms, banned phrases, approved contacts, student results with dated consent, disclaimers incl. Hindi, brand-name spelling, hidden characters, paid-partnership labels, offer end dates, competitor names, vague link text, hashtags, emoji), and every figure checked against the Facts Register.
+- Code checks: 31 Brand Kit rules (one checks text size in images), each with its own test sentences (preferred terms, banned phrases, approved contacts, student results with dated consent, disclaimers incl. Hindi, brand-name spelling, hidden characters, paid-partnership labels, offer end dates, competitor names, vague link text, hashtags, emoji), and every figure checked against the Facts Register.
 - AI checks: one rule per call, run twice when they find something; Claude → Groq → Groq's smaller model → Gemini, with time caps, a circuit breaker and a cache. Without AI, code checks and the whole workflow still run.
 - Verifier: no source, no flag. Numbers are compared by code, never by AI.
 - Images: OCR, palette, WCAG contrast, alt text, logo size and clear space, in the browser; AI vision for stylised text and people shown.
@@ -41,7 +41,7 @@ The three we promised, all live and tested against the exact tests written at Ro
 2. API and MCP server: scoped keys, get_brief (only facts valid today) and check_draft (the same findings as the app) over REST and MCP, with a playground and an audit trail.
 3. Campaign review with AI vision: caption, creatives and documents reviewed together; price, date and promo-code mismatches found and cited; people shown in creatives flagged for consent and routed to compliance.
 
-Beyond the promises: bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review with precedents, time-limited exceptions and dual sign-off, approval bound to the Brand Kit version and a database approval gate, a web page reader with hidden-text detection, 30 Brand Kit rules, security headers and a threat model.
+Beyond the promises: bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review with precedents, time-limited exceptions and dual sign-off, approval bound to the Brand Kit version and a database approval gate, a web page reader with hidden-text detection, 31 Brand Kit rules, security headers and a threat model.
 
 Reliability: a bug hunt on the live site found and fixed lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; each now has a test. The AI helpers (guide compiler, rule amendment) were measured live, and the gaps found were fixed. Accessibility checks (axe-core) now run on every page; a load test passed; the demo's embargoed fact was moved so the sample still works throughout judging.
 
