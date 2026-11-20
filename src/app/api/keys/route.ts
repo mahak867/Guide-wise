@@ -23,7 +23,14 @@ export async function POST(req: Request) {
     if (!parsed.success) return fail(`That key can't be created (${firstIssue(parsed.error)}).`);
     const ws = wsOf(req);
     if ((must(await db().from("api_keys").select("id").eq("ws", ws).is("revoked_at", null)) as unknown[]).length >= 10) return fail("A workspace can have up to 10 active keys. Revoke one first.");
-    const { key, row } = await createKey(ws, parsed.data.name, parsed.data.scopes);
+    const { key, row } = await createKey(ws, parsed.data.name, [...new Set(parsed.data.scopes)]);
+    // Several creates at once each saw fewer than 10 keys (bug hunt, 20 Nov: 13 at once made 13). Count again now:
+    // a key that is not among the 10 oldest active keys is taken back, never handed out.
+    const active = must(await db().from("api_keys").select("id").eq("ws", ws).is("revoked_at", null).order("created_at").order("id")) as { id: string }[];
+    if (active.findIndex((x) => x.id === row.id) >= 10) {
+      must(await db().from("api_keys").delete().eq("id", row.id));
+      return fail("A workspace can have up to 10 active keys. Revoke one first.");
+    }
     await log(req, null, "api_key_created", { key: row.prefix, name: row.name, scopes: row.scopes });
     return Response.json({ key, row });
   } catch (e) {

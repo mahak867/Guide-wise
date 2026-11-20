@@ -11,7 +11,52 @@ export function patternProblem(src: string): string | null {
   if (src.length > 300) return "is longer than 300 characters";
   try { new RegExp(src, "gi"); } catch { return "is not a valid pattern"; }
   if (/\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)[+*{]/.test(src)) return "repeats a group that already repeats, which can stall a review";
+  if (overlappingRepeat(src)) return "repeats a choice whose options can match the same text, which can stall a review";
   return null;
+}
+
+/**
+ * True when a repeated group offers a choice of options that are not plain, distinct words, such as "(a|a)*" or
+ * "(\w|\d)+". Each repetition can then match the same text more than one way, and a failing match tries every
+ * combination: "(a|a)*$" takes several seconds on 27 letters. A choice of distinct words ("(free|guaranteed)+") is safe.
+ */
+function overlappingRepeat(src: string): boolean {
+  const open: number[] = [];
+  let inClass = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (c === "\\") { i++; continue; }
+    if (inClass) { if (c === "]") inClass = false; continue; }
+    if (c === "[") { inClass = true; continue; }
+    if (c === "(") { open.push(i); continue; }
+    if (c !== ")" || !open.length) continue;
+    const start = open.pop()!;
+    const next = src.slice(i + 1, i + 8);
+    if (!/^(?:[*+]|\{\d*,(?:\d{2,}|[2-9])?\}|\{\d{2,}\}|\{[2-9]\})/.test(next)) continue; // "?" and {0,1} do not repeat
+    const options = topLevelOptions(src.slice(start + 1, i).replace(/^\?(?::|<[\w$]+>|[=!]|<[=!])/, ""));
+    if (options.length < 2) continue;
+    const words = options.map((o) => o.replace(/\\([.\-/&'])/g, "$1"));
+    if (words.some((w) => !/^[\p{L}\p{N} .\-/&']+$/u.test(w))) return true;
+    const lower = words.map((w) => w.toLowerCase());
+    if (lower.some((a, x) => lower.some((b, y) => x !== y && b.startsWith(a)))) return true;
+  }
+  return false;
+}
+
+function topLevelOptions(body: string): string[] {
+  const out: string[] = [];
+  let depth = 0, inClass = false, last = 0;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === "\\") { i++; continue; }
+    if (inClass) { if (c === "]") inClass = false; continue; }
+    if (c === "[") inClass = true;
+    else if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === "|" && depth === 0) { out.push(body.slice(last, i)); last = i + 1; }
+  }
+  out.push(body.slice(last));
+  return out;
 }
 const pattern = z.union([z.string(), z.object({ re: z.string(), fix: z.string().max(1000).optional(), factId: z.string().max(24).optional() })])
   .superRefine((p, ctx) => {
@@ -105,4 +150,21 @@ export function firstIssue(e: z.ZodError): string {
   const i = e.issues[0];
   const where = i.path.join(".").replace(/_/g, " ");
   return where ? `${where}: ${i.message}` : i.message;
+}
+
+/**
+ * Why a logo value cannot be stored, or null. A logo is a PNG or WebP data URL under 400,000 characters whose bytes
+ * really are a PNG or WebP image (bug hunt, 20 Nov: "data:image/png;base64,notbase64!!!" was accepted through the API,
+ * and every creative was then reported as missing the logo), or one of the demo's own /brand/*.png files.
+ */
+export function logoProblem(l: unknown): string | null {
+  if (typeof l !== "string") return "The logo must be a PNG or WebP image under 300 KB.";
+  if (/^\/brand\/[\w.-]+\.png$/.test(l)) return null;
+  const m = /^data:image\/(png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(l);
+  if (!m || l.length > 400_000) return "The logo must be a PNG or WebP image under 300 KB.";
+  const bytes = Buffer.from(m[2].slice(0, 32), "base64");
+  const png = bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const webp = bytes.length >= 12 && bytes.subarray(0, 4).toString("latin1") === "RIFF" && bytes.subarray(8, 12).toString("latin1") === "WEBP";
+  if (m[1] === "png" ? !png : !webp) return `That file is not a real ${m[1] === "png" ? "PNG" : "WebP"} image. Export the logo again as a PNG and upload it.`;
+  return null;
 }

@@ -1,4 +1,4 @@
-import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
+import { actor, bumpKit, db, fail, log, must, readBody, wsOf } from "@/lib/db";
 import { RuleIn, firstIssue, flagsNothing } from "@/lib/schemas";
 import { assessImpact } from "@/lib/impact";
 
@@ -7,7 +7,7 @@ import { assessImpact } from "@/lib/impact";
 export async function POST(req: Request) {
   try {
     if (actor(req).role !== "manager") return fail("Only the brand manager can change rules. Switch role to Meera.", 403);
-    const b = await req.json();
+    const b = await readBody(req);
     const id = String(b.id ?? "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
     if (!id || !b.title || !b.description) return fail("A rule needs an ID, a title and a description.");
     const parsed = RuleIn.safeParse({

@@ -1,6 +1,6 @@
 import mammoth from "mammoth";
 import { extractText, getDocumentProxy } from "unpdf";
-import { BadInput, fail } from "@/lib/db";
+import { BadInput, fail, readBody } from "@/lib/db";
 import { fetchPage } from "@/lib/webpage";
 
 export const maxDuration = 30;
@@ -9,7 +9,7 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
     if ((req.headers.get("content-type") ?? "").includes("application/json")) {
-      const { url } = (await req.json()) as { url?: unknown };
+      const { url } = (await readBody(req)) as { url?: unknown };
       if (typeof url !== "string" || !url.trim() || url.length > 2000) return fail("Send the web page address as url.");
       const page = await fetchPage(url);
       if (page.text.length < 10) return fail("No readable text was found on that page. If it is built entirely in JavaScript, copy the text from your browser instead.");

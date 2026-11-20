@@ -106,12 +106,30 @@ export async function checkUrl(raw: string): Promise<URL> {
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-/** Fetch a public web page safely (redirects re-checked, 8 s, 2 MB) and return its readable text. */
+/** An address typed without https:// ("example.com/course"), as people paste it from an address bar, gets https://. */
+export function withScheme(raw: string): string {
+  const s = raw.trim();
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(s) || !/^[\w-]+(?:\.[\w-]+)+(?:[/?#:]|$)/.test(s) ? s : `https://${s}`;
+}
+
+/** Text in the charset the server names (windows-1252, Shift_JIS…), UTF-8 when it names none or one we do not know. */
+function decodeBody(bytes: Buffer, type: string): string {
+  const cs = /charset="?([\w.:-]+)/i.exec(type)?.[1];
+  try { return new TextDecoder(cs || "utf-8").decode(bytes); } catch { return bytes.toString("utf8"); }
+}
+
+/**
+ * Fetch a public web page safely (redirects re-checked, 2 MB) and return its readable text. One 8-second deadline covers
+ * every redirect and the whole body (bug hunt, 20 Nov: each of four hops had its own 8 s, longer than the route is
+ * allowed to run, and a page that stopped sending half-way surfaced as a server error).
+ */
 export async function fetchPage(raw: string): Promise<{ url: string; title: string; text: string; hidden: string[] }> {
-  let url = await checkUrl(raw);
+  let url = await checkUrl(withScheme(raw));
+  const signal = AbortSignal.timeout(8000);
+  const late = (e: unknown) => new BadInput((e as Error)?.name === "TimeoutError" || signal.aborted ? "That page took too long to answer." : "That page could not be reached.");
   for (let hop = 0; ; hop++) {
-    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(8000), headers: { "user-agent": "Guidewise page reader", accept: "text/html,text/plain;q=0.9" } })
-      .catch((e: Error) => { throw new BadInput(e.name === "TimeoutError" ? "That page took too long to answer." : "That page could not be reached."); });
+    const res = await fetch(url, { redirect: "manual", signal, headers: { "user-agent": "Guidewise page reader", accept: "text/html,text/plain;q=0.9" } })
+      .catch((e: Error) => { throw late(e); });
     if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
       if (hop >= 3) throw new BadInput("That page redirects too many times.");
       url = await checkUrl(new URL(res.headers.get("location")!, url).toString());
@@ -124,13 +142,13 @@ export async function fetchPage(raw: string): Promise<{ url: string; title: stri
     const chunks: Uint8Array[] = [];
     let size = 0;
     while (reader) {
-      const { done, value } = await reader.read();
+      const { done, value } = await reader.read().catch((e) => { throw late(e); });
       if (done) break;
       size += value.length;
       if (size > MAX_BYTES) { await reader.cancel(); throw new BadInput("That page is larger than 2 MB."); }
       chunks.push(value);
     }
-    const body = Buffer.concat(chunks).toString("utf8");
+    const body = decodeBody(Buffer.concat(chunks), type);
     const out = /text\/plain/i.test(type) ? { title: "", text: body.trim(), hidden: [] as string[] } : pageText(body);
     return { url: url.toString(), ...out };
   }

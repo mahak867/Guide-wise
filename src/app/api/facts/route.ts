@@ -1,16 +1,18 @@
-import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
+import { actor, bumpKit, db, fail, log, must, readBody, wsOf } from "@/lib/db";
 import { FactIn, firstIssue } from "@/lib/schemas";
 import { loadKit } from "@/lib/db";
 import { assessImpact, describeFactChange } from "@/lib/impact";
 
+// A list of words, sent as a list or as comma-separated text. Anything else (an object, a number) adds no words.
 const list = (v: unknown): string[] =>
-  Array.isArray(v) ? v.map(String) : String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  Array.isArray(v) ? v.filter((x) => typeof x === "string" || typeof x === "number").map((x) => String(x).trim()).filter(Boolean)
+  : typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
 export async function POST(req: Request) {
   try {
     const a = actor(req);
     if (a.role !== "manager" && a.role !== "compliance") return fail("Only the brand manager or compliance reviewer can change facts.", 403);
-    const b = await req.json();
+    const b = await readBody(req);
     const id = String(b.id ?? "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
     if (!id || !b.statement) return fail("A fact needs an ID and a statement.");
     if (!b.evidence) return fail("A fact needs evidence: say where the figure comes from.");

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { actor, bumpKit, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
-import { Contacts, Disclaimers, FactIn, Palette, RuleIn, firstIssue } from "@/lib/schemas";
+import { Contacts, Disclaimers, FactIn, Palette, RuleIn, firstIssue, flagsNothing, logoProblem } from "@/lib/schemas";
 
 const KitFile = z.object({
   format: z.literal("guidewise-brand-kit"),
@@ -34,6 +34,16 @@ export async function POST(req: Request) {
       return fail(`That file is not a valid Guidewise Brand Kit (${firstIssue(parsed.error)}).`);
     }
     const file = parsed.data;
+    // The same checks as saving a rule or a logo on the page: a code rule that could never flag anything, or a logo
+    // that is not really an image, is refused here too.
+    for (const r of file.rules) {
+      const empty = flagsNothing(r);
+      if (empty) return fail(`That file is not a valid Guidewise Brand Kit (rule ${r.id}: ${empty}).`);
+    }
+    if (file.kit.logo) {
+      const why = logoProblem(file.kit.logo);
+      if (why) return fail(`That file is not a valid Guidewise Brand Kit (logo: ${why})`);
+    }
     const ws = wsOf(req);
     const { rules: existing } = await loadKit(ws);
     const byId = new Map(existing.map((r) => [r.id, r]));

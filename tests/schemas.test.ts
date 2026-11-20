@@ -17,6 +17,11 @@ describe("input validation", () => {
     expect(patternProblem("(?:https?://)?(?:bit\\.ly|t\\.co)/[\\w-]+")).toBeNull();
   });
 
+  it("rejects a repeated choice whose options overlap (bug hunt, 20 Nov: \"(a|a)*$\" was saved and took 6.6 s on 27 letters)", () => {
+    for (const p of ["(a|a)*$", "(?:a|a)*$", "(a|aa)+$", "(\\w|\\d)+$", "(?:x|xy){2,}z", "(free|freedom)+"]) expect(patternProblem(p), p).toMatch(/options can match the same text/);
+    for (const p of ["(free|guaranteed)+", "(?:bit\\.ly|t\\.co)?", "(a|b)?", "hurry!*", "(?:Rs\\.?|₹)\\s?\\d+", "[(|)]+"]) expect(patternProblem(p), p).toBeNull();
+  });
+
   it("rejects malformed rules and facts", () => {
     const rule = { id: "X-1", kind: "code", category: "pattern", title: "t", description: "d" };
     expect(RuleIn.safeParse({ ...rule, tests: "x" }).success).toBe(false);

@@ -1,6 +1,7 @@
 // Reading a live landing page: readable text out, and no way to make the server fetch a private address.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { blockedAddress, checkUrl, fetchPage, pageText } from "../src/lib/webpage";
+import { BadInput } from "../src/lib/db";
+import { blockedAddress, checkUrl, fetchPage, pageText, withScheme } from "../src/lib/webpage";
 
 const PAGE = `<!doctype html><html><head><title>JEE Crash Course | PrepPath</title><style>.x{color:red}</style>
 <script>window.track("view")</script></head><body>
@@ -67,5 +68,44 @@ describe("fetching", () => {
     expect(out.url).toBe("http://93.184.216.34/course");
     expect(out.text).toMatch(/Fee ₹14,999/);
     expect(f).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Bug hunt, 20 Nov 2026.
+describe("reader edge cases", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it("a page that stops sending half-way is a clear 400, not a server error", async () => {
+    const body = new ReadableStream({
+      start(c) { c.enqueue(new TextEncoder().encode("<p>Half a page")); },
+      pull() { throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" }); },
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { headers: { "content-type": "text/html" } })));
+    const err = await fetchPage("http://93.184.216.34/").catch((e) => e);
+    expect(err).toBeInstanceOf(BadInput);
+    expect(err.message).toMatch(/took too long/);
+  });
+  it("uses one deadline for every redirect, not a fresh one per hop", async () => {
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_u: unknown, init: RequestInit) => {
+      signals.push(init.signal!);
+      return signals.length < 3
+        ? new Response(null, { status: 302, headers: { location: `/hop${signals.length}` } })
+        : new Response("<p>Arrived after two redirects</p>", { headers: { "content-type": "text/html" } });
+    }));
+    await fetchPage("http://93.184.216.34/");
+    expect(signals).toHaveLength(3);
+    expect(new Set(signals).size).toBe(1);
+  });
+  it("reads a page in the charset its server names", async () => {
+    const latin1 = Buffer.from("<p>Caf\xe9 fees: \xa314,999 per term</p>", "latin1");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(latin1, { headers: { "content-type": "text/html; charset=windows-1252" } })));
+    expect((await fetchPage("http://93.184.216.34/")).text).toMatch(/Café fees: £14,999/);
+  });
+  it("adds https:// to an address typed without it, and leaves anything else alone", () => {
+    expect(withScheme("example.com")).toBe("https://example.com");
+    expect(withScheme(" preppath.in/course?x=1 ")).toBe("https://preppath.in/course?x=1");
+    expect(withScheme("http://example.com")).toBe("http://example.com");
+    expect(withScheme("javascript:alert(1)")).toBe("javascript:alert(1)");
+    expect(withScheme("not a url")).toBe("not a url");
   });
 });

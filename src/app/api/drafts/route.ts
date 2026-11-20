@@ -1,4 +1,5 @@
-import { actor, db, fail, log, must, wsOf } from "@/lib/db";
+import { actor, db, fail, log, must, readBody, wsOf } from "@/lib/db";
+import { CONTENT_TYPES } from "@/lib/types";
 import { cleanAssets, cleanImages, getDraft, runReview, type DraftRow } from "@/lib/workflow";
 
 export const maxDuration = 60;
@@ -19,17 +20,23 @@ export async function GET(req: Request) {
 // Create a draft and run the first review on it.
 export async function POST(req: Request) {
   try {
-    const b = await req.json();
+    const b = await readBody(req);
+    if (b.text !== undefined && b.text !== null && typeof b.text !== "string") return fail("Send the draft text as a string.");
     const text = String(b.text ?? "").trim();
-    if (text.length < 10 && !(Array.isArray(b.images) && b.images.length)) return fail("Paste the draft text or add an image first.");
+    // Invisible characters (zero-width spaces, direction marks) do not count towards the 10 characters a draft needs.
+    const visible = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u202A-\u202E\u2066-\u2069]/g, "").trim();
+    if (visible.length < 10 && !(Array.isArray(b.images) && b.images.length)) return fail("Paste the draft text or add an image first.");
     if (text.length > 12000) return fail("This version reviews up to 12,000 characters at a time.");
+    const type = b.content_type || "social";
+    if (!CONTENT_TYPES.some((c) => c.v === type)) return fail(`Choose a content type: ${CONTENT_TYPES.map((c) => c.v).join(", ")}.`);
+    if (b.title !== undefined && b.title !== null && typeof b.title !== "string") return fail("Send the title as a string.");
     const a = actor(req);
     const images = cleanImages(b.images);
     const assets = cleanAssets(b.assets);
     const row = must(await db().from("drafts").insert({
       ws: wsOf(req),
-      title: String(b.title || text.slice(0, 48)).trim(),
-      content_type: b.content_type || "social",
+      title: String(b.title || text.slice(0, 48)).trim().slice(0, 200),
+      content_type: type,
       text: text || "(Image only)",
       images,
       assets,
