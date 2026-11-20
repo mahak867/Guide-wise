@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, Card, Notice, PageHead } from "@/components/ui";
 import { api } from "@/lib/client";
+import type { CleanDraftStats } from "@/lib/eval/clean";
 import type { EvalReport } from "@/lib/eval/score";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -15,6 +16,11 @@ function Metric({ label, value, sub }: { label: string; value: string; sub: stri
       <div className="mt-1 text-sm text-muted">{sub}</div>
     </Card>
   );
+}
+
+function CleanMetric({ c }: { c?: CleanDraftStats }) {
+  if (!c) return <Metric label="Clean drafts left alone" value="—" sub="Not measured: no per-draft results were stored for this run." />;
+  return <Metric label="Clean drafts left alone" value={`${c.noViolations} of ${c.clean}`} sub={`Drafts with nothing planted and no violation flagged. ${c.noFindings} of ${c.clean} had no finding at all, suggestions included.`} />;
 }
 
 export default function Results() {
@@ -62,23 +68,25 @@ export default function Results() {
       {!r ? (!error && <p className="text-sm text-muted">Running the evaluation on {split === "test" ? "the 40 held-out drafts" : split === "dev" ? "the 20 development drafts" : "all 60 drafts"}…</p>) : (
         <>
           <h2 className="mb-2 flex flex-wrap items-center gap-2 font-semibold">Code checks only <Badge>{r.docs} drafts · {r.planted} planted errors · {r.ms} ms</Badge><span className="text-xs font-normal text-muted">Test set fingerprint <code className="font-mono">{r.fingerprint}</code></span></h2>
-          <p className="mb-3 max-w-3xl text-sm text-muted"><b className="font-medium text-ink">Precision</b> is the share of Guidewise&apos;s findings that were real planted errors (few false alarms). <b className="font-medium text-ink">Recall</b> is the share of planted errors it caught (few misses).</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <p className="mb-3 max-w-3xl text-sm text-muted"><b className="font-medium text-ink">Precision</b> is the share of Guidewise&apos;s findings that were real planted errors (few false alarms). <b className="font-medium text-ink">Recall</b> is the share of planted errors it caught (few misses). <b className="font-medium text-ink">Clean drafts left alone</b> counts the drafts with nothing planted that came back with no violation flagged.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Metric label="Precision" value={pct(r.precision)} sub={`${r.correct} of ${r.predicted} findings were planted errors. 95% interval ${ci(r.precisionCI)}.`} />
             <Metric label="Recall" value={pct(r.recall)} sub={`${r.caught} of ${r.planted} planted errors caught. 95% interval ${ci(r.recallCI)}.`} />
             <Metric label="Recall, critical rules" value={pct(r.criticalRecall)} sub={`Guarantees, figures, student records. ${r.criticalPlanted} planted. 95% interval ${ci(r.criticalCI)}.`} />
             <Metric label="Hard phrasings caught" value={`${r.hardCaught} of ${r.hardPlanted}`} sub="Errors written to avoid keyword patterns. These are what the AI checks are for." />
+            <CleanMetric c={r.cleanDrafts} />
           </div>
 
           <Card className="mt-4 p-4 text-sm">
             <h2>With the AI checks</h2>
             {ai ? (
               <>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <Metric label="Precision" value={pct(ai.precision ?? 0)} sub={`${ai.correct} of ${ai.predicted} findings were planted errors. 95% interval ${ci((ai.precisionCI ?? [0, 0]) as [number, number])}.`} />
                   <Metric label="Recall" value={pct(ai.recall ?? 0)} sub={`${ai.caught} of ${ai.planted} planted errors caught. 95% interval ${ci((ai.recallCI ?? [0, 0]) as [number, number])}.`} />
                   <Metric label="Recall, critical rules" value={pct(ai.criticalRecall ?? 0)} sub={`95% interval ${ci((ai.criticalCI ?? [0, 0]) as [number, number])}.`} />
                   <Metric label="Hard phrasings caught" value={`${ai.hardCaught} of ${ai.hardPlanted}`} sub="The code checks alone catch none of these." />
+                  <CleanMetric c={ai.cleanDrafts} />
                 </div>
                 <p className="mt-3 text-muted">
                   Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on all {ai.docs} held-out drafts, run twice with the answer cache off, on the live deployment with {ai.mode}. The first run is reported.

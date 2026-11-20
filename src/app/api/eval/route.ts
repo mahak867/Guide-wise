@@ -1,5 +1,5 @@
 import { fail } from "@/lib/db";
-import { runEval } from "@/lib/eval/score";
+import { cleanDraftStats, runEval } from "@/lib/eval/score";
 import { SEED_FACTS, SEED_KIT, SEED_RULES } from "@/lib/seed";
 
 // Re-runs the planted-error evaluation live with the shipped PrepPath Brand Kit.
@@ -9,9 +9,11 @@ export async function GET(req: Request) {
     const split = new URL(req.url).searchParams.get("split");
     const s = split === "dev" || split === "all" ? split : "test";
     const report = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI: false, split: s });
-    let ai: unknown = null;
+    let ai: Record<string, unknown> | null = null;
     try {
-      ai = (await import("@/lib/eval/ai-results.json")).default;
+      ai = { ...((await import("@/lib/eval/ai-results.json")).default as Record<string, unknown>) };
+      // Clean-draft counts for the AI run come from its stored per-draft results; without them, not measured.
+      if (Array.isArray(ai.results) && !ai.cleanDrafts) ai.cleanDrafts = cleanDraftStats(ai.results as Parameters<typeof cleanDraftStats>[0]);
     } catch {
       ai = null;
     }

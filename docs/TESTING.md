@@ -18,11 +18,13 @@ Latest full run against the live site (20 Nov 2026 build): **185 unit tests, 21 
 
 | Evaluation | Command | Result |
 | --- | --- | --- |
-| Text: 40 held-out planted-error drafts, code checks only | `npm run eval` | Precision 100% (93–100%), recall 74% (63–83%), 0 of 17 hard phrasings |
-| Text: same drafts, code and AI checks, run twice on the live site | `npx tsx scripts/eval.ts --ai` | Precision 92% (83–96%), recall 98% (92–100%), 17 of 17 hard phrasings, 83% same result on both runs |
+| Text: 40 held-out planted-error drafts, code checks only | `npm run eval` | Precision 100% (93–100%), recall 74% (63–83%), 0 of 17 hard phrasings, 10 of 10 clean drafts left alone |
+| Text: same drafts, code and AI checks, run twice on the live site | `npx tsx scripts/eval.ts --ai` | Precision 92% (83–96%), recall 98% (92–100%), 17 of 17 hard phrasings, 83% same result on both runs, 10 of 10 clean drafts left alone (first run) |
 | Images: 20 generated creatives with planted colour, contrast and logo errors, and clean ones | `npm run eval:images` | 20 of 20 planted errors caught, 0 false alarms in 40 clean checks |
 | Privacy: 8 pieces of personal data of 5 kinds (emails, mobile and landline numbers, Aadhaar, PAN, a card number) planted in 24 drafts, plus 3 confidential drafts with canary words | `npm run eval:privacy` | 0 leaks in 144 prompts sent to the AI |
 | AI helpers, live: guide compiler on 10 passages with planted vague and contradictory text; rule amendment on 8 seeded rules with 16 real dismissals | `npm run eval:helpers` | Compiler: 16 of 17 expected rules, 15 of 18 proposals pass their own tests, 7 of 8 planted problems warned, 0 false warnings. Amendment: 7 of 8 accepted by the code gate, but the dismissed text is still flagged after all 7 |
+
+**Clean drafts left alone:** about a quarter of the drafts (10 of the 40 held out) have nothing planted. The evaluation counts how many of them come back with no violation flagged, and with no finding at all (suggestions included): code checks only, 10 of 10 and 10 of 10, computed live; code and AI checks, 10 of 10 and 10 of 10, computed from the per-draft results stored in `src/lib/eval/ai-results.json`. It is printed by `npm run eval`, included as `cleanDrafts` in `scripts/eval-json.ts` output, shown on the Results page, and unit-tested in `tests/clean-drafts.test.ts`.
 
 The image labels were corrected once: three backgrounds first labelled "colour only" also fail WCAG contrast with white text (measured separately: 4.23, 3.68 and 2.82 against the 4.5 minimum), so they are contrast errors too. The privacy evaluation found one real leak on its first run — landline numbers written as 080-4123-5678 were not masked — which was fixed before publishing.
 

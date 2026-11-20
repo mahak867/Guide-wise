@@ -14,6 +14,8 @@ async function main() {
   if (useAI && !aiAvailable()) throw new Error("Set GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY to run with the AI checks.");
   const a = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test" });
   console.log(`${a.mode}: precision ${pct(a.precision)} [${a.precisionCI.map(pct).join(", ")}], recall ${pct(a.recall)} [${a.recallCI.map(pct).join(", ")}], critical recall ${pct(a.criticalRecall)}, hard ${a.hardCaught}/${a.hardPlanted}, ${a.ms} ms`);
+  const c = a.cleanDrafts;
+  console.log(`clean drafts with no violations flagged: ${c.noViolations} of ${c.clean} (with no findings at all: ${c.noFindings} of ${c.clean})`);
   if (!useAI) return;
   if (a.mode !== "ai") throw new Error("The AI checks did not run; nothing saved.");
   // Second run: how often does the same draft produce the same set of findings?

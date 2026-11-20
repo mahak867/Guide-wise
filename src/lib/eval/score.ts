@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import type { Fact, Finding, Kit, Rule } from "../types";
 import { reviewDraft } from "../engine/review";
+import { cleanDraftStats, type CleanDraftStats } from "./clean";
 import { EVAL_DOCS, EVAL_RULES, type EvalDoc } from "./dataset";
+
+export { cleanDraftStats, type CleanDraftStats };
 
 /** Wilson score interval for a proportion, 95%. */
 export function wilson(k: number, n: number): [number, number] {
@@ -30,6 +33,8 @@ export interface EvalReport {
   hardPlanted: number; hardCaught: number;
   violationPrecision: number; violationPredicted: number;
   perRule: { rule: string; planted: number; caught: number; falsePositives: number }[];
+  /** Drafts with nothing planted, and how many were left with no violation / no finding at all. */
+  cleanDrafts: CleanDraftStats;
   results: DocResult[];
   ms: number;
 }
@@ -79,6 +84,7 @@ export function summarise(results: DocResult[], rules: Rule[], mode: string, spl
       caught: all.filter((p) => p.rule === rule && p.caught).length,
       falsePositives: extras.filter((e) => e.rule === rule).length,
     })),
+    cleanDrafts: cleanDraftStats(results),
     results,
     ms,
   };
