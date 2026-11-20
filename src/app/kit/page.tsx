@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Badge, Button, Card, Field, PageHead, inputCls } from "@/components/ui";
+import { MakeRule } from "@/components/MakeRule";
 import { Toast } from "@/components/Toast";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { CONTENT_TYPES, type Rule } from "@/lib/types";
@@ -120,6 +121,9 @@ export default function KitPage() {
   const [guide, setGuide] = useState("");
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
   const [warnings, setWarnings] = useState<CompileWarning[]>([]);
+  const [words, setWords] = useState("");
+  const [wordsSentence, setWordsSentence] = useState("");
+  const [making, setMaking] = useState<{ text: string; sentence?: string } | null>(null);
   const manager = role === "manager";
   const set = (k: keyof typeof blank, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -267,7 +271,18 @@ export default function KitPage() {
         {advisory.map((r) => <RuleCard key={r.id} rule={r} manager={manager} onChange={onChange} />)}
       </div>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-2">
+      <Card className="mt-8 p-4">
+        <h2>Make a rule from words</h2>
+        <p className="mt-1 text-sm text-muted">Type words a draft should not use (or the preferred wording), and the sentence they came from if you have it. Guidewise proposes a code rule with test sentences and runs them; a reviewer or the brand manager can add it as advisory.</p>
+        <form className="mt-3 grid gap-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); if (words.trim().length >= 3) setMaking({ text: words.trim(), sentence: wordsSentence.trim() || undefined }); }}>
+          <Field label="Words" hint="(3 to 120 characters)"><input className={inputCls} maxLength={120} value={words} onChange={(e) => setWords(e.target.value)} placeholder="India's #1 coaching" /></Field>
+          <Field label="Sentence they came from" hint="(optional)"><input className={inputCls} maxLength={600} value={wordsSentence} onChange={(e) => setWordsSentence(e.target.value)} placeholder="Join India's #1 coaching for NEET 2027." /></Field>
+          <Button variant="primary" type="submit" disabled={words.trim().length < 3}>Propose a rule</Button>
+        </form>
+      </Card>
+      {making && <MakeRule text={making.text} sentence={making.sentence} onDone={() => setMaking(null)} />}
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card className="p-4">
           <h2>Add a rule</h2>
           {!manager && <p className="mt-1 text-sm text-muted">Only the brand manager can add rules.</p>}
