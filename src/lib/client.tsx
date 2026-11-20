@@ -83,8 +83,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     if (saved && ["creator", "brand", "compliance", "manager"].includes(saved)) currentRole = saved;
     const role = currentRole;
-    // A shared read-only record (/r/…) needs no workspace, so none is created or loaded for its visitor.
-    const shared = window.location.pathname.startsWith("/r/");
+    // A shared read-only record (/r/…) needs no workspace, so none is created or loaded for its visitor; nor does a
+    // join link (/join/…), which replaces the browser's workspace when its visitor presses Join.
+    const shared = window.location.pathname.startsWith("/r/") || window.location.pathname.startsWith("/join/");
     queueMicrotask(() => {
       setRoleState(role);
       if (!shared) refresh();
