@@ -455,5 +455,43 @@ expect("export loads", await call("GET", "/api/kit/export"), (r) => r.s === 200)
 expect("health", await call("GET", "/api/health"), (r) => r.s === 200);
 expect("eval endpoint without token", await call("GET", "/api/eval/ai"), (r) => r.s === 401 || r.s === 403);
 await call("POST", "/api/reset");
+// Racing calls on one draft: only the first of several identical state changes wins; the others get a 409.
+{
+  const rw = { "x-workspace": "probe-drace-" + randomUUID().slice(0, 12) };
+  const inR = (method, path, o = {}) => call(method, path, { ...o, headers: { ...rw, ...(o.headers ?? {}) } });
+  await inR("GET", "/api/state");
+  expect("drafts: a null body is a 400", await inR("POST", `/api/drafts/${randomUUID()}`, { raw: "null" }), (r) => r.s === 400 || r.s === 404);
+  // Low risk: brand review, single sign-off.
+  const mk = async (text) => (await inR("POST", "/api/drafts", { body: { title: "Race probe", content_type: "email", text, useAI: false } })).j.id;
+  const low = await mk("Our evening doubt sessions run every weekday for the December batch. Write to admissions@preppath.in.");
+  const subs = await Promise.all([1, 2, 3].map(() => inR("POST", `/api/drafts/${low}`, { body: { action: "submit" } })));
+  const lowEv = (await inR("GET", `/api/drafts/${low}`)).j;
+  expect("race: 3 submits at once log one submission", { s: 200, j: subs.map((x) => x.s) }, () => lowEv.events.filter((e) => e.action === "submitted").length === 1 && subs.filter((x) => x.s === 200).length === 1);
+  for (const f of lowEv.findings.filter((x) => x.state === "open" && x.level === "violation")) {
+    await inR("POST", `/api/drafts/${low}`, { role: "brand", body: { action: "dismiss", finding_id: f.id, reason: "Approved exception" } });
+  }
+  const aps = await Promise.all([1, 2, 3, 4, 5].map(() => inR("POST", `/api/drafts/${low}`, { role: "brand", body: { action: "approve" } })));
+  const lowAfter = (await inR("GET", `/api/drafts/${low}`)).j;
+  expect("race: 5 approvals at once give one receipt and one approval", { s: 200, j: aps.map((x) => x.s) }, () => lowAfter.draft.status === "approved"
+    && lowAfter.events.filter((e) => e.action === "approved").length === 1 && aps.filter((x) => x.s === 200).length === 1 && aps.every((x) => x.s === 200 || x.s === 409));
+  // High risk: compliance signs off once, however many times it is pressed at once.
+  const high = await mk("100% selection guaranteed for every student who joins the December batch.");
+  await inR("POST", `/api/drafts/${high}`, { body: { action: "submit" } });
+  for (const f of (await inR("GET", `/api/drafts/${high}`)).j.findings.filter((x) => x.state === "open" && x.level === "violation")) {
+    await inR("POST", `/api/drafts/${high}`, { role: "compliance", body: { action: "dismiss", finding_id: f.id, reason: "Approved exception" } });
+  }
+  const cs = await Promise.all([1, 2, 3, 4, 5].map(() => inR("POST", `/api/drafts/${high}`, { role: "compliance", body: { action: "approve" } })));
+  const highEv = (await inR("GET", `/api/drafts/${high}`)).j;
+  expect("race: 5 compliance sign-offs at once are recorded once", { s: 200, j: cs.map((x) => x.s) }, () => highEv.events.filter((e) => e.action === "approved_partial").length === 1 && highEv.draft.status === "compliance_review");
+  const bs = await Promise.all([1, 2, 3].map(() => inR("POST", `/api/drafts/${high}`, { role: "brand", body: { action: "approve" } })));
+  const highAfter = (await inR("GET", `/api/drafts/${high}`)).j;
+  expect("race: 3 brand sign-offs at once give one receipt", { s: 200, j: bs.map((x) => x.s) }, () => highAfter.draft.status === "approved" && highAfter.events.filter((e) => e.action === "approved").length === 1);
+  // Accept all, three times at once: versions stay unique.
+  const fx = await mk("Join Preppath today. Call 98765 43210 for the December batch, admissions open now for every student.");
+  await Promise.all([1, 2, 3].map(() => inR("POST", `/api/drafts/${fx}`, { body: { action: "accept_all" } })));
+  const vs = (await inR("GET", `/api/drafts/${fx}`)).j.versions.map((v) => v.version);
+  expect("race: 3 Accept all at once leave unique version numbers", { s: 200, j: vs }, () => new Set(vs).size === vs.length);
+}
+
 console.log(bad ? `${bad} problem(s).` : "No problems.");
 process.exit(bad ? 1 : 0);
