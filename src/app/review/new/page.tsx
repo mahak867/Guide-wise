@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
+import { Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { CampaignDocs, type Doc } from "@/components/CampaignDocs";
 import { ChannelPreview } from "@/components/ChannelPreview";
@@ -81,8 +81,11 @@ export default function NewReview() {
   }
 
   // /review/new#hard (the home page's "Try a hard case") goes straight to the hard cases.
+  const [hardOpen, setHardOpen] = useState(false);
   useEffect(() => {
-    if (window.location.hash === "#hard") document.getElementById("hard")?.scrollIntoView({ block: "center" });
+    if (window.location.hash !== "#hard") return;
+    queueMicrotask(() => setHardOpen(true));
+    requestAnimationFrame(() => document.getElementById("hard")?.scrollIntoView({ block: "center" }));
   }, []);
 
   const autoLoaded = useRef(false);
@@ -123,24 +126,26 @@ export default function NewReview() {
     }
   }
 
+  const checkSummary = brief
+    ? [`${brief.rules.length} rules`, `${brief.usable.length} facts`, images.length ? `${images.length} image${images.length === 1 ? "" : "s"}` : "", docsReady ? `${docsReady} document${docsReady === 1 ? "" : "s"}` : "", `AI checks ${aiOn ? "on" : "off"}`].filter(Boolean).join(" · ")
+    : "Loading the Brand Kit…";
+
   return (
     <>
-      <PageHead title="New review" sub="Paste the copy or upload a DOCX or PDF, add any images, say what it is for, and run the review. The draft is checked before anyone else sees it." />
+      <PageHead title="New review" sub="Paste or upload the draft, then run the review. Images, campaign documents and the draft's goal are optional." />
       <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
         <Card className="p-5">
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={submit} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
-              <Field label="Title" hint="(optional)"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="December batch caption" aria-describedby="title-help" /></Field>
-              <Field label="Content type">
-                <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)} aria-describedby="type-help">{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
-              </Field>
-            </div>
-            <div className="-mt-2 grid gap-x-4 gap-y-1 text-xs text-muted sm:grid-cols-[1fr_14rem]">
-              <p id="title-help">Names the review in the list. Left empty, the first words of the draft are used.</p>
-              <p id="type-help">
-                Decides which channel rules run.{" "}
-                {brief?.channelOnly.length ? <>Only for {typeLabel.toLowerCase()}: {brief.channelOnly.map((r) => r.title).join("; ")}.</> : <>No rule is specific to {typeLabel.toLowerCase()}.</>}
-              </p>
+              <Field label="Title" hint="(optional)"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="December batch caption" /></Field>
+              <div>
+                <Field label="Content type">
+                  <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)} aria-describedby="type-help">{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
+                </Field>
+                <p id="type-help" className="mt-1 text-xs text-muted">
+                  {brief?.channelOnly.length ? <span title={brief.channelOnly.map((r) => r.title).join("; ")}>Adds {brief.channelOnly.length} rule{brief.channelOnly.length === 1 ? "" : "s"} only for {typeLabel.toLowerCase()}s.</span> : <>Decides which channel rules run.</>}
+                </p>
+              </div>
             </div>
             <div>
               <Field label="Draft text">
@@ -154,32 +159,51 @@ export default function NewReview() {
                   const over = counts.chars > max;
                   return (
                     <span key={r.id} className={over ? "font-medium text-crit" : ""}>
-                      {counts.chars}/{max} before the cut-off ({r.title}){over ? `: ${counts.chars - max} over, so the end is hidden` : ""}
+                      {counts.chars}/{max} before the cut-off{over ? `: ${counts.chars - max} over` : ""}
                     </span>
                   );
                 })}
-                {brief?.readability?.config.maxWords && counts.words > 0 && (
-                  <span className={counts.longest > brief.readability.config.maxWords ? "text-major" : ""}>
-                    Longest sentence {counts.longest} words (keep to {brief.readability.config.maxWords}{brief.readability.status === "advisory" ? ", advisory" : ""})
-                  </span>
+                {brief?.readability?.config.maxWords && counts.words > 0 && counts.longest > brief.readability.config.maxWords && (
+                  <span className="text-major">Longest sentence {counts.longest} words (keep to {brief.readability.config.maxWords})</span>
                 )}
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <label className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 font-medium hover:bg-mist">
-                Upload DOCX or PDF
-                <input type="file" accept=".docx,.pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-              </label>
-              <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent({ ...DEMO_INTENT, locked: "" }); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
-                Use the sample caption
-              </Button>
-              <Button type="button" variant="ghost" disabled={!!busy} onClick={loadCampaign}>
-                Use the sample campaign
-              </Button>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <label className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 font-medium hover:bg-mist">
+                  Upload DOCX or PDF
+                  <input type="file" accept=".docx,.pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+                </label>
+                <Button type="button" variant="ghost" onClick={() => { setText(DEMO_CAPTION); setIntent({ ...DEMO_INTENT, locked: "" }); setTitle("Instagram caption: December JEE batch"); setType("social"); }}>
+                  Use the sample caption
+                </Button>
+                <Button type="button" variant="ghost" disabled={!!busy} onClick={loadCampaign}>
+                  Use the sample campaign
+                </Button>
+              </div>
             </div>
             <ChannelPreview text={text} title={title} type={type} kit={state?.kit} rules={brief?.rules ?? []} cta={intent.cta} image={images[0]} />
-            <div id="hard" className="scroll-mt-24 rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
-              <span className="font-medium">Try a hard case</span> <span className="text-muted">Drafts built to get past a checker. Pick one, then run the review.</span>
+            <ImagePicker images={images} onChange={setImages} />
+            <CampaignDocs docs={docs} onChange={setDocs} />
+            <fieldset className="rounded-md border border-line p-3">
+              <legend className="px-1 text-sm font-medium">What is this draft for? <span className="font-normal text-muted">(optional)</span></legend>
+              <p className="mb-2 text-xs text-muted">AI fixes keep this intent, and the reviewer sees it.</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Goal"><input className={inputCls} value={intent.goal} onChange={(e) => setIntent({ ...intent, goal: e.target.value })} placeholder="Get enquiries for the December batch" /></Field>
+                <Field label="Audience"><input className={inputCls} value={intent.audience} onChange={(e) => setIntent({ ...intent, audience: e.target.value })} placeholder="JEE aspirants" /></Field>
+                <Field label="Call to action"><input className={inputCls} value={intent.cta} onChange={(e) => setIntent({ ...intent, cta: e.target.value })} placeholder="Enquire now" /></Field>
+              </div>
+              <div className="mt-3"><Field label="Locked phrases" hint="(comma separated)"><input className={inputCls} value={intent.locked} onChange={(e) => setIntent({ ...intent, locked: e.target.value })} placeholder="Mission IIT 2027, December batch" aria-describedby="locked-help" /></Field></div>
+              <p id="locked-help" className="mt-1 text-xs text-muted">
+                No fix may change these words; findings on them are fixed by hand.
+                {locked.length > 0 && <> Protected: {locked.map((l) => <span key={l} className="mx-0.5 inline-block rounded border border-line bg-mist px-1 text-ink">{l}</span>)}</>}
+              </p>
+              <label className="mt-3 flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--color-ink)]" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} />
+                <span><b className="font-medium">Confidential draft.</b> <span className="text-muted">Never send it to an AI service; only the code checks run.</span></span>
+              </label>
+              {confidential && <p className="mt-1 pl-6 text-xs text-muted">Still checked: banned terms, contacts, disclaimers, named students, every figure against the Facts Register, and colours, logo and text read from images in your browser. Skipped: the AI tone and paraphrase checks and AI vision.</p>}
+            </fieldset>
+            <details id="hard" open={hardOpen || !!hard} onToggle={(e) => setHardOpen(e.currentTarget.open)} className="scroll-mt-24 rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
+              <summary className="cursor-pointer select-none"><span className="font-medium">Try a hard case</span> <span className="text-muted">Drafts built to get past a checker</span></summary>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {HARD_CASES.map((c) => (
                   <button key={c.id} type="button" aria-pressed={hard === c.id}
@@ -190,88 +214,63 @@ export default function NewReview() {
                 ))}
               </div>
               {hard && <p className="mt-2 text-muted" role="status"><b className="text-ink">What to look for:</b> {HARD_CASES.find((c) => c.id === hard)?.expect}</p>}
-            </div>
-            <ImagePicker images={images} onChange={setImages} />
-            <CampaignDocs docs={docs} onChange={setDocs} />
-            <fieldset className="rounded-md border border-line p-3">
-              <legend className="px-1 text-sm font-medium">What is this draft for? <span className="font-normal text-muted">Fixes are written to keep this intent.</span></legend>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Goal"><input className={inputCls} value={intent.goal} onChange={(e) => setIntent({ ...intent, goal: e.target.value })} placeholder="Get enquiries for the December batch" /></Field>
-                <Field label="Audience"><input className={inputCls} value={intent.audience} onChange={(e) => setIntent({ ...intent, audience: e.target.value })} placeholder="JEE aspirants" /></Field>
-                <Field label="Call to action"><input className={inputCls} value={intent.cta} onChange={(e) => setIntent({ ...intent, cta: e.target.value })} placeholder="Enquire now" /></Field>
-              </div>
-              <p className="mt-2 text-xs text-muted">The goal, audience and call to action are given to the AI checks and to every AI-written fix, so a fix keeps the post doing its job. They are also shown to the reviewer.</p>
-              <div className="mt-3"><Field label="Locked phrases" hint="(comma separated; no fix may remove them)"><input className={inputCls} value={intent.locked} onChange={(e) => setIntent({ ...intent, locked: e.target.value })} placeholder="Mission IIT 2027, December batch" aria-describedby="locked-help" /></Field></div>
-              <p id="locked-help" className="mt-1 text-xs text-muted">
-                For campaign names, taglines and offer names that must survive word for word. Findings on them are still raised, but any suggested fix that would change or drop one is withdrawn, so you fix it by hand.
-                {locked.length > 0 && <> Protected: {locked.map((l) => <span key={l} className="mx-0.5 inline-block rounded border border-line bg-mist px-1 text-ink">{l}</span>)}</>}
-              </p>
-              <label className="mt-3 flex items-start gap-2 text-sm">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--color-ink)]" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} />
-                <span><b className="font-medium">Confidential draft.</b> <span className="text-muted">Never send this draft to an AI service. Only the code checks run, for this review and every re-check.</span></span>
-              </label>
-              <p className="mt-1 pl-6 text-xs text-muted">Still checked: banned terms, contacts, disclaimers, named students and every figure against the Facts Register, plus colours, logo and text read from images in your browser. Skipped: the AI tone and paraphrase checks and AI vision. The review page marks it so the reviewer knows.</p>
-            </fieldset>
-            <section aria-labelledby="will-check" className="rounded-md border border-line bg-mist/60 px-3 py-2.5 text-sm">
-              <h2 id="will-check" className="!font-sans !text-sm font-medium !tracking-normal">What will be checked</h2>
-              {!brief ? <p className="mt-1 text-muted">Loading the Brand Kit…</p> : (
-                <ul className="mt-1.5 grid gap-x-5 gap-y-1 text-muted sm:grid-cols-2">
-                  <li><b className="text-ink">{brief.rules.length}</b> rules in force for {typeLabel.toLowerCase()}{brief.advisory.length ? `, plus ${brief.advisory.length} advisory (raise suggestions only)` : ""}</li>
-                  <li><b className="text-ink">{brief.usable.length}</b> fact{brief.usable.length === 1 ? "" : "s"} usable today; any other figure is flagged{brief.embargoed.length + brief.expired.length ? ` (${brief.embargoed.length + brief.expired.length} embargoed or expired)` : ""}</li>
-                  <li><b className="text-ink">{images.length}</b> image{images.length === 1 ? "" : "s"}{images.length ? `: text, colours, contrast, logo, alt text${aiOn ? ", and AI vision for people shown" : ""}` : " attached"}</li>
-                  <li><b className="text-ink">{docsReady}</b> campaign document{docsReady === 1 ? "" : "s"}{docsReady || images.length ? "; prices, dates and promo codes compared across everything" : " attached"}</li>
-                  <li><b className="text-ink">{locked.length}</b> locked phrase{locked.length === 1 ? "" : "s"} protected from fixes</li>
-                  <li>
-                    AI checks: <b className={aiOn ? "text-brand" : "text-ink"}>{aiOn ? "on" : "off"}</b>
-                    {confidential ? " (confidential draft)" : !state?.ai.available ? " (service unavailable; code checks run)" : `, ${state.ai.model}; each AI finding is run twice and verified`}
-                  </li>
-                </ul>
-              )}
-            </section>
+            </details>
             {error && <Notice tone="error">{error}</Notice>}
-            <div className="flex items-center gap-3">
-              <Button variant="primary" type="submit" disabled={!!busy}>{busy ?? "Run review"}</Button>
-              {state && !state.ai.available && <span className="text-sm text-muted">AI checks are off, so this review runs the code checks only.</span>}
+            <div className="border-t border-line pt-4">
+              <details className="mb-3 text-sm">
+                <summary className="cursor-pointer select-none text-muted hover:text-ink"><span className="font-medium text-ink">What will be checked:</span> {checkSummary}</summary>
+                {brief && (
+                  <ul className="mt-1.5 grid gap-x-5 gap-y-1 text-muted sm:grid-cols-2">
+                    <li><b className="text-ink">{brief.rules.length}</b> rules in force for {typeLabel.toLowerCase()}{brief.advisory.length ? `, plus ${brief.advisory.length} advisory (suggestions only)` : ""}</li>
+                    <li><b className="text-ink">{brief.usable.length}</b> fact{brief.usable.length === 1 ? "" : "s"} usable today; any other figure is flagged{brief.embargoed.length + brief.expired.length ? ` (${brief.embargoed.length + brief.expired.length} embargoed or expired)` : ""}</li>
+                    <li><b className="text-ink">{images.length}</b> image{images.length === 1 ? "" : "s"}{images.length ? `: text, colours, contrast, logo, alt text${aiOn ? ", and AI vision for people shown" : ""}` : " attached"}</li>
+                    <li><b className="text-ink">{docsReady}</b> campaign document{docsReady === 1 ? "" : "s"}{docsReady || images.length ? "; prices, dates and promo codes compared across everything" : " attached"}</li>
+                    <li><b className="text-ink">{locked.length}</b> locked phrase{locked.length === 1 ? "" : "s"} protected from fixes</li>
+                    <li>
+                      AI checks: <b className={aiOn ? "text-brand" : "text-ink"}>{aiOn ? "on" : "off"}</b>
+                      {confidential ? " (confidential draft)" : !state?.ai.available ? " (service unavailable; code checks run)" : `, ${state.ai.model}; each AI finding is run twice and verified`}
+                    </li>
+                  </ul>
+                )}
+              </details>
+              <Button variant="primary" type="submit" className="!px-5 !py-2.5 !text-[15px]" disabled={!!busy}>{busy ?? "Run review"}</Button>
             </div>
           </form>
         </Card>
 
         <Card className="h-fit p-4">
           <h2>Brief card</h2>
-          <p className="mt-0.5 text-sm text-muted">The rules in force and the facts that are safe to use today.</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted">
-            Read this before you write: it is built from the Brand Kit for the content type you chose{state ? ` (Brand Kit v${state.kit.version})` : ""}, and changes when you change the type. A figure not listed under facts, or a contact not listed below, will be flagged.
-          </p>
+          <p className="mt-0.5 text-sm text-muted">What is safe to say today{state ? `, from Brand Kit v${state.kit.version}` : ""}. A figure or contact not listed here is flagged.</p>
           {!brief ? <p className="mt-3 text-sm text-muted">Loading…</p> : (
             <div className="mt-3 space-y-4 text-sm">
               <div>
                 <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Facts you can use today</h3>
                 <ul className="mt-1.5 space-y-1.5">
                   {brief.usable.map((f) => (
-                    <li key={f.id}><Badge tone="green">{f.id}</Badge> {f.statement}{f.disclosure && <span className="block text-xs text-muted">Must appear with: {f.disclosure}</span>}</li>
+                    <li key={f.id}><span className="font-mono text-xs text-muted">{f.id}</span> {f.statement}{f.disclosure && <span className="block text-xs text-muted">Must appear with: {f.disclosure}</span>}</li>
                   ))}
                 </ul>
               </div>
               {(brief.embargoed.length > 0 || brief.expired.length > 0) && (
                 <div>
                   <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Not usable today</h3>
-                  <ul className="mt-1.5 space-y-1.5">
-                    {brief.embargoed.map((f) => <li key={f.id}><Badge tone="critical">{f.id}</Badge> Embargoed until {f.valid_from}. Ask {f.owner}.</li>)}
-                    {brief.expired.map((f) => <li key={f.id}><Badge tone="major">{f.id}</Badge> {f.statement} <span className="text-muted">(expired {f.valid_until})</span></li>)}
+                  <ul className="mt-1.5 space-y-1.5 text-muted">
+                    {brief.embargoed.map((f) => <li key={f.id}><span className="font-mono text-xs">{f.id}</span> Embargoed until {f.valid_from}. Ask {f.owner}.</li>)}
+                    {brief.expired.map((f) => <li key={f.id}><span className="font-mono text-xs">{f.id}</span> {f.statement} (expired {f.valid_until})</li>)}
                   </ul>
                 </div>
               )}
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Rules in force: {TYPES.find((t) => t.v === type)?.l.toLowerCase()} ({brief.rules.length})</h3>
-                <ul className="mt-1.5 space-y-1">
-                  {brief.rules.map((r) => <li key={r.id}><span className="font-mono text-xs text-muted">{r.id}</span> {r.title}</li>)}
-                </ul>
-                {brief.advisory.length > 0 && <p className="mt-1.5 text-xs text-muted">Also {brief.advisory.length} advisory rule{brief.advisory.length === 1 ? "" : "s"} ({brief.advisory.map((r) => r.id).join(", ")}): {brief.advisory.length === 1 ? "it raises" : "they raise"} suggestions that never block approval.</p>}
-              </div>
-              <div>
                 <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Approved contacts</h3>
                 <ul className="mt-1.5 space-y-1">{state!.kit.contacts.map((c) => <li key={c.value}>{c.label}: {c.value}</li>)}</ul>
               </div>
+              <details>
+                <summary className="cursor-pointer select-none text-xs font-medium uppercase tracking-wide text-muted hover:text-ink">Rules in force for {typeLabel.toLowerCase()} ({brief.rules.length})</summary>
+                <ul className="mt-1.5 space-y-1">
+                  {brief.rules.map((r) => <li key={r.id}><span className="font-mono text-xs text-muted">{r.id}</span> {r.title}</li>)}
+                </ul>
+                {brief.advisory.length > 0 && <p className="mt-1.5 text-xs text-muted">Also {brief.advisory.length} advisory rule{brief.advisory.length === 1 ? "" : "s"} ({brief.advisory.map((r) => r.id).join(", ")}): suggestions that never block approval.</p>}
+              </details>
             </div>
           )}
         </Card>

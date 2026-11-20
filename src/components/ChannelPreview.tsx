@@ -1,11 +1,9 @@
 "use client";
-import { useId, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Badge } from "@/components/ui";
 import { analysePreview, CHANNEL_ORDER, CHANNELS, countGraphemes, defaultChannel, tokens, truncateGraphemes, type Channel, type Item, type Preview } from "@/lib/preview";
 import type { Kit, Rule } from "@/lib/types";
 
-const WIDE = "(min-width: 640px)";
-const subscribe = (cb: () => void) => { const m = window.matchMedia(WIDE); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); };
 
 /** Text with hashtags and mentions (social) or *bold* (WhatsApp) shown as the app shows them. */
 function Rich({ text, channel }: { text: string; channel: Channel }) {
@@ -121,10 +119,8 @@ export function ChannelPreview({ text, title, type, kit, rules, cta, image }: {
   const id = useId();
   const [picked, setPicked] = useState<{ type: string; channel: Channel } | null>(null);
   const channel = picked?.type === type ? picked.channel : defaultChannel(type);
-  // Open on a laptop, folded on a phone, until the writer opens or closes it.
-  const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => false);
-  const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? wide;
+  // Folded until the writer opens it; the summary line says whether anything is cut or wrong.
+  const [open, setOpen] = useState(false);
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const required = useMemo(() => rules.filter((r) => r.category === "disclaimer").map((r) => ({
@@ -152,13 +148,13 @@ export function ChannelPreview({ text, title, type, kit, rules, cta, image }: {
     : `What a reader sees before ${spec.action}`;
 
   return (
-    <details open={open} onToggle={(e) => setUserOpen(e.currentTarget.open)} className="rounded-md border border-line">
+    <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)} className="rounded-md border border-line">
       <summary className="cursor-pointer px-3 py-2 text-sm">
         <span className="font-medium">Preview on {spec.label}</span>
-        {!empty && <span className="ml-2 text-xs text-muted">
+        {!empty ? <span className="ml-2 text-xs text-muted">
           {p.cut ? `${p.shown} of ${p.total} characters before the cut` : `all ${p.total} characters shown`}
-          {warns > 0 && <b className="ml-1.5 font-medium text-crit">· {warns} warning{warns === 1 ? "" : "s"}</b>}
-        </span>}
+          {warns > 0 ? <b className="ml-1.5 font-medium text-crit">· {warns} warning{warns === 1 ? "" : "s"}</b> : " · no warnings"}
+        </span> : <span className="ml-2 text-xs text-muted">where each app cuts the text</span>}
       </summary>
       <div className="border-t border-line px-3 pb-3 pt-2.5">
         <div role="tablist" aria-label="Channel to preview" className="flex flex-wrap gap-1.5" onKeyDown={onKey}>
@@ -215,8 +211,7 @@ export function ChannelPreview({ text, title, type, kit, rules, cta, image }: {
 function Approx({ children }: { children?: ReactNode }) {
   return (
     <p className="mt-2.5 text-xs text-muted">
-      {children} Cut-off lengths are approximate: each app also cuts by line count and screen width, and it varies by device, font size and app version.
-      Characters are counted as a reader sees them (an emoji is one), and the cut never splits one.
+      {children} Cut-offs are approximate: they also vary by device, font size and app version. An emoji counts as one character.
     </p>
   );
 }

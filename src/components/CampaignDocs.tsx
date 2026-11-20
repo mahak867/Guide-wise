@@ -13,6 +13,9 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  // Folded until the writer opens it, or documents are added (the sample campaign adds two).
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? docs.length > 0;
   const set = (i: number, patch: Partial<Doc>) => onChange(docs.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   async function upload(file: File) {
     setBusy(true); setError(null);
@@ -36,12 +39,12 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
     setBusy(false);
   }
   return (
-    <fieldset className="rounded-md border border-line p-3">
-      <legend className="px-1 text-sm font-medium">Campaign documents <span className="font-normal text-muted">Optional, up to 4: paste text, upload a PDF or Word file, or read a live web page. Reviewed with the caption; prices, dates and promo codes are compared across all of them.</span></legend>
-      <p className="mb-2 text-xs text-muted">
-        Each document gets every text rule (terms, contacts, disclaimers, claims against the Facts Register, and the AI checks when they are on). Post-length and sentence-length rules are skipped, since they are about the caption.
-        Fixes are shown as wording to change in that document. {docs.length}/4 added.
-      </p>
+    <details open={open} onToggle={(e) => setUserOpen(e.currentTarget.open)} className="rounded-md border border-line px-3 py-2.5">
+      <summary className="cursor-pointer select-none text-sm">
+        <span className="font-medium">Campaign documents</span> <span className="text-muted">(optional{docs.length ? `, ${docs.length}/4 added` : ""})</span>
+        <span className="block text-xs text-muted">Add a brochure, landing page or email: prices, dates and promo codes are compared with the caption.</span>
+      </summary>
+      <p className="mb-2 mt-2 text-xs text-muted">Paste text, upload a PDF or Word file, or read a live page. Every text rule runs on each; post-length rules are skipped.</p>
       <div className="space-y-3">
         {docs.map((d, i) => (
           <div key={i} className="rounded-md border border-line p-2 text-sm">
@@ -54,7 +57,7 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
             <label className="sr-only" htmlFor={`doc-${i}`}>Text of document {i + 1}</label>
             <textarea id={`doc-${i}`} rows={3} className={inputCls + " mt-2"} value={d.text} onChange={(e) => set(i, { text: e.target.value })} placeholder="Paste the document text" />
             {d.text.trim().length > 0 && d.text.trim().length < 10 ? <p className="text-xs text-crit">Add at least 10 characters, or remove this document.</p>
-              : d.text.trim() ? <p className="mt-1 text-xs text-muted">{d.text.trim().split(/\s+/).length} words · {d.text.trim().length.toLocaleString("en-IN")} characters{d.text.length >= 12000 ? " (the first 12,000 are checked)" : ""}. Findings here are labelled “{d.name}”.</p>
+              : d.text.trim() ? <p className="mt-1 text-xs text-muted">{d.text.trim().split(/\s+/).length} words{d.text.length >= 12000 ? " (the first 12,000 characters are checked)" : ""}</p>
               : <p className="mt-1 text-xs text-muted">Empty documents are left out of the review.</p>}
           </div>
         ))}
@@ -79,6 +82,6 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
         {note && <p className="text-xs text-muted">{note}</p>}
         {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       </div>
-    </fieldset>
+    </details>
   );
 }

@@ -27,7 +27,7 @@ export function ImpactPanel() {
         <div className="flex-1">
           <h2 className="text-base">Impact of this change</h2>
           <p className="mt-0.5 text-muted">{impact.change.what}</p>
-          <p className="mt-0.5 text-xs text-muted">{impact.change.kind === "fact" ? "Fact" : "Rule"} {impact.change.id} · assessed {fmtDate(impact.at)} · every draft in this workspace was checked for whether it uses it</p>
+          <p className="mt-0.5 text-xs text-muted">{impact.change.kind === "fact" ? "Fact" : "Rule"} {impact.change.id} · {fmtDate(impact.at)}</p>
         </div>
         <button className="text-xs text-muted underline hover:text-ink" onClick={() => setImpact(null)}>Close</button>
       </div>
@@ -50,13 +50,16 @@ export function ImpactPanel() {
                 <span className="text-xs text-muted">
                   Now {(STATUS[a.status]?.label ?? a.status).toLowerCase()}
                   {a.outcome === "reapproval" ? (a.status === "compliance_review" ? ": compliance signs off again, then brand" : ": the brand reviewer approves it again") : ""}
-                  {" · "}{a.findings.length ? `${a.findings.length} finding${a.findings.length === 1 ? "" : "s"} about this change` : "no new finding"}
+                  {a.findings.length ? "" : " · no new finding"}
                 </span>
                 {a.findings.length > 0 && (
-                  <ul className="w-full space-y-0.5 text-xs text-muted">
-                    {a.findings.slice(0, 3).map((f, i) => <li key={i}><span className="font-mono">{f.rule_id}</span> “{f.quote}”: {f.message.length > 160 ? `${f.message.slice(0, 160)}…` : f.message}</li>)}
-                    {a.findings.length > 3 && <li>and {a.findings.length - 3} more on its review page</li>}
-                  </ul>
+                  <details className="w-full text-xs text-muted">
+                    <summary className="cursor-pointer select-none hover:text-ink">{a.findings.length} finding{a.findings.length === 1 ? "" : "s"} about this change</summary>
+                    <ul className="mt-1 space-y-0.5">
+                      {a.findings.slice(0, 3).map((f, i) => <li key={i}><span className="font-mono">{f.rule_id}</span> “{f.quote}”: {f.message.length > 160 ? `${f.message.slice(0, 160)}…` : f.message}</li>)}
+                      {a.findings.length > 3 && <li>and {a.findings.length - 3} more on its review page</li>}
+                    </ul>
+                  </details>
                 )}
               </li>
             ))}
