@@ -3,18 +3,23 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DemoGuide } from "@/components/DemoGuide";
+import { ImageInspector } from "@/components/ImageInspector";
 import { ImagePicker } from "@/components/ImagePicker";
+import { InviteTeammate } from "@/components/InviteTeammate";
+import { MakeRule } from "@/components/MakeRule";
 import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
 import type { ImageInput } from "@/lib/image";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { wordDiff } from "@/lib/diff";
 import { BRAND_SIGNERS, EXCEPTION, approversOf, canGrantException, complianceSignOff, exceptionLapsed, exceptionsOf, parseException } from "@/lib/approval";
+import { REVIEWER_ROLES, floatAt, liveChange, mayPoll, selectionForRule, snapOf } from "@/lib/live";
+import type { InspectorImage } from "@/lib/regions";
 import { canAcceptFix, moveCursor, precedentLine, reviewKey, whyNoAccept, type Precedent } from "@/lib/review-extras";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
   id: string; title: string; content_type: string; text: string; intent: { goal: string; audience: string; cta: string; confidential?: boolean; locked?: string[]; demo?: string };
-  images: { name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null; vision?: { text: string; people: { description: string; kind: string }[] } | null }[];
+  images: ({ name: string; alt: string; dataUrl: string; colours: { hex: string; share: number }[]; ocr: string; ocr_ok?: boolean; logo?: import("@/lib/logo").LogoMatch | null; vision?: { text: string; people: { description: string; kind: string }[] } | null } & InspectorImage)[];
   assets?: { name: string; text: string }[];
   impact?: { reason: string; at: string } | null;
   status: string; risk_tier: string | null; risk_reasons: string[]; version: number; kit_version: number; author: string; mode: string; stats: Partial<ReviewStats>;
@@ -139,6 +144,9 @@ function describe(e: Ev): string {
     case "share_created": return "created a read-only share link for the approval record";
     case "share_revoked": return "revoked a read-only share link";
     case "assets_saved": return "updated the campaign documents";
+    case "invite_created": return "made a join link so a teammate can work on this workspace (valid 7 days)";
+    case "invite_revoked": return "revoked a join link";
+    case "invite_accepted": return `joined the workspace through a join link${d.invited_by ? ` from ${d.invited_by}` : ""}`;
     default: return e.action.replace(/_/g, " ");
   }
 }
@@ -167,8 +175,18 @@ export default function ReviewPage() {
   const [announce, setAnnounce] = useState("");
   const helpRef = useRef<HTMLDialogElement>(null);
   const undoSeq = useRef(0);
+  // "Make this a rule": the floating button on words selected in the draft, and the open proposal dialog.
+  const draftRef = useRef<HTMLDivElement>(null);
+  const [float, setFloat] = useState<{ left: number; top: number; text: string; sentence?: string } | null>(null);
+  const [ruleFor, setRuleFor] = useState<{ text: string; sentence?: string; from: "selection" | "finding" } | null>(null);
+  // Live updates: what someone else changed, announced politely. seq counts loads, so a poll that raced one is dropped.
+  const [live, setLive] = useState("");
+  const seq = useRef(0);
+  const dataRef = useRef<Data | null>(null);
+  const pause = useRef({ editing: false, dialog: false, busy: false });
 
   const load = useCallback(async () => {
+    seq.current++;
     try {
       setData(await api<Data>(`/api/drafts/${id}`));
     } catch (e) {
@@ -181,6 +199,7 @@ export default function ReviewPage() {
     setBusy(label);
     setError(null);
     setNotice(null);
+    setLive("");
     // Any other change ends the offer to undo the last fix (an edit would make it impossible anyway).
     setUndo(null);
     try {
@@ -310,6 +329,63 @@ export default function ReviewPage() {
   }
   useEffect(() => { keyHandler.current = onKey; });
 
+  // Live updates. Every 12 s while the tab is visible, the draft is read again; when its version, status or number of
+  // open findings changed (someone else acted), the page takes the new state and says what happened. It waits while
+  // the user has an unsaved edit or comment, a dialog is open or a request is out, so nothing they are typing is lost.
+  useEffect(() => {
+    dataRef.current = data;
+    pause.current = {
+      editing: editing !== null || imgEdit !== null || fixEdit !== null || dismissing !== null || granting !== null || !!comment.trim(),
+      dialog: ruleFor !== null,
+      busy: !!busy,
+    };
+  });
+  const hasData = !!data;
+  const isApproved = data?.draft.status === "approved";
+  useEffect(() => {
+    if (!hasData || isApproved) return;
+    let out = false;
+    const may = () => {
+      const typed = ["c", "cm"].some((k) => !!(document.getElementById(k) as HTMLInputElement | null)?.value.trim());
+      return mayPoll({
+        visible: document.visibilityState === "visible", approved: dataRef.current?.draft.status === "approved",
+        editing: pause.current.editing || typed, dialog: pause.current.dialog || !!helpRef.current?.open, busy: pause.current.busy || out,
+      });
+    };
+    const tick = async () => {
+      if (!dataRef.current || !may()) return;
+      out = true;
+      const s = seq.current;
+      try {
+        const next = await api<Data>(`/api/drafts/${id}`);
+        out = false;
+        const cur = dataRef.current;
+        if (!cur || s !== seq.current || !may()) return;
+        const what = liveChange(snapOf(cur), snapOf(next), next.events[0]);
+        if (what) { setData(next); setLive((prev) => (prev === what ? what + "\u00a0" : what)); }
+      } catch {
+        /* a missed poll is retried on the next tick */
+      } finally {
+        out = false;
+      }
+    };
+    const timer = setInterval(tick, 12_000);
+    const onVis = () => { if (document.visibilityState === "visible") void tick(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onVis); };
+  }, [id, hasData, isApproved]);
+
+  // The floating button follows the selection it was made for: it goes when the page scrolls or the selection clears.
+  useEffect(() => {
+    if (!float) return;
+    const hide = () => setFloat(null);
+    const onSel = () => { if (window.getSelection()?.isCollapsed) setFloat(null); };
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    document.addEventListener("selectionchange", onSel);
+    return () => { window.removeEventListener("scroll", hide, true); window.removeEventListener("resize", hide); document.removeEventListener("selectionchange", onSel); };
+  }, [float]);
+
   if (error && !data) return (
     <div className="space-y-3">
       <h1>Review not found</h1>
@@ -371,9 +447,30 @@ export default function ReviewPage() {
   const recent = events.slice(0, 3);
   const older = events.slice(3);
 
+  /** Words selected in the draft text: offer "Make this a rule" next to them, to the reviewers and the brand manager. */
+  function onSelectEnd() {
+    const sel = window.getSelection();
+    const inside = !!sel && sel.rangeCount > 0 && !!sel.anchorNode && !!draftRef.current?.contains(sel.anchorNode);
+    const picked = REVIEWER_ROLES.includes(role) && editing === null ? selectionForRule(sel?.toString(), draft.text, inside) : null;
+    if (!picked || !sel) { setFloat(null); return; }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    setFloat({ ...picked, ...floatAt(r, { w: window.innerWidth, h: window.innerHeight }) });
+  }
+  /** The proposal dialog closed: read the draft again, and put focus back where the words were picked. */
+  function closeRule() {
+    const from = ruleFor?.from;
+    setRuleFor(null);
+    void load();
+    if (from === "selection") {
+      window.getSelection()?.removeAllRanges();
+      setTimeout(() => draftRef.current?.focus(), 0);
+    }
+  }
+
   return (
     <>
-      <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/" className="text-sm text-muted hover:underline">Reviews</Link><span className="text-muted">/</span>
           <h1 className="tracking-tight">{draft.title}</h1>
@@ -384,6 +481,8 @@ export default function ReviewPage() {
           Version {draft.version} · <span>{draft.mode === "ai" ? "Code and AI checks" : "Code checks only"}</span> · Brand Kit v{draft.kit_version}
           {draft.risk_tier && <> · <span className={draft.risk_tier === "high" ? "font-medium text-crit" : ""}>{draft.risk_tier === "high" ? "High risk" : "Low risk"}</span></>}
         </p>
+        </div>
+        <InviteTeammate draftId={draft.id} onChange={load} />
       </div>
 
       {draft.intent.demo === "approved-before" && draft.status === "approved" ? (
@@ -462,6 +561,15 @@ export default function ReviewPage() {
         )}
       </section>
 
+      {/* Someone else changed this draft: said once, politely. The region is always there so the words are read. */}
+      <div aria-live="polite" aria-atomic="true">
+        {live && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-line bg-mist px-3 py-2 text-sm">
+            <span className="min-w-0 flex-1">{live}</span>
+            <Button variant="ghost" aria-label="Close the update notice" onClick={() => setLive("")}>×</Button>
+          </div>
+        )}
+      </div>
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {notice && <div className="mb-4"><Notice tone="ok">{notice}</Notice></div>}
       {st.aiError && (
@@ -494,7 +602,20 @@ export default function ReviewPage() {
                 </div>
               </div>
             ) : (
-              <Highlighted text={draft.text} findings={open.filter((f) => (f.location ?? "text") === "text")} active={active} onPick={pick} />
+              <>
+                <div ref={draftRef} tabIndex={-1} className="focus:outline-none" onMouseUp={onSelectEnd} onKeyUp={onSelectEnd}>
+                  <Highlighted text={draft.text} findings={open.filter((f) => (f.location ?? "text") === "text")} active={active} onPick={pick} />
+                </div>
+                {float && (
+                  <button type="button" style={{ left: float.left, top: float.top }} aria-label="Make this a rule from the selected words"
+                    className="fixed z-40 rounded-[5px] border border-ink bg-ink px-2.5 py-1 text-[13px] font-medium text-paper shadow-md hover:bg-brand-dark"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setRuleFor({ text: float.text, sentence: float.sentence, from: "selection" }); setFloat(null); }}>
+                    Make this a rule
+                  </button>
+                )}
+                {REVIEWER_ROLES.includes(role) && !approved && <p className="mt-2 text-xs text-muted">Select words in the draft to make them a rule.</p>}
+              </>
             )}
             {(draft.intent.goal || draft.intent.audience || draft.intent.cta) && (
               <dl className="mt-4 grid gap-x-4 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-3">
@@ -646,6 +767,13 @@ export default function ReviewPage() {
                     const line = precedentLine(data.precedents?.[f.rule_id]);
                     return line && <p className="mt-2" title="From this workspace's other drafts">{line}</p>;
                   })()}
+                  {(() => {
+                    // A quiet way to turn the flagged words into a rule of the team's own.
+                    const words = (f.location ?? "text") === "text" ? selectionForRule(f.quote, draft.text, true) : null;
+                    return words && (
+                      <button type="button" className="mt-2 block text-xs text-muted underline underline-offset-2 hover:text-ink" onClick={() => setRuleFor({ ...words, from: "finding" })}>Make this a rule</button>
+                    );
+                  })()}
                 </details>
                 </div>)}
               </div>
@@ -710,7 +838,8 @@ export default function ReviewPage() {
                 {draft.images.map((img, i) => {
                   const mine = open.filter((f) => f.location === `image:${i + 1}`);
                   return (
-                    <div key={i} id={`img-${i + 1}`} className="flex flex-wrap gap-4">
+                    <div key={i} id={`img-${i + 1}`}>
+                    <div className="flex flex-wrap gap-4">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.dataUrl} alt={img.alt || `Image ${i + 1} (no alt text provided)`} className="h-44 w-44 rounded-md border border-line object-cover" />
                       <div className="min-w-0 flex-1 space-y-2 text-sm">
@@ -731,6 +860,15 @@ export default function ReviewPage() {
                           </div>
                         </details>
                       </div>
+                    </div>
+                    {img.dataUrl && img.w && img.h ? (
+                      <details className="mt-3 text-sm">
+                        <summary className="cursor-pointer select-none text-xs text-muted hover:text-ink">Where on Image {i + 1}: {mine.length ? `outlines of its ${mine.length} open finding${mine.length === 1 ? "" : "s"}` : "the text lines, colours and logo read from it"}</summary>
+                        <div className="mt-2 max-w-xl">
+                          <ImageInspector key={i} image={img} index={i} findings={findings.filter((f) => f.state === "open")} />
+                        </div>
+                      </details>
+                    ) : null}
                     </div>
                   );
                 })}
@@ -877,6 +1015,8 @@ export default function ReviewPage() {
           </div>
         )}
       </div>
+
+      {ruleFor && <MakeRule text={ruleFor.text} sentence={ruleFor.sentence} onDone={closeRule} />}
 
       <dialog ref={helpRef} aria-labelledby="kbd-title" className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-md border border-line bg-white p-4 text-sm text-ink backdrop:bg-ink/30">
         <h2 id="kbd-title">Keyboard shortcuts</h2>

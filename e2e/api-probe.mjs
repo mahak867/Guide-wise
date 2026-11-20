@@ -1,7 +1,7 @@
 // Probes every API route with bad input and the wrong role. Every answer must be a clean 4xx with a
 // message, never a 500, and the app must still work afterwards.
 //   BASE_URL=https://guidewise-kohl.vercel.app node e2e/api-probe.mjs
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 const L = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 const ws = "probe-" + randomUUID().slice(0, 12);
 let bad = 0;
@@ -515,6 +515,65 @@ await call("POST", "/api/reset");
   expect("make rule: one advisory rule added", { s: 200, j: { n: after.length } }, () => after.length === before + 1 && after.find((x) => x.id === saved.j?.id)?.status === "advisory");
   expect("make rule: the same words again are refused as a duplicate", await inM("POST", "/api/rules", { role: "brand", body: { made_from_words: words } }), (r) => is4xx(r) && r.s === 409 && r.j.error.includes(saved.j?.id ?? "W-"));
   expect("make rule: a reviewer still cannot change rules the normal way", await inM("POST", "/api/rules", { role: "brand", body: { id: "X-2", title: "t", description: "d" } }), is(403));
+}
+
+// "Invite a teammate": a reviewer makes a join link to this workspace; only its hash is stored. Joining hands the
+// workspace id to the browser that presses Join; unknown, expired and revoked links are refused alike; other
+// workspaces stay isolated. A workspace of its own, so its events change nothing elsewhere.
+{
+  const iw = "probe-inv-" + randomUUID().slice(0, 12);
+  const inI = (method, path, o = {}) => call(method, path, { ...o, headers: { "x-workspace": iw, ...(o.headers ?? {}) } });
+  await inI("GET", "/api/state"); // seeds the workspace with its approved sample draft
+  const draft = (await inI("GET", "/api/drafts")).j.drafts[0];
+  expect("invite: the creator cannot make a join link", await inI("POST", "/api/invites", { body: { draft_id: draft.id } }), (r) => is4xx(r) && r.s === 403);
+  expect("invite: a bad draft id is refused", await inI("POST", "/api/invites", { role: "manager", body: { draft_id: "nope" } }), (r) => is4xx(r) && r.s === 400);
+  expect("invite: another workspace's draft is not found", await inI("POST", "/api/invites", { role: "manager", body: { draft_id: id } }), (r) => is4xx(r) && r.s === 404);
+  const made = await inI("POST", "/api/invites", { role: "manager", body: { draft_id: draft.id } });
+  const days = (Date.parse(made.j?.expires_at) - Date.now()) / 864e5;
+  expect("invite: the brand manager makes a /join/ link valid 7 days", made, (r) => r.s === 200 && /\/join\/[A-Za-z0-9_-]{43}$/.test(r.j?.url ?? "") && days > 6.9 && days <= 7);
+  const token = (made.j?.url ?? "").split("/join/")[1] ?? "";
+  const listed = await inI("GET", "/api/invites");
+  expect("invite: listed without token or hash", listed, (r) => r.s === 200 && r.j.invites.some((x) => x.id === made.j?.invite?.id) && !JSON.stringify(r.j).includes(token) && !/"hash"/.test(JSON.stringify(r.j)));
+  const acts = (await inI("GET", `/api/drafts/${draft.id}`)).j;
+  expect("invite: the draft's activity shows it, without the hash", { s: 200, j: acts.events?.[0] }, (r) => r.j?.action === "invite_created" && !("hash" in (r.j?.detail ?? {})));
+  const preview = await fetch(`${L}/api/join/${token}`);
+  const pj = await preview.json().catch(() => null);
+  expect("invite: the preview names who invited and the draft, not the workspace", { s: preview.status, j: pj }, (r) => r.s === 200 && r.j.invite.created_by === "Meera" && r.j.invite.draft_title === draft.title && !JSON.stringify(r.j).includes(iw));
+  const page = await fetch(`${L}/join/${token}`);
+  const html = await page.text();
+  expect("invite: the /join/ page explains and asks before joining", { s: page.status, j: {} }, (r) => r.s === 200 && />Join</.test(html) && /<meta name="robots" content="noindex"/.test(html) && !html.includes(iw));
+  expect("invite: GET does not join (no invite_accepted event)", await inI("GET", `/api/drafts/${draft.id}`), (r) => !r.j.events.some((e) => e.action === "invite_accepted"));
+  const second = "probe-two-" + randomUUID().slice(0, 12);
+  const asSecond = (path) => fetch(L + path, { headers: { "x-workspace": second } }).then(async (r) => ({ s: r.status, j: await r.json().catch(() => null) }));
+  expect("invite: before joining, a second workspace cannot see the draft", await asSecond(`/api/drafts/${draft.id}`), is(404));
+  const joined = await fetch(`${L}/api/join/${token}`, { method: "POST", headers: { "x-workspace": second, "x-role": "compliance" } });
+  const jj = await joined.json().catch(() => null);
+  expect("invite: Join hands over the workspace and the draft", { s: joined.status, j: jj }, (r) => r.s === 200 && r.j.ws === iw && r.j.draft_id === draft.id);
+  const seen = await fetch(`${L}/api/drafts/${draft.id}`, { headers: { "x-workspace": jj?.ws ?? "", "x-role": "compliance" } }).then(async (r) => ({ s: r.status, j: await r.json().catch(() => null) }));
+  expect("invite: with the joined workspace header, the second person sees the draft and the join", seen, (r) => r.s === 200 && r.j.draft.id === draft.id && r.j.events.some((e) => e.action === "invite_accepted" && e.actor === "Kavya"));
+  expect("invite: other workspaces are still isolated", await asSecond(`/api/drafts/${draft.id}`), is(404));
+  expect("invite: the probe's own workspace cannot see it either", await call("GET", `/api/drafts/${draft.id}`), is(404));
+  expect("invite: the creator cannot revoke", await inI("DELETE", `/api/invites/${made.j?.invite?.id}`), (r) => is4xx(r) && r.s === 403);
+  expect("invite: another workspace cannot revoke", await call("DELETE", `/api/invites/${made.j?.invite?.id}`, { role: "manager" }), (r) => is4xx(r) && r.s === 404);
+  expect("invite: a reviewer revokes it", await inI("DELETE", `/api/invites/${made.j?.invite?.id}`, { role: "brand" }), is(200));
+  expect("invite: revoking again is refused", await inI("DELETE", `/api/invites/${made.j?.invite?.id}`, { role: "brand" }), (r) => is4xx(r) && r.s === 409);
+  expect("invite: a revoked link cannot join", { s: (await fetch(`${L}/api/join/${token}`, { method: "POST" })).status, j: {} }, is(404));
+  expect("invite: the revoked /join/ page is a 404", { s: (await fetch(`${L}/join/${token}`)).status, j: {} }, is(404));
+  expect("invite: an unknown token is not found", { s: (await fetch(`${L}/api/join/${randomUUID().replace(/-/g, "")}${"x".repeat(11)}`, { method: "POST" })).status, j: {} }, is(404));
+  expect("invite: a malformed token is not found", { s: (await fetch(`${L}/api/join/not-a-token`, { method: "POST" })).status, j: {} }, is(404));
+  expect("invite: a bad id to revoke is not found", await inI("DELETE", "/api/invites/abc", { role: "manager" }), (r) => is4xx(r) && r.s === 404);
+  // An expired link: written straight to the database (the API only makes 7-day links), when the probe has its address.
+  const SB = process.env.NEXT_PUBLIC_SUPABASE_URL, SK = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+  if (SB && SK) {
+    const old = randomBytes(32).toString("base64url");
+    const ins = await fetch(`${SB.replace(/\/$/, "")}/rest/v1/events`, {
+      method: "POST", headers: { apikey: SK, authorization: `Bearer ${SK}`, "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify({ ws: iw, draft_id: null, actor: "Meera", role: "manager", action: "invite_created", detail: { hash: createHash("sha256").update(old).digest("hex"), expires_at: new Date(Date.now() - 6e4).toISOString(), created_by: "Meera" } }),
+    });
+    expect("invite: (setup) an expired link written to the database", { s: ins.status, j: {} }, (r) => r.s === 201);
+    expect("invite: an expired link cannot join", { s: (await fetch(`${L}/api/join/${old}`, { method: "POST" })).status, j: {} }, is(404));
+    expect("invite: an expired link is not listed as active", await inI("GET", "/api/invites"), (r) => r.s === 200 && r.j.invites.length === 0);
+  } else console.log("skip invite: expired link (set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY to write one)");
 }
 
 console.log(bad ? `${bad} problem(s).` : "No problems.");

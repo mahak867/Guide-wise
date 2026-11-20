@@ -77,6 +77,7 @@ Each is tested against exactly the test we wrote down at Round 2 ([docs/TESTING.
 | 7 Verifier | A finding whose quote, rule or fact does not exist is dropped: no source, no flag |
 | 8 Fix re-test | Every fix applied and checked again before it is offered |
 | 9 Route and approve | A fixed table routes to brand or compliance; a person approves; the record carries a SHA-256 fingerprint and the Brand Kit version |
+| Workflow | Image inspector outlines each creative's problems; select words in a draft to make them a rule; the review page updates live when a teammate acts; "Invite a teammate" makes a 7-day, revocable join link to the workspace |
 
 Without any AI key, the code checks and the whole workflow still run, and the app says so. Area-by-area detail (image checks, Facts Register, Brand Kit, workflow, Insights, reliability): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#features-in-detail).
 

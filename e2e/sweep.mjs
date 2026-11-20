@@ -523,6 +523,54 @@ await step(page, "campaign: the sample campaign finds the price mismatch and the
   must(titles.includes("The campaign says the same thing everywhere"), "no cross-document finding");
   return titles.includes("People in a creative need consent on record") ? "person flagged by AI vision" : "AI vision unavailable this run";
 });
+await step(page, "review: the image inspector outlines the sample campaign's creative", async () => {
+  must(/\/review\/[0-9a-f-]{36}$/.test(page.url()), `not on the campaign review: ${page.url()}`);
+  await page.locator("summary", { hasText: /^Where on Image 1/ }).first().click();
+  const fig = page.locator("figure").filter({ has: page.locator("figcaption") }).first();
+  await fig.waitFor({ timeout: 10000 });
+  const cap = (await fig.locator("figcaption").innerText()).trim();
+  must(/^(Image 1|sample)/i.test(cap), `unexpected caption: ${cap}`);
+  must(await fig.locator("img").evaluate((i) => i.complete && i.naturalWidth > 0), "the inspector's image did not load");
+  return `"${cap.slice(0, 70)}"; ${await axeCheck(page)}`;
+});
+await step(page, "review: select words in the draft, Make this a rule, the proposal opens and closes", async () => {
+  await role("brand");
+  // The floating button sits by the selection and goes away on scroll, so the draft is put in view first.
+  await page.locator("p.proof").first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  const picked = await page.evaluate(() => {
+    const p = document.querySelector("p.proof");
+    if (!p) return "";
+    const walk = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const m = /\S+\s+\S+\s+\S+/.exec(n.textContent ?? "");
+      if (!m) continue;
+      const r = document.createRange();
+      r.setStart(n, m.index);
+      r.setEnd(n, m.index + m[0].length);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      p.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      return sel.toString();
+    }
+    return "";
+  });
+  must(picked.trim().length >= 3, "no words to select in the draft");
+  const btn = page.getByRole("button", { name: "Make this a rule from the selected words" });
+  await btn.waitFor({ timeout: 5000 });
+  await btn.click();
+  const dlg = page.getByRole("dialog", { name: "Make this a rule" });
+  await dlg.waitFor({ timeout: 10000 });
+  // The proposal, or the reason none can be made (e.g. the words are already a rule).
+  await dlg.getByText(/Test sentences/).or(dlg.getByRole("alert")).first().waitFor({ timeout: 60000 });
+  const axe = await axeCheck(page);
+  await dlg.getByRole("button", { name: "Close", exact: true }).click();
+  await dlg.waitFor({ state: "hidden", timeout: 5000 });
+  must(await page.evaluate(() => document.activeElement !== document.body && !!document.activeElement), "focus did not return after the dialog closed");
+  await role("creator");
+  return `"${picked.trim().slice(0, 40)}"; ${axe}`;
+});
 await step(page, "campaign: read a live landing page by its address", async () => {
   await go("/review/new", "Brief card"); await role("creator");
   await page.locator("textarea").first().fill("JEE crash course for droppers. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol.");

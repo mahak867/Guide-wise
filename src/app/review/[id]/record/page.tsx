@@ -22,6 +22,7 @@ interface Rec {
 const ACTION: Record<string, string> = {
   approved_partial: "approved for compliance (first of two sign-offs)", exception_lapsed: "an approved exception lapsed; finding reopened",
   share_created: "created a read-only share link", share_revoked: "revoked a read-only share link",
+  invite_created: "made a join link for a teammate (valid 7 days)", invite_revoked: "revoked a join link", invite_accepted: "joined the workspace through a join link",
   fix_undone: "undid an accepted fix", approval_blocked_kit_changed: "approval refused: the Brand Kit had changed; checked again",
   approval_blocked_exception_lapsed: "approval refused: an approved exception had lapsed",
 };
