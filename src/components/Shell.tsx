@@ -10,6 +10,7 @@ import { Badge, Button, Notice } from "./ui";
 const NAV = [
   { href: "/", label: "Reviews" },
   { href: "/review/new", label: "New review" },
+  { href: "/bulk", label: "Bulk check" },
   { href: "/kit", label: "Brand Kit" },
   { href: "/facts", label: "Facts and assets" },
   { href: "/insights", label: "Insights" },

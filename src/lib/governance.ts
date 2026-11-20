@@ -28,8 +28,11 @@ export async function getBrief(ws: string, contentType = "social") {
 
 export interface CheckInput { text: string; content_type?: string; use_ai?: boolean; images?: DraftImage[] }
 
-export async function checkDraft(ws: string, input: CheckInput) {
-  const { kit, rules, facts } = await loadKit(ws);
+type Loaded = Awaited<ReturnType<typeof loadKit>>;
+
+/** `loaded` lets a caller checking many drafts read the workspace's Brand Kit once. */
+export async function checkDraft(ws: string, input: CheckInput, loaded?: Loaded) {
+  const { kit, rules, facts } = loaded ?? await loadKit(ws);
   const type = CONTENT_TYPES.some((c) => c.v === input.content_type) ? input.content_type! : "social";
   const { findings, stats } = await reviewDraft(input.text, null, rules, facts, kit, { useAI: input.use_ai !== false, images: input.images ?? [], contentType: type });
   const violations = findings.filter((f) => f.level === "violation");
@@ -42,4 +45,15 @@ export async function checkDraft(ws: string, input: CheckInput) {
       message: f.message, fix: f.fix ?? null, fix_note: f.fix_note ?? null, rule: f.rule_text, location: f.location ?? "text",
     })),
   };
+}
+
+/**
+ * Many drafts against one read of the Brand Kit, with the code checks only (AI off), so a whole
+ * content calendar is checked in seconds and never spends AI quota. Same findings as checkDraft.
+ */
+export async function checkMany(ws: string, posts: { text: string; content_type?: string }[]) {
+  const loaded = await loadKit(ws);
+  const results = [];
+  for (const p of posts) results.push(await checkDraft(ws, { text: p.text, content_type: p.content_type, use_ai: false }, loaded));
+  return { kit_version: loaded.kit.version, titles: new Map(loaded.rules.map((r) => [r.id, r.title])), results };
 }
