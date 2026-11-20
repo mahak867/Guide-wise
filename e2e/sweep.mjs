@@ -67,7 +67,7 @@ await step(page, "sample review created", async () => {
   rid = page.url().split("/review/")[1];
 });
 
-const PAGES = ["/", "/review/new", `/review/${rid}`, `/review/${rid}/record`, "/kit", "/facts", "/insights", "/results", "/about", "/developers", "/review/00000000-0000-4000-8000-000000000000", "/nope"];
+const PAGES = ["/", "/review/new", `/review/${rid}`, `/review/${rid}/record`, "/kit", "/facts", "/insights", "/results", "/about", "/developers", "/bulk", "/review/00000000-0000-4000-8000-000000000000", "/nope"];
 async function checkPage(p, path) {
   await p.goto(L + path, { waitUntil: "networkidle" });
   await p.waitForTimeout(1500);
@@ -459,6 +459,27 @@ await step(page, "campaign: read a live landing page by its address", async () =
   await page.locator("#doc-url").fill("http://169.254.169.254/latest/meta-data/");
   await page.getByRole("button", { name: "Read page" }).click();
   await msg(/not a public web page/);
+});
+await step(page, "bulk: the sample calendar gives six verdicts; a post opens as a review", async () => {
+  await go("/bulk");
+  await page.getByRole("button", { name: "Use a sample calendar" }).click();
+  await msg(/Using 6 posts from the sample calendar/);
+  await page.getByRole("button", { name: "Check 6 posts" }).click();
+  await msg(/6 posts.*checked/, 60000);
+  const table = page.getByRole("table", { name: "Results for each post" });
+  const rows = table.locator("tbody tr");
+  must((await rows.count()) === 6, `expected 6 result rows, got ${await rows.count()}`);
+  const verdicts = await rows.evaluateAll((els) => els.map((e) => (/Ready for review|Needs fixes/.exec(e.textContent ?? "") ?? [""])[0]));
+  must(verdicts.every(Boolean), `a row has no verdict: ${verdicts.join(", ")}`);
+  must(verdicts.includes("Ready for review") && verdicts.includes("Needs fixes"), `expected a mix of verdicts, got ${verdicts.join(", ")}`);
+  must(await page.getByText("Most common rules broken").count(), "no summary of the rules broken");
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download results (CSV)" }).click()]);
+  const csv = readFileSync(await dl.path(), "utf8");
+  must(csv.includes("verdict") && csv.split("\r\n").filter(Boolean).length === 7, "results CSV does not have a header and 6 rows");
+  await rows.nth(1).getByRole("button", { name: /Open as a review/ }).click();
+  await page.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
+  await msg(/open finding/, 90000);
+  return verdicts.join(", ");
 });
 await step(page, "results: switch set and re-run; open a draft", async () => {
   await page.goto(L + "/results");

@@ -293,6 +293,22 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("campaign: more than 4 documents is a clear 400", await call("POST", "/api/drafts", { body: { text: "A valid draft text here.", assets: Array(5).fill({ name: "x", text: "Some document text here." }) } }), is4xx);
 }
 
+// Bulk check: up to 50 posts, code checks only, one result per post; bad lists are a clear 400.
+{
+  const two = await call("POST", "/api/bulk", { body: { posts: [
+    { text: "100% selection guaranteed for every student. Enrol today, limited seats!!", title: "Promo" },
+    { text: "Our adaptive practice classes adjust to how you learn. Write to admissions@preppath.in.", content_type: "email", date: "2026-12-05" },
+  ] } });
+  expect("bulk: 2 posts give 2 results, code checks only", two, (r) => r.s === 200 && r.j?.mode === "rules-only" && r.j.results?.length === 2
+    && r.j.results[0].verdict === "fix_before_publishing" && r.j.results[0].top.some((f) => f.rule_id === "R-12" && f.rule_title && f.quote)
+    && r.j.results[1].verdict === "ready_for_review" && typeof r.j.results[1].counts?.critical === "number");
+  const post = { text: "A post that is long enough to check." };
+  expect("bulk: 51 posts refused", await call("POST", "/api/bulk", { body: { posts: Array(51).fill(post) } }), (r) => is4xx(r) && r.s === 400 && /50/.test(r.j.error));
+  expect("bulk: a post under 10 characters refused, naming the post", await call("POST", "/api/bulk", { body: { posts: [post, { text: "too short" }] } }), (r) => is4xx(r) && r.s === 400 && /post 2/.test(r.j.error));
+  expect("bulk: malformed JSON refused", await call("POST", "/api/bulk", { raw: "{not json" }), (r) => is4xx(r) && r.s === 400);
+  expect("bulk: an unknown content type refused", await call("POST", "/api/bulk", { body: { posts: [{ ...post, content_type: "fax" }] } }), (r) => is4xx(r) && r.s === 400);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));
