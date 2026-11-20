@@ -26,11 +26,8 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
 
   return (
     <fieldset className="rounded-md border border-line p-3">
-      <legend className="px-1 text-sm font-medium">Images <span className="font-normal text-muted">Up to 4. Colours and the text inside each image are checked too.</span></legend>
-      <p className="mb-2 text-xs text-muted">
-        Each image is read here in your browser before anything is sent: its text (OCR), its main colours against the Brand Kit palette, text contrast, whether the logo is present with clear space, and its alt text.
-        Every text rule and fact then runs on the words found in it. {images.length}/4 added.
-      </p>
+      <legend className="px-1 text-sm font-medium">Images <span className="font-normal text-muted">(optional, up to 4)</span></legend>
+      <p className="mb-2 text-xs text-muted">Read in your browser before anything is sent: text, colours, contrast, logo and alt text are checked. {images.length}/4 added.</p>
       <div className="space-y-3">
         {images.map((img, i) => (
           <div key={i} className="flex flex-wrap gap-3 rounded-md border border-line p-2">
@@ -41,19 +38,22 @@ export function ImagePicker({ images, onChange }: { images: ImageInput[]; onChan
                 <b>Image {i + 1}</b><span className="truncate text-muted">{img.name}{img.w ? ` · ${img.w}×${img.h}px` : ""}</span>
                 <button type="button" className="ml-auto text-xs text-muted underline hover:text-crit" onClick={() => onChange(images.filter((_, j) => j !== i))}>Remove</button>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {img.colours.map((c) => (
-                  <span key={c.hex} className="inline-flex items-center gap-1 rounded border border-line px-1 text-xs"><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%</span>
-                ))}
-              </div>
               {img.logo && <div className="text-xs text-muted">{img.logo.found ? `Logo found (match ${img.logo.score.toFixed(2)}), ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width.` : `Logo not found (best match ${img.logo.score.toFixed(2)}).`}</div>}
-              <div className="text-xs text-muted">{img.ocr_ok ? (img.ocr ? <>Text found: “{img.ocr.replace(/\n/g, " ").slice(0, 140)}{img.ocr.length > 140 ? "…" : ""}”</> : "No text found in the image.") : "The text in this image could not be read here, so only its colours are checked."}</div>
+              <details className="text-xs text-muted">
+                <summary className="cursor-pointer select-none hover:text-ink">Text and colours read from the image</summary>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {img.colours.map((c) => (
+                    <span key={c.hex} className="inline-flex items-center gap-1 rounded border border-line px-1 text-xs"><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%</span>
+                  ))}
+                </div>
+                <p className="mt-1.5">{img.ocr_ok ? (img.ocr ? <>Text found: “{img.ocr.replace(/\n/g, " ").slice(0, 140)}{img.ocr.length > 140 ? "…" : ""}”</> : "No text found in the image.") : "The text in this image could not be read here, so only its colours are checked."}</p>
+              </details>
               <label className="block">
                 <span className="sr-only">Alt text for image {i + 1}</span>
                 <input className={inputCls} value={img.alt} placeholder="Alt text: describe the image and repeat any words in it" aria-describedby={`alt-help-${i}`} onChange={(e) => onChange(images.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} />
               </label>
               <p id={`alt-help-${i}`} className={`text-xs ${img.alt.trim().length < 8 ? "text-major" : "text-muted"}`}>
-                Alt text: {img.alt.trim().length} characters. {img.alt.trim().length < 8 ? "Under 8 is flagged as missing; screen-reader users would get nothing from this image." : "Long enough to pass the alt-text check."}
+                {img.alt.trim().length < 8 ? "Alt text under 8 characters is flagged as missing." : `Alt text: ${img.alt.trim().length} characters, long enough.`}
               </p>
             </div>
           </div>

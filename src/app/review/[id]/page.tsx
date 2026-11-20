@@ -363,20 +363,31 @@ export default function ReviewPage() {
     }
   }
 
+  // The routing in one line, and its reasons for the disclosure under it.
+  const route = draft.risk_tier === "high"
+    ? `High risk: ${ROLES.compliance.name} (compliance) signs off first, then ${ROLES.brand.name} or ${ROLES.manager.name} (brand).`
+    : `Low risk: one approval from ${ROLES.brand.name} (brand) or ${ROLES.manager.name}.`;
+  const SEV_LABEL = { critical: "Critical", major: "Major", minor: "Minor" } as const;
+  const recent = events.slice(0, 3);
+  const older = events.slice(3);
+
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link href="/" className="text-sm text-muted hover:underline">Reviews</Link><span className="text-muted">/</span>
-        <h1 className="tracking-tight">{draft.title}</h1>
-        <Badge tone={STATUS[draft.status]?.tone}>{STATUS[draft.status]?.label ?? draft.status}</Badge>
-        {draft.risk_tier && <Badge tone={draft.risk_tier === "high" ? "critical" : "green"}>{draft.risk_tier === "high" ? "High risk" : "Low risk"}</Badge>}
-        <Badge>v{draft.version}</Badge>
-        <Badge tone={draft.mode === "ai" ? "green" : "grey"}>{draft.mode === "ai" ? "Code and AI checks" : "Code checks only"}</Badge>
-        {draft.intent.confidential && <Badge tone="ink">Confidential · never sent to AI</Badge>}
+      <div className="mb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/" className="text-sm text-muted hover:underline">Reviews</Link><span className="text-muted">/</span>
+          <h1 className="tracking-tight">{draft.title}</h1>
+          <Badge tone={STATUS[draft.status]?.tone}>{STATUS[draft.status]?.label ?? draft.status}</Badge>
+          {draft.intent.confidential && <Badge tone="ink">Confidential · never sent to AI</Badge>}
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Version {draft.version} · <span>{draft.mode === "ai" ? "Code and AI checks" : "Code checks only"}</span> · Brand Kit v{draft.kit_version}
+          {draft.risk_tier && <> · <span className={draft.risk_tier === "high" ? "font-medium text-crit" : ""}>{draft.risk_tier === "high" ? "High risk" : "Low risk"}</span></>}
+        </p>
       </div>
 
       {draft.intent.demo === "approved-before" && draft.status === "approved" ? (
-        <Card className="mb-4 border-brand/40 p-3.5 text-sm">
+        <Card className="mb-3 border-brand/40 p-3.5 text-sm">
           <b>Approved before you arrived, so you can see change impact.</b>{" "}
           This post uses fact F-3 (4,200+ selections). On <Link href="/facts" className="font-medium text-brand-dark underline underline-offset-2">Facts and assets</Link>, act as Meera, click Edit on F-3, change the figure and save: Guidewise re-checks this post and sends it back for re-approval with the reason.
         </Card>
@@ -390,61 +401,81 @@ export default function ReviewPage() {
         routedTo: inReview ? draft.status : null,
       }} />}
 
-      {/* What happens next, and who does it */}
-      <Card className="mb-4 flex flex-wrap items-center gap-3 p-3.5 text-sm">
-        <div className="min-w-0 flex-1">
-          {draft.impact && inReview && (
-            <><b>Back for re-approval.</b> This piece was approved, then a Brand Kit change made it fail: {draft.impact.reason} The new findings are below. </>
-          )}
-          {approved ? (
-            <><b>Approved and locked.</b> The receipt below records exactly what was approved.</>
-          ) : inReview && signed ? (
-            <><b>Approved by {signed.actor}, waiting for brand sign-off.</b> High-risk content needs two sign-offs: compliance, then brand ({ROLES.brand.name} or {ROLES.manager.name}).</>
-          ) : inReview ? (
-            <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b>{draft.status === "compliance_review" ? ` High risk needs two sign-offs: ${ROLES.compliance.name} first, then brand.` : " One approval completes it."}</>
-          ) : draft.status === "changes_requested" ? (
-            <><b>Changes requested.</b> {ROLES.creator.name} edits the draft and submits it again.</>
-          ) : (
-            <><b>With {draft.author}, the creator.</b> {openViolations.length ? `Resolve the ${openViolations.length} open finding${openViolations.length > 1 ? "s" : ""}, or submit and let a reviewer decide.` : "No open findings. Submit it for approval."}</>
-          )}
-        </div>
-        {needed && role !== needed && !canAct && (
-          <Button onClick={() => setRole(needed)}>Act as {ROLES[needed].name}</Button>
+      {/* The next step: who acts and what they do, with the action itself. */}
+      <section aria-labelledby="next-step" className="mb-4 rounded-md border border-line border-l-4 border-l-ink bg-white p-4 text-sm shadow-[0_1px_0_rgba(28,27,24,0.03)]">
+        <h2 id="next-step" className="!font-sans !text-[11px] font-medium uppercase !tracking-[0.14em] text-muted">Next step</h2>
+        {draft.impact && inReview && (
+          <p className="mt-1.5 rounded-md bg-crit-soft px-2.5 py-1.5 text-crit"><b>Back for re-approval.</b> It was approved, then a Brand Kit change made it fail: {draft.impact.reason}</p>
         )}
-        {canEdit && role === "creator" && <Button variant="primary" disabled={!!busy} onClick={() => act("Submitting…", { action: "submit" })}>{busy === "Submitting…" ? busy : "Submit for review"}</Button>}
-        {draft.risk_tier && !approved && (
-          <div className="w-full border-t border-line pt-2.5 text-[13px]">
-            <p>
-              <b className="font-medium">{inReview ? "Why it was routed here: " : "Where it goes when submitted: "}</b>
-              {draft.risk_tier === "high"
-                ? `high risk, so ${ROLES.compliance.name} (compliance) signs off first and then ${ROLES.brand.name} or ${ROLES.manager.name} (brand) gives a second sign-off.`
-                : `low risk, so one approval from ${ROLES.brand.name} (brand reviewer) or ${ROLES.manager.name} is enough.`}
-              {inReview ? "" : " The risk is worked out again at submission, from the findings as they stand then."}
-            </p>
-            {draft.risk_tier === "high" && draft.risk_reasons.length > 0 ? (
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted">
-                {plainReasons(draft.risk_reasons, (rid) => state?.rules.find((r) => r.id === rid)?.title ?? rid, openViolations.filter((f) => f.severity === "critical").length).map((r, i) => <li key={i}>{r}</li>)}
-              </ul>
-            ) : draft.risk_tier !== "high" ? (
-              <p className="mt-0.5 text-muted">No rule about outcomes, claims or regulated content was flagged, and no critical finding is open.</p>
-            ) : null}
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <p className="min-w-0 flex-1 basis-64 text-[15px]">
+            {approved ? (
+              <><b>Approved and locked.</b> <span className="text-muted">The receipt below records exactly what was approved.</span></>
+            ) : inReview && signed ? (
+              <><b>Approved by {signed.actor}, waiting for brand sign-off.</b> <span className="text-muted">{ROLES.brand.name} or {ROLES.manager.name} gives the second sign-off.</span></>
+            ) : inReview ? (
+              <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b> <span className="text-muted">{openViolations.length ? `Dismiss each open finding with a reason, or request changes; then approve.` : "Approve, or request changes."}{draft.status === "compliance_review" ? " Brand signs off second." : ""}</span></>
+            ) : draft.status === "changes_requested" ? (
+              <><b>{ROLES.creator.name}: make the requested changes.</b> <span className="text-muted">Edit the draft, then submit it again.</span></>
+            ) : openViolations.length ? (
+              <><b>{draft.author}: resolve the {openViolations.length} open finding{openViolations.length > 1 ? "s" : ""}.</b> <span className="text-muted">Accept or dismiss each one{fixable.length ? " (or Accept all)" : ""}, then submit. You can also submit now and let a reviewer decide.</span></>
+            ) : (
+              <><b>{draft.author}: submit it for approval.</b> <span className="text-muted">No open findings.</span></>
+            )}
+          </p>
+          {needed && role !== needed && !canAct && (
+            <Button variant="primary" onClick={() => setRole(needed)}>Act as {ROLES[needed].name}</Button>
+          )}
+          {canEdit && role === "creator" && <Button variant={openViolations.length ? "secondary" : "primary"} disabled={!!busy} onClick={() => act("Submitting…", { action: "submit" })}>{busy === "Submitting…" ? busy : "Submit for review"}</Button>}
+          {approved && receipt && <a href="#receipt" className="text-sm font-medium text-brand-dark underline underline-offset-2">See the receipt</a>}
+        </div>
+        {canApprove && (
+          <div className="mt-3 space-y-2 border-t border-line pt-3">
+            {draft.status === "compliance_review" && (
+              <p className="text-xs text-muted">{signed ? `Second of two sign-offs: ${signed.actor} approved for compliance on ${fmtDate(signed.at)}. Approving now completes it.` : "First of two sign-offs: after you approve, brand signs off."}</p>
+            )}
+            <label className="sr-only" htmlFor="cm">Comment</label>
+            <textarea id="cm" rows={2} className={inputCls} placeholder="Comment (required when requesting changes)" value={comment} onChange={(e) => setComment(e.target.value)} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" disabled={!!busy || openViolations.length > 0} onClick={() => act("Approving…", { action: "approve", comment }, draft.status === "compliance_review" && !signed ? "Compliance sign-off recorded. Waiting for brand sign-off." : "Approved. The receipt is below.")}>Approve</Button>
+              <Button disabled={!!busy} onClick={async () => { if (await act("Sending…", { action: "request_changes", comment })) setComment(""); }}>Request changes</Button>
+              {openViolations.length > 0 && <span className="text-xs text-muted">{openViolations.length} open finding{openViolations.length > 1 ? "s" : ""} must be dismissed with a reason first.</span>}
+            </div>
           </div>
         )}
-      </Card>
+        {draft.risk_tier && !approved && (
+          <details className="mt-3 border-t border-line pt-2 text-[13px]">
+            <summary className="cursor-pointer select-none text-muted hover:text-ink">
+              <b className="font-medium text-ink">{inReview ? "Why it was routed here" : "Where it goes when submitted"}:</b> {route}
+            </summary>
+            <div className="mt-1.5 text-muted">
+              {draft.risk_tier === "high" && draft.risk_reasons.length > 0 ? (
+                <ul className="list-disc space-y-0.5 pl-5">
+                  {plainReasons(draft.risk_reasons, (rid) => state?.rules.find((r) => r.id === rid)?.title ?? rid, openViolations.filter((f) => f.severity === "critical").length).map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              ) : draft.risk_tier !== "high" ? (
+                <p>No rule about outcomes, claims or regulated content was flagged, and no critical finding is open.</p>
+              ) : null}
+              {!inReview && <p className="mt-1">The risk is worked out again at submission, from the findings as they stand then.</p>}
+            </div>
+          </details>
+        )}
+      </section>
 
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {notice && <div className="mb-4"><Notice tone="ok">{notice}</Notice></div>}
       {st.aiError && (
         <div className="mb-4"><Notice>
-          The AI service was unavailable for this review ({st.aiError}), so only the code checks ran. The workflow still works.
+          The AI service was unavailable for this review, so only the code checks ran.
           {draft.status !== "approved" && !draft.intent.confidential && (
             <> <Button disabled={!!busy} onClick={() => act("Re-checking…", { action: "recheck" }, "Checked again.")}>{busy === "Re-checking…" ? busy : "Re-check"}</Button></>
           )}
         </Notice></div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
-        <div className="min-w-0 space-y-5 break-words">
+      {/* On a phone: the draft, then the findings, then everything else. On a laptop: two columns, findings on the right. */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:grid-rows-[auto_1fr]">
+        <div className="min-w-0 space-y-5 break-words lg:col-start-1 lg:row-start-1">
           <Card className="p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2>Draft</h2>
@@ -467,9 +498,9 @@ export default function ReviewPage() {
             )}
             {(draft.intent.goal || draft.intent.audience || draft.intent.cta) && (
               <dl className="mt-4 grid gap-x-4 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-3">
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Goal</dt><dd>{draft.intent.goal || "–"}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Audience</dt><dd>{draft.intent.audience || "–"}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Call to action</dt><dd>{draft.intent.cta || "–"}</dd></div>
+                <div><dt className="text-xs text-muted">Goal</dt><dd>{draft.intent.goal || "–"}</dd></div>
+                <div><dt className="text-xs text-muted">Audience</dt><dd>{draft.intent.audience || "–"}</dd></div>
+                <div><dt className="text-xs text-muted">Call to action</dt><dd>{draft.intent.cta || "–"}</dd></div>
               </dl>
             )}
           </Card>
@@ -486,279 +517,60 @@ export default function ReviewPage() {
             </Card>
           )}
 
-          {(draft.assets?.length ?? 0) > 0 && (
-            <Card className="p-5">
-              <h2>Campaign documents</h2>
-              <p className="mt-1 text-sm text-muted">Reviewed with the caption and creatives. Prices, dates and promo codes are compared across all of them.</p>
-              <div className="mt-3 space-y-3">
-                {draft.assets!.map((a, i) => {
-                  const n = open.filter((f) => f.location === `asset:${i + 1}`).length;
-                  return (
-                    <div key={i} id={`doc-${i + 1}`} className="rounded-md border border-line p-3 text-sm">
-                      <div className="flex items-center gap-2"><b className="capitalize">{a.name}</b>{n > 0 ? <Badge tone="critical">{n} open finding{n === 1 ? "" : "s"}</Badge> : <Badge tone="green">No open findings</Badge>}</div>
-                      <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-relaxed">{a.text}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-          {draft.images?.length > 0 && imgEdit === null && (
-            <Card className="p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2>Images</h2>
-                {canEdit && role === "creator" && <Button onClick={() => setImgEdit(draft.images.map((x) => ({ ...x, w: 0, h: 0, ocr_ok: x.ocr_ok !== false })))}>Replace or edit images</Button>}
-              </div>
-              <div className="mt-3 space-y-4">
-                {draft.images.map((img, i) => {
-                  const mine = open.filter((f) => f.location === `image:${i + 1}`);
-                  return (
-                    <div key={i} id={`img-${i + 1}`} className="flex flex-wrap gap-4">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img.dataUrl} alt={img.alt || `Image ${i + 1} (no alt text provided)`} className="h-44 w-44 rounded-md border border-line object-cover" />
-                      <div className="min-w-0 flex-1 space-y-2 text-sm">
-                        <div className="flex flex-wrap items-center gap-2"><b>Image {i + 1}</b><span className="text-muted">{img.name}</span>{mine.length > 0 && <Badge tone="critical">{mine.length} open finding{mine.length > 1 ? "s" : ""}</Badge>}</div>
-                        <div className="flex flex-wrap gap-1">
-                          {img.colours.map((c) => {
-                            const flagged = mine.some((f) => f.quote === c.hex);
-                            return <span key={c.hex} className={`inline-flex items-center gap-1 rounded border px-1 text-xs ${flagged ? "border-crit text-crit" : "border-line"}`}><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%{flagged ? " · off-palette" : ""}</span>;
-                          })}
-                        </div>
-                        <div><span className="text-xs uppercase tracking-wide text-muted">Text read from the image</span><p className="mt-0.5 whitespace-pre-wrap rounded-md bg-mist px-2 py-1.5">{img.ocr_ok === false ? "Could not be read in the browser that uploaded it." : img.ocr || "No text found."}</p></div>
-                        {img.logo && <div><span className="text-xs uppercase tracking-wide text-muted">Logo</span><p>{img.logo.found ? `Found: match ${img.logo.score.toFixed(2)}, ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width${(img.logo.crowd ?? 0) > 0.1 ? ", clear space crowded" : ", clear space free"}.` : <span className="text-crit">Not found. Best match {img.logo.score.toFixed(2)}; the logo counts as present at 0.70.</span>}</p></div>}
-                        {img.vision && <div><span className="text-xs uppercase tracking-wide text-muted">AI vision</span><p>{img.vision.people.length ? <span className="text-crit">Shows {img.vision.people.length === 1 ? "a person" : `${img.vision.people.length} people`}: {img.vision.people.map((p) => p.description).join("; ")}. A consent record is needed.</span> : "No people shown."}{img.vision.text && img.vision.text.replace(/\s+/g, " ").trim() !== (img.ocr ?? "").replace(/\s+/g, " ").trim() ? " It also read text the OCR missed; every rule ran on it." : ""}</p></div>}
-                        <div><span className="text-xs uppercase tracking-wide text-muted">Alt text</span><p>{img.alt || <span className="text-muted">None</span>}</p></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-
-          <Card className="p-4 text-sm">
-            <h2>How this review was produced</h2>
-            <ul className="mt-2 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
-              <li><b className="text-ink">{st.codeFindings ?? 0}</b> finding{st.codeFindings === 1 ? "" : "s"} from code checks</li>
-              <li><b className="text-ink">{st.aiFindings ?? 0}</b> finding{st.aiFindings === 1 ? "" : "s"} from AI checks{draft.intent.confidential ? " (off: confidential draft)" : draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls${st.aiCached ? `, ${st.aiCached} answered from cache` : ""})`}</li>
-              {!!(st.images || st.assets) && <li><b className="text-ink">{st.visualFindings ?? 0}</b> finding{st.visualFindings === 1 ? "" : "s"} from {[st.images ? `${st.images} image${st.images > 1 ? "s" : ""}` : "", st.assets ? `${st.assets} document${st.assets > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ")} and the checks across them</li>}
-              <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
-              <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>
-              <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
-              <li>Checked against Brand Kit <b className="text-ink">v{draft.kit_version}</b>{st.ms !== undefined ? (st.ms < 100 ? " in under 0.1s" : ` in ${(st.ms / 1000).toFixed(1)}s`) : ""}</li>
-            </ul>
-            {(() => {
-              // What ran on this draft, and what was skipped and why: a skipped AI stage makes this a partial review.
-              const ai = draft.mode === "ai";
-              const why = (e?: string) => (e ? e.replace(/^The AI service did not answer \(?/, "").split(/[|(]/)[0].trim().slice(0, 90) || "the AI service did not answer" : "the AI service did not answer");
-              const imgs = st.images ?? 0, docs = st.assets ?? 0;
-              const rows: [string, boolean | null, string][] = [
-                ["Code checks", true, "terms, contacts, students, disclaimers, every figure against the Facts Register"],
-                ["AI checks", draft.intent.confidential ? null : ai, draft.intent.confidential ? "skipped: confidential drafts are never sent to AI" : ai ? `${st.aiCalls ?? 0} calls on the caption${docs || imgs ? ", the documents and the text in each creative" : ""}` : `skipped: ${why(st.aiError)}. Re-check above to try again`],
-                ["Images", imgs ? true : null, imgs ? `${imgs} read in the browser: text (OCR), colours, contrast, logo, alt text` : "none attached"],
-                ["AI vision", !imgs || draft.intent.confidential ? null : (st.visionRead ?? 0) > 0 && !st.visionError, !imgs ? "no images" : draft.intent.confidential ? "skipped: confidential" : st.visionError ? `skipped: ${why(st.visionError)}` : `${st.visionRead ?? imgs} creative${(st.visionRead ?? imgs) === 1 ? "" : "s"} read for stylised text and people shown`],
-                ["Campaign documents", docs ? true : null, docs ? `${docs} document${docs > 1 ? "s" : ""}, every check` : "none attached"],
-                ["Across the campaign", docs || imgs ? true : null, docs || imgs ? "prices, figures, dates and promo codes compared" : "nothing to compare"],
-                ["Verifier", true, "every finding's quote, rule and fact confirmed"],
-              ];
-              const partial = rows.some(([, ok]) => ok === false);
-              return (
-                <div className="mt-3 border-t border-line pt-2">
-                  <h3 className="flex items-center gap-2 text-sm font-medium text-ink">What was checked {partial && <Badge tone="major">Partial review</Badge>}</h3>
-                  <ul className="mt-1 space-y-0.5 text-muted">
-                    {rows.map(([name, ok, detail]) => (
-                      <li key={name}><span aria-hidden className={ok ? "text-brand" : ok === false ? "text-crit" : ""}>{ok ? "✓" : ok === false ? "✗" : "–"}</span> <b className="text-ink">{name}</b> <span className="sr-only">{ok ? "ran" : ok === false ? "skipped" : "not applicable"}</span>· {detail}</li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })()}
-            {!!st.droppedByVerifier?.length && (
-              <details className="mt-2 text-muted"><summary className="cursor-pointer">What the verifier dropped</summary>
-                <ul className="mt-1 list-disc pl-5">{st.droppedByVerifier.map((d, i) => <li key={i}>{d.rule_id}: "{d.quote}" ({d.reason})</li>)}</ul>
-              </details>
-            )}
-          </Card>
-
-          {inReview && (
-            <Card className="p-4">
-              <h2>Reviewer decision</h2>
-              {!canApprove ? (
-                <p className="mt-1 text-sm text-muted">
-                  {draft.status === "compliance_review"
-                    ? signed ? `${signed.actor} gave the compliance sign-off. The brand sign-off is next: the brand reviewer or the brand manager.` : "This draft is high risk, so the compliance reviewer signs off first, then brand."
-                    : "A brand or compliance reviewer decides."}{" "}
-                  Use "Act as {ROLES[needed!].name}" above.
-                </p>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {draft.status === "compliance_review" && (
-                    <p className="text-sm text-muted">{signed ? `Second of two sign-offs: ${signed.actor} approved for compliance on ${fmtDate(signed.at)}. Approving now completes the approval.` : "First of two sign-offs: after you approve, the brand reviewer or the brand manager signs off."}</p>
-                  )}
-                  <label className="sr-only" htmlFor="cm">Comment</label>
-                  <textarea id="cm" rows={2} className={inputCls} placeholder="Comment (required when requesting changes)" value={comment} onChange={(e) => setComment(e.target.value)} />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="primary" disabled={!!busy || openViolations.length > 0} onClick={() => act("Approving…", { action: "approve", comment }, draft.status === "compliance_review" && !signed ? "Compliance sign-off recorded. Waiting for brand sign-off." : "Approved. The receipt is below.")}>Approve</Button>
-                    <Button disabled={!!busy} onClick={async () => { if (await act("Sending…", { action: "request_changes", comment })) setComment(""); }}>Request changes</Button>
-                    {openViolations.length > 0 && <span className="text-sm text-muted">{openViolations.length} open finding{openViolations.length > 1 ? "s" : ""}: dismiss each with a reason, or request changes.</span>}
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
-
-          {receipt && (
-            <Card className="border-brand/40 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2>Approval receipt</h2>
-                <div className="flex gap-2"><Button onClick={() => {
-                  const blob = new Blob([JSON.stringify({ product: "Guidewise", draft: draft.title, ...receipt }, null, 2)], { type: "application/json" });
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(blob);
-                  a.download = `guidewise-receipt-${receipt.id.slice(0, 8)}.json`;
-                  a.click();
-                }}>Download JSON</Button>
-                <Link href={`/review/${draft.id}/record`} className="rounded-[5px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-paper">Approval record (PDF)</Link></div>
-              </div>
-              <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Approved by</dt><dd>{approversOf(receipt).map((x, i) => (
-                  <span key={i} className="block">{x.name} ({ROLES[x.role as Role]?.title ?? x.role}) · {fmtDate(x.at)}</span>
-                ))}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Checked against</dt><dd>Brand Kit v{receipt.kit_version} · draft v{String(receipt.findings_summary.draft_version)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Findings</dt><dd>{String(receipt.findings_summary.total)} raised · {String(receipt.findings_summary.fixed)} fixed · {String(receipt.findings_summary.dismissed)} dismissed with a reason</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-muted">Rules involved</dt><dd>{(receipt.findings_summary.rules as string[]).join(", ") || "None"}</dd></div>
-                {exceptionsOf(receipt).length > 0 && (
-                  <div className="sm:col-span-2"><dt className="text-xs uppercase tracking-wide text-muted">Approved exceptions</dt><dd>{exceptionsOf(receipt).map((x, i) => (
-                    <span key={i} className="block">{x.rule} (&ldquo;{x.quote}&rdquo;) · {x.until ? `valid until ${x.until}${x.until < todayIso() ? " (lapsed)" : ""}` : "no end date"}{x.by ? ` · granted by ${x.by}` : ""}</span>
-                  ))}</dd></div>
-                )}
-                <div className="sm:col-span-2"><dt className="text-xs uppercase tracking-wide text-muted">Fingerprint of the approved text (SHA-256)</dt><dd className="break-all font-mono text-xs">{receipt.text_hash}</dd></div>
-              </dl>
-              <p className="mt-2 text-xs text-muted">If the published text differs by one character, its fingerprint will not match this one.</p>
-            </Card>
-          )}
-
-          <Card className="p-4">
-            <h2>Activity</h2>
-            <ol className="mt-2 space-y-1.5 text-sm">
-              {events.map((e) => (
-                <li key={e.id} className="flex gap-2"><span className="w-28 shrink-0 text-xs text-muted">{fmtDate(e.at)}</span><span><b>{e.actor}</b> {describe(e)}</span></li>
-              ))}
-            </ol>
-            {!approved && (
-              <form className="mt-3 flex gap-2" onSubmit={async (e) => { e.preventDefault(); const f = e.currentTarget; const v = new FormData(f).get("c"); if (await act("…", { action: "comment", comment: v })) f.reset(); }}>
-                <label className="sr-only" htmlFor="c">Add a comment</label>
-                <input id="c" name="c" className={inputCls} placeholder={`Comment as ${ROLES[role].name}`} />
-                <Button type="submit" disabled={!!busy}>Comment</Button>
-              </form>
-            )}
-            <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted">Version history ({versions.length})</summary>
-              <ol className="mt-2 space-y-2">{versions.map((v, i) => {
-                const prev = versions[i + 1];
-                const diff = prev ? wordDiff(prev.text, v.text) : null;
-                const wc = (t: "add" | "del") => (diff ?? []).filter((p) => p.t === t).reduce((n, p) => n + (p.s.trim() ? p.s.trim().split(/\s+/).length : 0), 0);
-                const raised = findings.filter((f) => f.draft_version === v.version);
-                const fixedHere = events.filter((e) => e.action === "fix_accepted" && Number(e.detail.version) === v.version).length;
-                return (
-                  <li key={v.version} className="rounded-md border border-line p-2">
-                    <div className="text-xs text-muted">v{v.version} · {v.note} · {fmtDate(v.at)}</div>
-                    <div className="mt-0.5 text-xs text-muted">
-                      {diff ? (wc("add") || wc("del") ? `${wc("add")} word${wc("add") === 1 ? "" : "s"} added, ${wc("del")} removed` : "Text unchanged (images, documents or a re-check)") : `First version, ${v.text.trim().split(/\s+/).length} words`}
-                      {raised.length ? ` · ${raised.length} finding${raised.length === 1 ? "" : "s"} first raised on it` : ""}
-                      {fixedHere ? ` · made by accepting ${fixedHere} fix${fixedHere === 1 ? "" : "es"}` : ""}
-                    </div>
-                    <div className="mt-1 whitespace-pre-wrap leading-relaxed">{diff ? diff.map((p, k) => p.t === "same" ? <span key={k}>{p.s}</span> : p.t === "add" ? <ins key={k} className="bg-brand-soft no-underline">{p.s}</ins> : <del key={k} className="text-crit/80">{p.s}</del>) : v.text}</div>
-                  </li>
-                );
-              })}</ol>
-            </details>
-          </Card>
         </div>
 
-        <div className="min-w-0 space-y-3 break-words lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+        <div className="min-w-0 space-y-3 break-words lg:sticky lg:top-16 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2>{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
-            {canEdit && role === "creator" && fixable.length > 1 && <Button disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
+            {canEdit && role === "creator" && fixable.length > 1 && <Button variant={openViolations.length ? "primary" : "secondary"} disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
           </div>
-          {open.length > 0 && (
-            <p className="text-xs text-muted" id="kbd-hint">
-              <span className="sr-only">Shortcuts on this page. </span>Keyboard: J/K move · A accept · D dismiss · ? help
-            </p>
-          )}
           {findings.length > 0 && (
-            <div className="rounded-md border border-line bg-white px-3 py-2 text-xs" aria-label="Findings summary" role="group">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-muted">Open by severity</span>
-                {(["critical", "major", "minor"] as const).map((s) => (
-                  <span key={s} className="inline-flex items-center gap-1"><span aria-hidden className={`h-2 w-2 rounded-full ${{ critical: "bg-crit", major: "bg-major", minor: "bg-minor" }[s]}`} /><b className="font-medium">{tally[s]}</b> {s}</span>
-                ))}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-muted">All {findings.length} by state</span>
-                <span><b className="font-medium">{tally.violations}</b> open violation{tally.violations === 1 ? "" : "s"}</span>
-                <span><b className="font-medium">{tally.suggestions}</b> suggestion{tally.suggestions === 1 ? "" : "s"}</span>
-                <span><b className="font-medium">{tally.fixed}</b> fixed</span>
-                <span><b className="font-medium">{tally.dismissed}</b> dismissed</span>
-              </div>
-              {/* A proportion bar of the same four states. */}
-              <div aria-hidden className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-mist">
-                {([["violations", "bg-crit"], ["suggestions", "bg-minor"], ["fixed", "bg-brand"], ["dismissed", "bg-major"]] as const).map(([k, c]) => tally[k] > 0 && <span key={k} className={c} style={{ width: `${(tally[k] / findings.length) * 100}%` }} />)}
-              </div>
-              <p className="mt-1.5 text-muted">Open violations block approval until each is fixed or dismissed with a reason; suggestions never block it.</p>
-            </div>
+            <p className="text-xs text-muted">
+              {tally.fixed} fixed · {tally.dismissed} dismissed{tally.suggestions ? ` · ${tally.suggestions} open suggestion${tally.suggestions === 1 ? "" : "s"} (never block approval)` : ""}
+              {open.length > 0 && <span id="kbd-hint" className="hidden sm:inline"><span className="sr-only">. Shortcuts on this page: </span><span aria-hidden> · </span>Keys: J/K move · A accept · D dismiss · ? help</span>}
+            </p>
           )}
           {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : (state && !state.rules.some((r) => r.status === "enforced")) ? "No rules are in force in the Brand Kit, so nothing was checked. Enforce rules on the Brand Kit page, then re-check." : "No findings. This draft follows the rules in force."}</Card>}
           {open.length > 0 && <div id="findings-list"><Card className="divide-y divide-line overflow-hidden">
-          {open.map((f) => {
+          {open.map((f, idx) => {
             const rule = state?.rules.find((r) => r.id === f.rule_id);
             // One finding is open at a time; the rest stay as one-line rows.
             const expanded = expandedOf(open, active);
             const isOpen = expanded === f.id;
             const check = checkOf(f, rule?.category);
+            const where = f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : f.location?.startsWith("asset:") ? (draft.assets?.[Number(f.location.slice(6)) - 1]?.name ?? "Document") : null;
+            const groupStart = idx === 0 || open[idx - 1].severity !== f.severity;
             return (
-              <div key={f.id} id={`f-${f.id}`} data-fid={f.id} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
+              <div key={f.id}>
+              {groupStart && (
+                <div className="flex items-center gap-2 bg-paper px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-muted">
+                  <span aria-hidden className={`h-2 w-2 rounded-full ${{ critical: "bg-crit", major: "bg-major", minor: "bg-minor" }[f.severity]}`} />
+                  {SEV_LABEL[f.severity]} · {tally[f.severity]}
+                </div>
+              )}
+              <div id={`f-${f.id}`} data-fid={f.id} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
                 <button className={`flex w-full items-start gap-3 px-4 py-2.5 text-left focus-visible:-outline-offset-2 ${cursor === f.id ? "bg-mist/60" : ""}`} aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
                   <span className="min-w-0 flex-1">
                     <span className="block font-serif text-[15.5px] font-medium leading-snug">{rule?.title ?? f.rule_id}</span>
                     {!isOpen && <span className="mt-0.5 block truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
                   </span>
-                  <span className="shrink-0 pt-1 text-right text-[10.5px] font-medium uppercase leading-4 tracking-[0.06em] text-muted">
-                    {f.severity}{f.level === "suggestion" ? " · suggestion" : ""} · {check.short}
-                    <span className="block">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : f.location?.startsWith("asset:") ? (draft.assets?.[Number(f.location.slice(6)) - 1]?.name ?? "Document") : "Text"}{f.fix != null ? " · fix ready" : ""}</span>
+                  <span className="shrink-0 pt-1 text-right text-[11px] leading-4 text-muted">
+                    <span className="sr-only">{f.severity}{f.level === "suggestion" ? " suggestion" : ""}. </span>
+                    {where && <span className="block">{where}</span>}
+                    {f.fix != null && <span className="block font-medium text-brand-dark">Fix ready</span>}
+                    {f.level === "suggestion" && <span className="block">Suggestion</span>}
                   </span>
                   <span aria-hidden className="shrink-0 pt-0.5 text-muted">{isOpen ? "–" : "+"}</span>
                 </button>
                 {isOpen && (<div className="px-4 pb-4">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge tone={f.severity}>{f.severity[0].toUpperCase() + f.severity.slice(1)}</Badge>
-                  <span title={check.how}><Badge>{check.label}</Badge></span>
-                  {f.level === "suggestion" && <Badge>Suggestion</Badge>}
-                  {f.location?.startsWith("image:") && <Badge tone="ink">Image {f.location.slice(6)}</Badge>}
-                  <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
+                <div className="flex items-start gap-2">
+                  <blockquote className="flex min-w-0 flex-1 items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 shrink-0 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
+                  <button className="shrink-0 pt-0.5 text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
                 </div>
-                <blockquote className="mt-1 flex items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
-                <p className="mt-2">{f.message}</p>
-                <dl className="mt-2 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs text-muted">
-                  <dt>Check</dt><dd><b className="font-medium text-ink">{check.label}.</b> {check.how}</dd>
-                  <dt>Where</dt><dd>{whereOf(f.location, draft)}</dd>
-                  {f.created_at && <><dt>Raised</dt><dd>{fmtDate(f.created_at)}{f.draft_version ? `, on version ${f.draft_version}` : ""}{f.level === "suggestion" ? ". A suggestion: it does not block approval" : ""}</dd></>}
-                </dl>
                 {parseException(f.dismiss_reason) && <div className="mt-2"><ExceptionNote reason={f.dismiss_reason} open /></div>}
-                {(() => {
-                  // How this team settled the same rule on its other drafts.
-                  const line = precedentLine(data.precedents?.[f.rule_id]);
-                  return line && <p className="mt-2 text-xs text-muted" title="From this workspace's other drafts">{line}</p>;
-                })()}
-                <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
-                {f.precedent && (
-                  <p className="mt-2 rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-xs">
-                    <b>Precedent:</b> {f.precedent.order}. {f.precedent.note}{" "}
-                    <a className="underline" href={f.precedent.source} target="_blank" rel="noreferrer">Press report</a>
-                  </p>
-                )}
                 {f.fix !== null && f.fix !== undefined ? (
                   <div className="mt-2 rounded-md border border-brand/30 bg-brand-soft px-2 py-1.5">
-                    <div className="text-xs font-medium text-brand-dark">Suggested fix · re-tested, introduces no new issue</div>
+                    <div className="text-xs font-medium text-brand-dark">Suggested fix · re-tested</div>
                     <div className="mt-1"><del className="text-muted">{f.quote}</del> <span aria-hidden>→</span> <ins className="font-medium no-underline">{f.fix || "(remove these words)"}</ins></div>
                     {f.fix_note && <div className="mt-1 text-xs text-muted">{f.fix_note}</div>}
                   </div>
@@ -814,7 +626,29 @@ export default function ReviewPage() {
                     </div>
                   )
                 )}
+                <details className="mt-3 text-xs text-muted">
+                  <summary className="cursor-pointer select-none hover:text-ink">Why it was flagged · {f.rule_id} · {check.label}</summary>
+                  <p className="mt-1.5 text-sm text-ink">{f.message}</p>
+                  <dl className="mt-2 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 gap-y-0.5">
+                    <dt>Check</dt><dd><b className="font-medium text-ink">{check.label}.</b> {check.how}</dd>
+                    <dt>Where</dt><dd>{whereOf(f.location, draft)}</dd>
+                    {f.created_at && <><dt>Raised</dt><dd>{fmtDate(f.created_at)}{f.draft_version ? `, on version ${f.draft_version}` : ""}{f.level === "suggestion" ? ". A suggestion: it does not block approval" : ""}</dd></>}
+                  </dl>
+                  <p className="mt-2 rounded-md bg-mist px-2 py-1.5"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
+                  {f.precedent && (
+                    <p className="mt-2 rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-ink">
+                      <b>Precedent:</b> {f.precedent.order}. {f.precedent.note}{" "}
+                      <a className="underline" href={f.precedent.source} target="_blank" rel="noreferrer">Press report</a>
+                    </p>
+                  )}
+                  {(() => {
+                    // How this team settled the same rule on its other drafts.
+                    const line = precedentLine(data.precedents?.[f.rule_id]);
+                    return line && <p className="mt-2" title="From this workspace's other drafts">{line}</p>;
+                  })()}
+                </details>
                 </div>)}
+              </div>
               </div>
             );
           })}
@@ -833,15 +667,13 @@ export default function ReviewPage() {
                     <li key={f.id} className="rounded-md border border-line bg-white p-2.5 text-sm">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge tone={f.state === "dismissed" ? "major" : "green"}>{f.state === "accepted" ? "Fix accepted" : f.state === "dismissed" ? "Dismissed" : "Resolved by edit"}</Badge>
-                        <span className="font-mono text-xs text-muted">{f.rule_id}</span>
-                        {f.resolved_by && f.resolved_by !== "edit" && <span className="text-xs text-muted">by {f.resolved_by}{ev ? `, ${fmtDate(ev.at)}` : ""}</span>}
+                        <span className="font-medium">{rule?.title ?? f.rule_id}</span>
                       </div>
-                      <div className="mt-1 font-medium">{rule?.title ?? f.rule_id}</div>
-                      <div className="text-xs text-muted">{f.severity} · {checkOf(f, rule?.category).label} · {whereOf(f.location, draft)}{f.created_at ? ` · raised ${fmtDate(f.created_at)}` : ""}</div>
                       <div className="mt-1 text-muted">"{f.quote}"{f.state === "accepted" && f.fix ? ` → "${f.fix}"` : ""}</div>
+                      <div className="mt-0.5 text-xs text-muted">{f.rule_id} · {f.severity} · {whereOf(f.location, draft)}{f.resolved_by && f.resolved_by !== "edit" ? ` · by ${f.resolved_by}${ev ? `, ${fmtDate(ev.at)}` : ""}` : ""}</div>
                       {f.state === "resolved" && <div className="mt-1 text-xs text-muted">Closed by itself: after an edit, these words were no longer in the draft.</div>}
                       {f.state === "dismissed" && parseException(f.dismiss_reason) && <div className="mt-1"><ExceptionNote reason={f.dismiss_reason} by={f.resolved_by} /></div>}
-                      {f.dismiss_reason && <div className="mt-1 text-xs">{f.state === "dismissed" && f.resolved_by ? `${f.resolved_by} gave the reason: ` : "Reason: "}{f.dismiss_reason}{!approved && <button className="ml-2 underline" onClick={() => act("…", { action: "reopen", finding_id: f.id })}>Reopen</button>}</div>}
+                      {f.dismiss_reason && <div className="mt-1 text-xs">Reason: {f.dismiss_reason}{!approved && <button className="ml-2 underline" onClick={() => act("…", { action: "reopen", finding_id: f.id })}>Reopen</button>}</div>}
                     </li>
                     );
                   })}
@@ -849,6 +681,185 @@ export default function ReviewPage() {
               )}
             </div>
           )}
+        </div>
+        <div className="min-w-0 space-y-5 break-words lg:col-start-1 lg:row-start-2">
+          {(draft.assets?.length ?? 0) > 0 && (
+            <Card className="p-5">
+              <h2>Campaign documents</h2>
+              <p className="mt-1 text-sm text-muted">Reviewed with the caption and creatives; prices, dates and promo codes are compared across all of them.</p>
+              <div className="mt-3 space-y-3">
+                {draft.assets!.map((a, i) => {
+                  const n = open.filter((f) => f.location === `asset:${i + 1}`).length;
+                  return (
+                    <div key={i} id={`doc-${i + 1}`} className="rounded-md border border-line p-3 text-sm">
+                      <div className="flex items-center gap-2"><b className="capitalize">{a.name}</b><span className={`text-xs ${n ? "font-medium text-crit" : "text-muted"}`}>{n ? `${n} open finding${n === 1 ? "" : "s"}` : "No open findings"}</span></div>
+                      <p className="mt-1.5 whitespace-pre-wrap font-serif text-[15px] leading-relaxed">{a.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+          {draft.images?.length > 0 && imgEdit === null && (
+            <Card className="p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2>Images</h2>
+                {canEdit && role === "creator" && <Button onClick={() => setImgEdit(draft.images.map((x) => ({ ...x, w: 0, h: 0, ocr_ok: x.ocr_ok !== false })))}>Replace or edit images</Button>}
+              </div>
+              <div className="mt-3 space-y-4">
+                {draft.images.map((img, i) => {
+                  const mine = open.filter((f) => f.location === `image:${i + 1}`);
+                  return (
+                    <div key={i} id={`img-${i + 1}`} className="flex flex-wrap gap-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.dataUrl} alt={img.alt || `Image ${i + 1} (no alt text provided)`} className="h-44 w-44 rounded-md border border-line object-cover" />
+                      <div className="min-w-0 flex-1 space-y-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-2"><b>Image {i + 1}</b><span className="text-muted">{img.name}</span>{mine.length > 0 && <span className="text-xs font-medium text-crit">{mine.length} open finding{mine.length > 1 ? "s" : ""}</span>}</div>
+                        <div><span className="text-xs text-muted">Alt text</span><p>{img.alt || <span className="text-muted">None</span>}</p></div>
+                        <details className="text-sm">
+                          <summary className="cursor-pointer select-none text-xs text-muted hover:text-ink">What was read from the image: text, colours, logo{img.vision ? ", people" : ""}</summary>
+                          <div className="mt-2 space-y-2">
+                            <div className="flex flex-wrap gap-1">
+                              {img.colours.map((c) => {
+                                const flagged = mine.some((f) => f.quote === c.hex);
+                                return <span key={c.hex} className={`inline-flex items-center gap-1 rounded border px-1 text-xs ${flagged ? "border-crit text-crit" : "border-line"}`}><span className="h-3 w-3 rounded-sm border border-line" style={{ background: c.hex }} aria-hidden />{c.hex} {Math.round(c.share * 100)}%{flagged ? " · off-palette" : ""}</span>;
+                              })}
+                            </div>
+                            <div><span className="text-xs text-muted">Text read from the image</span><p className="mt-0.5 whitespace-pre-wrap rounded-md bg-mist px-2 py-1.5">{img.ocr_ok === false ? "Could not be read in the browser that uploaded it." : img.ocr || "No text found."}</p></div>
+                            {img.logo && <div><span className="text-xs text-muted">Logo</span><p>{img.logo.found ? `Found: match ${img.logo.score.toFixed(2)}, ${Math.round((img.logo.box?.w ?? 0) * 100)}% of the width${(img.logo.crowd ?? 0) > 0.1 ? ", clear space crowded" : ", clear space free"}.` : <span className="text-crit">Not found. Best match {img.logo.score.toFixed(2)}; the logo counts as present at 0.70.</span>}</p></div>}
+                            {img.vision && <div><span className="text-xs text-muted">AI vision</span><p>{img.vision.people.length ? <span className="text-crit">Shows {img.vision.people.length === 1 ? "a person" : `${img.vision.people.length} people`}: {img.vision.people.map((p) => p.description).join("; ")}. A consent record is needed.</span> : "No people shown."}{img.vision.text && img.vision.text.replace(/\s+/g, " ").trim() !== (img.ocr ?? "").replace(/\s+/g, " ").trim() ? " It also read text the OCR missed; every rule ran on it." : ""}</p></div>}
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {receipt && (
+            <Card className="scroll-mt-20 border-brand/40 p-4">
+              <div id="receipt" className="flex flex-wrap items-center justify-between gap-2">
+                <h2>Approval receipt</h2>
+                <div className="flex gap-2"><Button onClick={() => {
+                  const blob = new Blob([JSON.stringify({ product: "Guidewise", draft: draft.title, ...receipt }, null, 2)], { type: "application/json" });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `guidewise-receipt-${receipt.id.slice(0, 8)}.json`;
+                  a.click();
+                }}>Download JSON</Button>
+                <Link href={`/review/${draft.id}/record`} className="rounded-[5px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-paper">Approval record (PDF)</Link></div>
+              </div>
+              <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                <div><dt className="text-xs text-muted">Approved by</dt><dd>{approversOf(receipt).map((x, i) => (
+                  <span key={i} className="block">{x.name} ({ROLES[x.role as Role]?.title ?? x.role}) · {fmtDate(x.at)}</span>
+                ))}</dd></div>
+                <div><dt className="text-xs text-muted">Checked against</dt><dd>Brand Kit v{receipt.kit_version} · draft v{String(receipt.findings_summary.draft_version)}</dd></div>
+                <div><dt className="text-xs text-muted">Findings</dt><dd>{String(receipt.findings_summary.total)} raised · {String(receipt.findings_summary.fixed)} fixed · {String(receipt.findings_summary.dismissed)} dismissed with a reason</dd></div>
+                <div><dt className="text-xs text-muted">Rules involved</dt><dd>{(receipt.findings_summary.rules as string[]).join(", ") || "None"}</dd></div>
+                {exceptionsOf(receipt).length > 0 && (
+                  <div className="sm:col-span-2"><dt className="text-xs text-muted">Approved exceptions</dt><dd>{exceptionsOf(receipt).map((x, i) => (
+                    <span key={i} className="block">{x.rule} (&ldquo;{x.quote}&rdquo;) · {x.until ? `valid until ${x.until}${x.until < todayIso() ? " (lapsed)" : ""}` : "no end date"}{x.by ? ` · granted by ${x.by}` : ""}</span>
+                  ))}</dd></div>
+                )}
+                <div className="sm:col-span-2"><dt className="text-xs text-muted">Fingerprint of the approved text (SHA-256)</dt><dd className="break-all font-mono text-xs">{receipt.text_hash}</dd></div>
+              </dl>
+              <p className="mt-2 text-xs text-muted">If the published text differs by one character, its fingerprint will not match this one.</p>
+            </Card>
+          )}
+
+          <Card className="p-4">
+            <h2>Activity</h2>
+            <ol className="mt-2 space-y-1.5 text-sm">
+              {recent.map((e) => (
+                <li key={e.id} className="flex gap-2"><span className="w-28 shrink-0 text-xs text-muted">{fmtDate(e.at)}</span><span><b>{e.actor}</b> {describe(e)}</span></li>
+              ))}
+            </ol>
+            {older.length > 0 && (
+              <details className="mt-1.5 text-sm"><summary className="cursor-pointer select-none text-muted hover:text-ink">{older.length} earlier event{older.length === 1 ? "" : "s"}</summary>
+                <ol className="mt-1.5 space-y-1.5">
+                  {older.map((e) => (
+                    <li key={e.id} className="flex gap-2"><span className="w-28 shrink-0 text-xs text-muted">{fmtDate(e.at)}</span><span><b>{e.actor}</b> {describe(e)}</span></li>
+                  ))}
+                </ol>
+              </details>
+            )}
+            {!approved && (
+              <form className="mt-3 flex gap-2" onSubmit={async (e) => { e.preventDefault(); const f = e.currentTarget; const v = new FormData(f).get("c"); if (await act("…", { action: "comment", comment: v })) f.reset(); }}>
+                <label className="sr-only" htmlFor="c">Add a comment</label>
+                <input id="c" name="c" className={inputCls} placeholder={`Comment as ${ROLES[role].name}`} />
+                <Button type="submit" disabled={!!busy}>Comment</Button>
+              </form>
+            )}
+            <details className="mt-3 text-sm"><summary className="cursor-pointer select-none text-muted hover:text-ink">Version history ({versions.length})</summary>
+              <ol className="mt-2 space-y-2">{versions.map((v, i) => {
+                const prev = versions[i + 1];
+                const diff = prev ? wordDiff(prev.text, v.text) : null;
+                const wc = (t: "add" | "del") => (diff ?? []).filter((p) => p.t === t).reduce((n, p) => n + (p.s.trim() ? p.s.trim().split(/\s+/).length : 0), 0);
+                const raised = findings.filter((f) => f.draft_version === v.version);
+                const fixedHere = events.filter((e) => e.action === "fix_accepted" && Number(e.detail.version) === v.version).length;
+                return (
+                  <li key={v.version} className="rounded-md border border-line p-2">
+                    <div className="text-xs text-muted">v{v.version} · {v.note} · {fmtDate(v.at)}</div>
+                    <div className="mt-0.5 text-xs text-muted">
+                      {diff ? (wc("add") || wc("del") ? `${wc("add")} word${wc("add") === 1 ? "" : "s"} added, ${wc("del")} removed` : "Text unchanged (images, documents or a re-check)") : `First version, ${v.text.trim().split(/\s+/).length} words`}
+                      {raised.length ? ` · ${raised.length} finding${raised.length === 1 ? "" : "s"} first raised on it` : ""}
+                      {fixedHere ? ` · made by accepting ${fixedHere} fix${fixedHere === 1 ? "" : "es"}` : ""}
+                    </div>
+                    <div className="mt-1 whitespace-pre-wrap leading-relaxed">{diff ? diff.map((p, k) => p.t === "same" ? <span key={k}>{p.s}</span> : p.t === "add" ? <ins key={k} className="bg-brand-soft no-underline">{p.s}</ins> : <del key={k} className="text-crit/80">{p.s}</del>) : v.text}</div>
+                  </li>
+                );
+              })}</ol>
+            </details>
+          </Card>
+
+          {(() => {
+            // What ran on this draft, and what was skipped and why: a skipped AI stage makes this a partial review.
+            const ai = draft.mode === "ai";
+            const why = (e?: string) => (e ? e.replace(/^The AI service did not answer \(?/, "").split(/[|(]/)[0].trim().slice(0, 90) || "the AI service did not answer" : "the AI service did not answer");
+            const imgs = st.images ?? 0, docs = st.assets ?? 0;
+            const rows: [string, boolean | null, string][] = [
+              ["Code checks", true, "terms, contacts, students, disclaimers, every figure against the Facts Register"],
+              ["AI checks", draft.intent.confidential ? null : ai, draft.intent.confidential ? "skipped: confidential drafts are never sent to AI" : ai ? `${st.aiCalls ?? 0} calls on the caption${docs || imgs ? ", the documents and the text in each creative" : ""}` : `skipped: ${why(st.aiError)}. Re-check above to try again`],
+              ["Images", imgs ? true : null, imgs ? `${imgs} read in the browser: text (OCR), colours, contrast, logo, alt text` : "none attached"],
+              ["AI vision", !imgs || draft.intent.confidential ? null : (st.visionRead ?? 0) > 0 && !st.visionError, !imgs ? "no images" : draft.intent.confidential ? "skipped: confidential" : st.visionError ? `skipped: ${why(st.visionError)}` : `${st.visionRead ?? imgs} creative${(st.visionRead ?? imgs) === 1 ? "" : "s"} read for stylised text and people shown`],
+              ["Campaign documents", docs ? true : null, docs ? `${docs} document${docs > 1 ? "s" : ""}, every check` : "none attached"],
+              ["Across the campaign", docs || imgs ? true : null, docs || imgs ? "prices, figures, dates and promo codes compared" : "nothing to compare"],
+              ["Verifier", true, "every finding's quote, rule and fact confirmed"],
+            ];
+            const partial = rows.some(([, ok]) => ok === false);
+            return (
+              <details className="rounded-md border border-line bg-white p-4 text-sm">
+                <summary className="cursor-pointer select-none">
+                  <span className="font-serif text-[17px] text-ink">How this review was produced</span>
+                  {partial && <span className="ml-2 align-middle"><Badge tone="major">Partial review</Badge></span>}
+                  <span className="mt-0.5 block text-xs text-muted">{findings.length} finding{findings.length === 1 ? "" : "s"} raised against Brand Kit v{draft.kit_version}{st.ms !== undefined ? (st.ms < 100 ? " in under 0.1s" : ` in ${(st.ms / 1000).toFixed(1)}s`) : ""}. What was checked and what was skipped.</span>
+                </summary>
+                <ul className="mt-3 grid gap-x-6 gap-y-1 text-muted sm:grid-cols-2">
+                  <li><b className="text-ink">{st.codeFindings ?? 0}</b> finding{st.codeFindings === 1 ? "" : "s"} from code checks</li>
+                  <li><b className="text-ink">{st.aiFindings ?? 0}</b> finding{st.aiFindings === 1 ? "" : "s"} from AI checks{draft.intent.confidential ? " (off: confidential draft)" : draft.mode !== "ai" ? " (AI off)" : ` (${st.aiCalls} calls${st.aiCached ? `, ${st.aiCached} answered from cache` : ""})`}</li>
+                  {!!(st.images || st.assets) && <li><b className="text-ink">{st.visualFindings ?? 0}</b> finding{st.visualFindings === 1 ? "" : "s"} from {[st.images ? `${st.images} image${st.images > 1 ? "s" : ""}` : "", st.assets ? `${st.assets} document${st.assets > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ")} and the checks across them</li>}
+                  <li><b className="text-ink">{st.droppedByVerifier?.length ?? 0}</b> dropped by the verifier (no source, no flag)</li>
+                  <li><b className="text-ink">{st.fixesWithdrawn ?? 0}</b> fixes withdrawn after re-testing</li>
+                  <li><b className="text-ink">{st.redactions ?? 0}</b> personal details removed before any AI call</li>
+                </ul>
+                <div className="mt-3 border-t border-line pt-2">
+                  <h3 className="text-sm font-medium text-ink">What was checked</h3>
+                  <ul className="mt-1 space-y-0.5 text-muted">
+                    {rows.map(([name, ok, detail]) => (
+                      <li key={name}><span aria-hidden className={ok ? "text-brand" : ok === false ? "text-crit" : ""}>{ok ? "✓" : ok === false ? "✗" : "–"}</span> <b className="text-ink">{name}</b> <span className="sr-only">{ok ? "ran" : ok === false ? "skipped" : "not applicable"}</span>· {detail}</li>
+                    ))}
+                  </ul>
+                </div>
+                {!!st.droppedByVerifier?.length && (
+                  <div className="mt-2 text-muted"><h3 className="text-sm font-medium text-ink">What the verifier dropped</h3>
+                    <ul className="mt-1 list-disc pl-5">{st.droppedByVerifier.map((d, i) => <li key={i}>{d.rule_id}: "{d.quote}" ({d.reason})</li>)}</ul>
+                  </div>
+                )}
+              </details>
+            );
+          })()}
         </div>
       </div>
 

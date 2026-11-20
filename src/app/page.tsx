@@ -30,16 +30,16 @@ const LAST: Record<string, string> = {
 };
 const lastText = (l: { actor: string; action: string }) => `${l.actor} ${LAST[l.action] ?? l.action.replace(/_/g, " ")}`;
 
-/** Who acts next on a review, from its status (and, for high risk, whether compliance has already signed). */
-function nextActor(status: string, signed: boolean): { role: Role | null; text: string } {
+/** Who acts next on a review, from its status (and, for high risk, whether compliance has already signed): a name and the step. */
+function nextActor(status: string, signed: boolean): { role: Role | null; who: string; what: string } {
   switch (status) {
-    case "draft": return { role: "creator", text: `${ROLES.creator.name}, to resolve findings and submit` };
-    case "changes_requested": return { role: "creator", text: `${ROLES.creator.name}, to make the requested changes` };
-    case "brand_review": return { role: "brand", text: `${ROLES.brand.name} (or ${ROLES.manager.name}), for brand approval` };
+    case "draft": return { role: "creator", who: ROLES.creator.name, what: "resolve findings and submit" };
+    case "changes_requested": return { role: "creator", who: ROLES.creator.name, what: "make the requested changes" };
+    case "brand_review": return { role: "brand", who: `${ROLES.brand.name} or ${ROLES.manager.name}`, what: "brand approval" };
     case "compliance_review": return signed
-      ? { role: "brand", text: `${ROLES.brand.name} (or ${ROLES.manager.name}), for the second sign-off` }
-      : { role: "compliance", text: `${ROLES.compliance.name}, for the compliance sign-off` };
-    default: return { role: null, text: "No one: approved and locked" };
+      ? { role: "brand", who: `${ROLES.brand.name} or ${ROLES.manager.name}`, what: "second sign-off (brand)" }
+      : { role: "compliance", who: ROLES.compliance.name, what: "compliance sign-off" };
+    default: return { role: null, who: "No one", what: "approved and locked" };
   }
 }
 
@@ -158,36 +158,37 @@ export default function Home() {
         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">Brand rules that run</p>
         <h1 className="mt-2 max-w-3xl !text-[2.9rem] !leading-[1.05]">Check a draft <em>before</em> it is published.</h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted">
-          Guidewise checks marketing content against the team's approved rules and dated facts. Every finding quotes the rule it breaks and the exact words, offers a re-tested fix, and
-          risky content goes to the right reviewer. A person makes the final approval.
+          Every finding quotes the rule it breaks and the exact words, with a re-tested fix. Risky content goes to the right reviewer, and a person makes the final approval.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button variant="primary" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
-          <Link href="/review/new"><Button>Check your own draft</Button></Link>
-          <Link href="/review/new#hard"><Button>Try a hard case</Button></Link>
-          <a href="/demo.webm" target="_blank" rel="noreferrer" className="self-center px-1 text-sm text-muted underline underline-offset-2 hover:text-ink">Watch a 100-second walkthrough</a>
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <Button variant="primary" className="!px-5 !py-2.5 !text-[15px]" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
+          <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href="/review/new" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Check your own draft</Link>
+            <Link href="/review/new#hard" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Try a hard case</Link>
+            <a href="/demo.webm" target="_blank" rel="noreferrer" className="text-muted underline decoration-line underline-offset-4 hover:text-ink">Watch the 100-second walkthrough</a>
+          </span>
         </div>
-        <ol className="mt-8 grid gap-x-6 gap-y-3 border-t border-line pt-5 text-[13px] leading-relaxed text-muted sm:grid-cols-4">
-          <li><b className="text-ink">1. Review.</b> The sample is an Instagram post from a fictional coaching brand: a caption and a creative, with problems in both.</li>
-          <li><b className="text-ink">2. Resolve.</b> Accept the re-tested fixes for the caption. Image findings are fixed in the design file, so they stay open for the reviewer.</li>
-          <li><b className="text-ink">3. Route.</b> Submit. Outcome claims send it to the compliance reviewer.</li>
-          <li><b className="text-ink">4. Approve.</b> Switch to Kavya, dismiss what is left with a reason (or request changes) and approve; high-risk content then needs Arjun's brand sign-off before the receipt.</li>
+        <ol className="mt-8 grid gap-x-6 gap-y-2 border-t border-line pt-5 text-[13px] leading-relaxed text-muted sm:grid-cols-4">
+          <li><b className="text-ink">1. Review.</b> A sample Instagram post with problems in the caption and the creative.</li>
+          <li><b className="text-ink">2. Fix.</b> Accept the re-tested fixes. Image findings stay open for the reviewer.</li>
+          <li><b className="text-ink">3. Submit.</b> Outcome claims route it to compliance.</li>
+          <li><b className="text-ink">4. Approve.</b> Act as Kavya, then Arjun, to sign off and get the receipt.</li>
         </ol>
         <div className="mt-6 border-t border-line pt-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">New in the final round</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {[
-              { href: "/review/new?sample=campaign", title: "Review a whole campaign", body: "Caption, creative, brochure and landing page together. Prices, dates and promo codes that disagree are flagged, and AI vision checks the people shown.",
-                see: "The form fills itself. Press Run review: the fee (₹12,999 against ₹14,999), the start date and the promo code each disagree, and every finding names the document it is in." },
-              { href: "/facts", title: "See what a change touches", body: "The WhatsApp results post below is already approved. Edit fact F-3's figure: every draft that used it is re-checked and the approved post goes back for re-approval.",
-                see: "An impact panel listing each draft that was re-checked and what happened to it. The approved post leaves Approved, and its review page says why." },
-              { href: "/developers", title: "Check drafts from AI tools", body: "Create an API key and call check_draft over REST or MCP: the same cited findings as the app, with an audit trail.",
-                see: "A key shown once, the JSON findings for a sample draft from either transport, and every call logged with its time and result." },
+              { href: "/review/new?sample=campaign", title: "Review a whole campaign", body: "Caption, creative, brochure and landing page together; AI vision checks the people shown.",
+                see: "The fee, start date and promo code disagree across documents, and each finding names where it is." },
+              { href: "/facts", title: "See what a change touches", body: "Edit fact F-3's figure: every draft that used it is re-checked.",
+                see: "The approved WhatsApp post goes back for re-approval, with the reason." },
+              { href: "/developers", title: "Check drafts from AI tools", body: "Create an API key and call check_draft over REST or MCP.",
+                see: "The same cited findings as the app, and every call in an audit trail." },
             ].map((c) => (
               <Link key={c.href} href={c.href} className="group flex flex-col rounded-md border border-line bg-white p-4 transition-colors hover:border-brand">
                 <b className="font-serif text-[15px] font-medium text-ink group-hover:text-brand-dark">{c.title} →</b>
                 <p className="mt-1 text-[13px] leading-relaxed text-muted">{c.body}</p>
-                <p className="mt-2 border-t border-line pt-2 text-[12.5px] leading-relaxed text-muted"><b className="font-medium text-ink">What you will see:</b> {c.see}</p>
+                <p className="mt-2 border-t border-line pt-2 text-[12.5px] leading-relaxed text-muted"><b className="font-medium text-ink">You will see:</b> {c.see}</p>
               </Link>
             ))}
           </div>
@@ -199,78 +200,49 @@ export default function Home() {
       <PageHead
         title="Reviews"
         sub={MINE[role].length
-          ? `${mine.length} waiting for ${ROLES[role].name} (${ROLES[role].title.toLowerCase()}). Everything else is shown below it.`
+          ? `${mine.length} waiting for ${ROLES[role].name} (${ROLES[role].title.toLowerCase()}), shown first.`
           : `${ROLES[role].name} owns the Brand Kit. All reviews are listed for reference.`}
       />
       <Card>
         {rows === null ? (
           <p className="p-5 text-sm text-muted">Loading reviews…</p>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-muted">No drafts have been reviewed yet. Start with the sample caption above.</p>
+          <p className="p-5 text-sm text-muted">No drafts have been reviewed yet. Start with the sample post above.</p>
         ) : (
           <>
-            {/* Wide screens: one row per review. */}
-            <table className="hidden w-full text-left text-sm md:table">
-              <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Draft</th><th className="px-4 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 font-medium">Risk</th>
-                  <th className="px-4 py-2.5 font-medium">Findings</th><th className="px-4 py-2.5 font-medium">Waiting for</th><th className="px-4 py-2.5 font-medium">Last activity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ordered.map((r) => {
-                  const d = details[r.id];
-                  const next = nextActor(r.status, !!d?.signed);
-                  const why = riskWhy(r.risk_tier, d?.reasons, r.open);
-                  return (
-                    <tr key={r.id} className={`border-b border-line align-top last:border-0 ${mine.includes(r) ? "bg-brand-soft/40" : ""}`}>
-                      <td className="px-4 py-2.5">
-                        <Link href={`/review/${r.id}`} className="font-medium text-brand-dark underline-offset-2 hover:underline">{r.title}</Link>
-                        <div className="text-xs text-muted">{TYPE_LABEL[r.content_type] ?? r.content_type} · by {r.author} · v{r.version} · {r.mode === "ai" ? "code and AI checks" : "code checks"}</div>
-                      </td>
-                      <td className="px-4 py-2.5"><Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge>{r.impact && <span className="ml-1"><Badge tone="critical">Re-approval</Badge></span>}</td>
-                      <td className="px-4 py-2.5">
-                        {r.risk_tier ? <Badge tone={r.risk_tier === "high" ? "critical" : "green"}>{r.risk_tier === "high" ? "High" : "Low"}</Badge> : "–"}
-                        {why && <div className="mt-0.5 max-w-[11rem] text-xs text-muted">{why}</div>}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        {d && d.total === 0 ? "No findings" : <><b className="font-medium">{r.open}</b> open{d ? <> of {d.total}</> : null}</>}
-                        {d && d.total > 0 && <div className="text-xs text-muted">{d.fixed} fixed · {d.dismissed} dismissed</div>}
-                      </td>
-                      <td className="max-w-[13rem] px-4 py-2.5">
-                        {next.text}
-                        {mine.includes(r) && <div className="text-xs font-medium text-brand-dark">That is you</div>}
-                      </td>
-                      <td className="px-4 py-2.5 text-muted">
-                        <span className="whitespace-nowrap text-ink" title={fmtDate(d?.last?.at ?? r.updated_at)}>{ago(d?.last?.at ?? r.updated_at, now)}</span>
-                        <div className="text-xs">{d?.last ? lastText(d.last) : fmtDate(r.updated_at)}</div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* Phones: the same facts, stacked, so nothing scrolls sideways. */}
-            <ul className="divide-y divide-line md:hidden">
+            <div aria-hidden className="hidden border-b border-line px-4 py-2 text-xs uppercase tracking-wide text-muted md:grid md:grid-cols-[minmax(0,1fr)_10rem_14rem_8rem] md:gap-4">
+              <span>Draft</span><span>Status</span><span>Waiting for</span><span>Open findings</span>
+            </div>
+            <ul className="divide-y divide-line">
               {ordered.map((r) => {
                 const d = details[r.id];
                 const next = nextActor(r.status, !!d?.signed);
                 const why = riskWhy(r.risk_tier, d?.reasons, r.open);
+                const you = mine.includes(r);
+                const when = d?.last?.at ?? r.updated_at;
                 return (
-                  <li key={r.id} className={`px-4 py-3 text-sm ${mine.includes(r) ? "bg-brand-soft/40" : ""}`}>
-                    <Link href={`/review/${r.id}`} className="font-medium text-brand-dark underline-offset-2 hover:underline">{r.title}</Link>
-                    <div className="text-xs text-muted">{TYPE_LABEL[r.content_type] ?? r.content_type} · by {r.author} · v{r.version}</div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      <Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge>
-                      {r.impact && <Badge tone="critical">Re-approval</Badge>}
-                      {r.risk_tier && <Badge tone={r.risk_tier === "high" ? "critical" : "green"}>{r.risk_tier === "high" ? "High risk" : "Low risk"}</Badge>}
+                  <li key={r.id} className={`px-4 py-3 text-sm ${you ? "bg-brand-soft/40" : ""}`}>
+                    <div className="grid gap-x-4 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_10rem_14rem_8rem] md:items-start">
+                      <div className="min-w-0">
+                        <Link href={`/review/${r.id}`} className="font-medium text-brand-dark underline-offset-2 hover:underline">{r.title}</Link>
+                        <div className="text-xs text-muted"><span title={fmtDate(when)}>{ago(when, now)}</span> · {TYPE_LABEL[r.content_type] ?? r.content_type}</div>
+                      </div>
+                      <div className="flex flex-wrap gap-1"><Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge>{r.impact && <Badge tone="critical">Re-approval</Badge>}</div>
+                      <div>
+                        {next.role ? <><span className="text-muted md:sr-only">Waiting for </span><b className="font-medium">{next.who}</b><span className="text-muted">: {next.what}</span></> : <span className="text-muted">Approved and locked</span>}
+                        {you && <span className="ml-1 text-xs font-medium text-brand-dark">(you)</span>}
+                      </div>
+                      <div>{d && d.total === 0 ? <span className="text-muted">No findings</span> : <><b className="font-medium">{r.open}</b> open<span className="md:sr-only"> finding{r.open === 1 ? "" : "s"}</span></>}</div>
                     </div>
-                    <dl className="mt-1.5 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs">
-                      <dt className="text-muted">Findings</dt><dd>{d && d.total === 0 ? "No findings" : `${r.open} open${d ? ` of ${d.total} (${d.fixed} fixed, ${d.dismissed} dismissed)` : ""}`}</dd>
-                      {why && <><dt className="text-muted">Risk because</dt><dd>{why}</dd></>}
-                      <dt className="text-muted">Waiting for</dt><dd>{next.text}{mine.includes(r) ? " (you)" : ""}</dd>
-                      <dt className="text-muted">Last activity</dt><dd>{ago(d?.last?.at ?? r.updated_at, now)}{d?.last ? `: ${lastText(d.last)}` : ""}</dd>
-                    </dl>
+                    <details className="mt-1 text-xs text-muted">
+                      <summary className="w-fit cursor-pointer select-none hover:text-ink">More about this review</summary>
+                      <dl className="mt-1.5 grid grid-cols-[7rem_minmax(0,1fr)] gap-x-2 gap-y-0.5">
+                        <dt>Risk</dt><dd className="text-ink">{r.risk_tier ? `${r.risk_tier === "high" ? "High" : "Low"}${why ? `: ${why}` : ""}` : "Not set yet"}</dd>
+                        {d && d.total > 0 && <><dt>Findings</dt><dd className="text-ink">{r.open} open of {d.total}: {d.fixed} fixed, {d.dismissed} dismissed</dd></>}
+                        <dt>Last activity</dt><dd className="text-ink">{d?.last ? `${lastText(d.last)}, ` : ""}{fmtDate(when)}</dd>
+                        <dt>Draft</dt><dd className="text-ink">By {r.author} · version {r.version} · {r.mode === "ai" ? "code and AI checks" : "code checks"}</dd>
+                      </dl>
+                    </details>
                   </li>
                 );
               })}
@@ -278,8 +250,8 @@ export default function Home() {
           </>
         )}
       </Card>
-      <div className="mt-3 rounded-md border border-line bg-white/60 px-4 py-3 text-xs text-muted">
-        <h2 className="!font-sans !text-xs uppercase !tracking-[0.1em] text-ink">What the statuses mean</h2>
+      <details className="mt-3 rounded-md border border-line bg-white/60 px-4 py-3 text-xs text-muted">
+        <summary className="cursor-pointer select-none font-medium text-ink">What the statuses mean</summary>
         <dl className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {LEGEND.map((l) => (
             <div key={l.status} className="flex flex-wrap items-start gap-x-2 gap-y-0.5">
@@ -291,7 +263,7 @@ export default function Home() {
           </div>
         </dl>
         <p className="mt-2"><b className="font-medium text-ink">Risk</b> is high when a rule about outcomes, claims or regulated content was flagged, or a critical finding is still open; high risk needs two sign-offs. Rows waiting for the person you are acting as are shaded.</p>
-      </div>
+      </details>
     </>
   );
 }

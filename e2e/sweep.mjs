@@ -335,6 +335,9 @@ await step(page, "new review: ad with an uploaded image and a locked phrase", as
 await step(page, "channel preview: the sample caption is cut on Instagram, with the missing disclaimer and the call to action after the cut", async () => {
   await go("/review/new", "Brief card"); await role("creator");
   await page.getByRole("button", { name: "Use the sample caption" }).click();
+  // The preview is folded until opened; its summary line already counts the warnings.
+  await page.getByText(/1 warning|\d warnings/).first().waitFor({ timeout: 5000 });
+  await page.getByText("Preview on Instagram").click();
   const panel = page.getByRole("tabpanel");
   await panel.getByText("What a reader sees before tapping").waitFor({ timeout: 5000 });
   must((await page.getByRole("tab", { selected: true }).innerText()).trim() === "Instagram", "social post did not open the Instagram tab");
@@ -363,6 +366,7 @@ await step(mp, "phone: channel preview starts folded, opens, and does not scroll
 });
 await step(page, "hard cases: each fills the draft; hidden characters are caught, then the guarantee", async () => {
   await go("/review/new", "Brief card"); await role("creator");
+  await page.locator("#hard summary").click(); // the hard cases are folded until opened
   const labels = ["Prompt injection", "Right number, wrong subject", "Hindi claim, English disclaimer", "Personal data", "Paraphrase only AI catches", "Ad cut off at", "Hidden characters"];
   for (const l of labels) {
     await page.getByRole("button", { name: new RegExp(l) }).click();
@@ -522,6 +526,7 @@ await step(page, "campaign: the sample campaign finds the price mismatch and the
 await step(page, "campaign: read a live landing page by its address", async () => {
   await go("/review/new", "Brief card"); await role("creator");
   await page.locator("textarea").first().fill("JEE crash course for droppers. Starts 5 January. Fee ₹12,999. Use code EARLY20 when you enrol.");
+  await page.locator("summary", { hasText: "Campaign documents" }).click(); // folded until opened or used
   await page.getByRole("button", { name: "Use our sample landing page" }).click();
   await page.getByRole("button", { name: "Read page" }).click();
   await msg(/Menus, headers and footers were left out/);
