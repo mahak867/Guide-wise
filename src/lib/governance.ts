@@ -36,8 +36,11 @@ export async function checkDraft(ws: string, input: CheckInput, loaded?: Loaded)
   const type = CONTENT_TYPES.some((c) => c.v === input.content_type) ? input.content_type! : "social";
   const { findings, stats } = await reviewDraft(input.text, null, rules, facts, kit, { useAI: input.use_ai !== false, images: input.images ?? [], contentType: type });
   const violations = findings.filter((f) => f.level === "violation");
+  // With no rules in force, "no findings" means nothing was checked, not that the draft is fine: say so.
+  const inForce = rules.filter((r) => r.status === "enforced" && (!r.config.channels?.length || r.config.channels.includes(type))).length;
   return {
-    kit_version: kit.version, content_type: type, mode: stats.mode,
+    kit_version: kit.version, content_type: type, mode: stats.mode, rules_in_force: inForce,
+    ...(inForce === 0 ? { warning: "No rules are in force for this content type, so nothing was checked against the Brand Kit. Enforce rules on the Brand Kit page first." } : {}),
     verdict: violations.length ? "fix_before_publishing" : "ready_for_review",
     summary: { findings: findings.length, violations: violations.length, critical: violations.filter((f) => f.severity === "critical").length },
     findings: findings.map((f) => ({

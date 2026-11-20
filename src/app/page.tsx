@@ -25,6 +25,8 @@ const LAST: Record<string, string> = {
   text_edited: "edited the text", images_updated: "updated the images", assets_updated: "updated the documents", submitted: "submitted it",
   approved: "approved it", approved_partial: "gave the compliance sign-off", changes_requested: "requested changes", comment: "commented",
   reapproval_needed: "sent it back for re-approval", exception_lapsed: "reopened a lapsed exception",
+  fix_undone: "undid a fix", share_created: "shared the approval record", share_revoked: "revoked a share link", assets_saved: "updated the documents",
+  approval_blocked_kit_changed: "tried to approve; the Brand Kit had changed", approval_blocked_exception_lapsed: "tried to approve; an exception had lapsed",
 };
 const lastText = (l: { actor: string; action: string }) => `${l.actor} ${LAST[l.action] ?? l.action.replace(/_/g, " ")}`;
 

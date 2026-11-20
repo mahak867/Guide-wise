@@ -137,7 +137,7 @@ export async function fetchPage(raw: string): Promise<{ url: string; title: stri
     }
     if (!res.ok) throw new BadInput(`That page answered with an error (${res.status}).`);
     const type = res.headers.get("content-type") ?? "";
-    if (!/text\/html|application\/xhtml|text\/plain/i.test(type)) throw new BadInput("That address is not a web page. For a PDF, download it and upload the file.");
+    if (!/text\/html|application\/xhtml|text\/plain/i.test(type)) throw new BadInput(/pdf/i.test(type) ? "That address is a PDF, not a web page. Download it and upload the file instead." : `That address is not a web page (it returned ${type.split(";")[0].trim() || "an unknown type"}). Use the address of the page itself.`);
     const reader = res.body?.getReader();
     const chunks: Uint8Array[] = [];
     let size = 0;

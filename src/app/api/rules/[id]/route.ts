@@ -68,6 +68,10 @@ export async function POST(req: Request, ctx: Ctx) {
       const impact = await assessImpact(wsOf(req), { kind: "rule", id, what: `Rule ${id} was amended: "${a.description}"` });
       return Response.json({ ok: true, kit_version: v, run: c.run, impact, added: c.added, changes: c.changes, dismissed: c.dismissed, resolves: c.resolves, checked_by: c.checked_by });
     }
+    // Asking for the state a rule is already in changes nothing: no new Brand Kit version, no re-checks.
+    if ((action === "promote" && rule.status === "enforced") || (action === "demote" && rule.status === "advisory")) {
+      return Response.json({ ok: true, unchanged: true, message: `${id} is already ${rule.status}.` });
+    }
     if (action === "promote") {
       // The gate: tests are re-run now, so a stale pass can't be used.
       const run = await runRuleTests(rule, facts, kit);

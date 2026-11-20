@@ -61,8 +61,9 @@ export async function assessImpact(ws: string, change: Change, factsBefore: Fact
       const status = riskTier(await getFindings(draft.id)).tier === "high" ? "compliance_review" : "brand_review";
       const why = lapsed.length ? `${change.what} An approved exception has also lapsed (${[...new Set(lapsed.map((f) => f.rule_id))].join(", ")}).` : change.what;
       const impact = { reason: why, change_kind: change.kind, change_id: change.id, at: new Date().toISOString(), previous_status: "approved" };
-      must(await d.from("drafts").update({ status, impact, updated_at: new Date().toISOString() }).eq("id", draft.id));
-      must(await d.from("events").insert({ ws, draft_id: draft.id, actor: "Guidewise", role: "system", action: "reapproval_needed", detail: { change: change.what, findings: fresh.length } }));
+      // Only move it back if it is still approved: two Brand Kit changes at once send it back (and log it) once.
+      const moved = must(await d.from("drafts").update({ status, impact, updated_at: new Date().toISOString() }).eq("id", draft.id).eq("status", "approved").select("id")) as unknown[];
+      if (moved.length) must(await d.from("events").insert({ ws, draft_id: draft.id, actor: "Guidewise", role: "system", action: "reapproval_needed", detail: { change: change.what, findings: fresh.length } }));
       affected.push({ id: draft.id, title: draft.title, status, outcome: "reapproval", findings: brief(fresh) });
     } else {
       await runReview(ws, draft, false, true);

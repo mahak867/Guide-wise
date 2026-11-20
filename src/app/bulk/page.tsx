@@ -160,6 +160,9 @@ export default function BulkCheck() {
 
       {run && summary && (
         <section className="mt-6" aria-labelledby="bulk-results">
+          {state && !state.rules.some((r) => r.status === "enforced") && (
+            <div className="mb-3"><Notice tone="error">No rules are in force in the Brand Kit, so these posts were not checked against anything. Enforce rules on the Brand Kit page, then run the check again.</Notice></div>
+          )}
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 id="bulk-results" ref={resultsHead} tabIndex={-1} className="focus:outline-none">Results</h2>

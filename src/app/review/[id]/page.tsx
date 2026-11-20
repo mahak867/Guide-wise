@@ -136,7 +136,10 @@ function describe(e: Ev): string {
     case "images_updated": return `updated the images (version ${d.version}) and re-ran the checks`;
     case "assets_updated": return "updated the campaign documents and re-ran the checks";
     case "reapproval_needed": return `sent it back for re-approval after a Brand Kit change: ${d.change}${d.findings ? ` (${d.findings} new finding${d.findings === 1 ? "" : "s"})` : ""}`;
-    default: return e.action;
+    case "share_created": return "created a read-only share link for the approval record";
+    case "share_revoked": return "revoked a read-only share link";
+    case "assets_saved": return "updated the campaign documents";
+    default: return e.action.replace(/_/g, " ");
   }
 }
 
@@ -307,7 +310,13 @@ export default function ReviewPage() {
   }
   useEffect(() => { keyHandler.current = onKey; });
 
-  if (error && !data) return <Notice tone="error">{error} <Link className="underline" href="/">Back to reviews</Link></Notice>;
+  if (error && !data) return (
+    <div className="space-y-3">
+      <h1>Review not found</h1>
+      <Notice tone="error">{error}</Notice>
+      <p className="text-sm text-muted">Each review belongs to the browser that created it, so a link from someone else opens their review only on their device. <Link className="underline" href="/">Back to reviews</Link> · <Link className="underline" href="/review/new">Start a new review</Link></p>
+    </div>
+  );
   if (!data) return <p className="text-sm text-muted">Loading the review…</p>;
 
   const { draft, findings, events, versions, receipt } = data;
@@ -698,7 +707,7 @@ export default function ReviewPage() {
               <p className="mt-1.5 text-muted">Open violations block approval until each is fixed or dismissed with a reason; suggestions never block it.</p>
             </div>
           )}
-          {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : "No findings. This draft follows the rules in force."}</Card>}
+          {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : (state && !state.rules.some((r) => r.status === "enforced")) ? "No rules are in force in the Brand Kit, so nothing was checked. Enforce rules on the Brand Kit page, then re-check." : "No findings. This draft follows the rules in force."}</Card>}
           {open.length > 0 && <div id="findings-list"><Card className="divide-y divide-line overflow-hidden">
           {open.map((f) => {
             const rule = state?.rules.find((r) => r.id === f.rule_id);
