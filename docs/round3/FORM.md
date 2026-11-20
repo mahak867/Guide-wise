@@ -1,67 +1,121 @@
-# Round 3 submission: form answers
+# Round 3 form: answers field by field
 
-Paste each block into the matching field. Submitted once, by the team leader (Mahak Fahad). Before submitting, rebuild the PDF (`node docs/round3/build-pdf.mjs`).
+Submitted once, by the team leader. Paste each block into the matching field. Fields marked YOU are yours. Before submitting: rebuild the PDF (`node docs/round3/build-pdf.mjs`), upload it to Drive, set "Anyone with the link" as Viewer, and open every link in a private window.
 
-## Final working link
-https://guidewise-kohl.vercel.app
+## Your team
 
-## Repository
-https://github.com/mahak867/Guide-wise
+**Team Name:** Guide Wise (YOU: copy exactly as written in Rounds 1 and 2 and on the payment)
 
-## Final product PDF
-docs/round3/Guidewise_Round3.pdf (upload the file; it is also in the repository)
+**Team Leader full name:** Mahak Fahad
 
-## Complete feature list
-Core loop: draft → code checks and AI checks → cited findings with re-tested fixes → routed to the right reviewer → human approval with a fingerprinted record.
+**Team Leader email:** YOU: the same email used in Rounds 1 and 2
 
-- Review: paste copy or upload DOCX/PDF, up to 4 images and 4 campaign documents; goal, audience, channel, locked phrases; confidential mode (never sent to AI); channel previews (Instagram, LinkedIn, Facebook ad, WhatsApp, email, web page) that mark the cut and warn when a disclaimer or call to action falls after it.
-- Code checks: 31 Brand Kit rules (one checks text size in images), each with its own test sentences (preferred terms, banned phrases, approved contacts, student results with dated consent, disclaimers incl. Hindi, brand-name spelling, hidden characters, paid-partnership labels, offer end dates, competitor names, vague link text, hashtags, emoji), and every figure checked against the Facts Register.
-- AI checks: one rule per call, run twice when they find something; Claude → Groq → Groq's smaller model → Gemini, with time caps, a circuit breaker and a cache. Without AI, code checks and the whole workflow still run.
-- Verifier: no source, no flag. Numbers are compared by code, never by AI.
-- Images: OCR, palette, WCAG contrast, alt text, logo size and clear space, in the browser; AI vision for stylised text and people shown.
-- Campaign review (Round 3): caption, creatives and documents (pasted, uploaded, or read from a live web page, with hidden text flagged) reviewed together; prices, figures, dates and promo codes compared across all of them.
-- Facts Register: evidence, owner, valid dates, disclosures, successors; embargoed, expired and wrong-subject figures flagged.
-- Change impact (Round 3): changing a fact or rule re-checks every draft that used it and sends broken approved pieces back for re-approval.
-- API and MCP server (Round 3): scoped, hashed, revocable keys; get_brief and check_draft over REST and MCP; playground and audit trail.
-- Workflow: four roles enforced on the server; risk routing; dual sign-off (compliance, then brand) for high risk; time-limited exceptions only a reviewer can grant; approval bound to the Brand Kit version and blocked by a database trigger while a violation is open; undo a fix for 10 seconds; keyboard review; each finding shows how the team settled the same rule before; comments, versions, audit log; approval record with a SHA-256 fingerprint.
-- Read-only share links: an approved record sent outside the workspace, valid 30 days, revocable.
-- Bulk check: a content calendar or CSV of up to 50 posts, a verdict per post in seconds, results CSV.
-- Chrome extension: check selected text in LinkedIn, Gmail, X or any page through the API.
-- Brand Kit: rule tests and an enforce gate, per-channel rules, versions, JSON export and import, a guide compiler for PDF and Word guides.
-- Insights: most-dismissed and unclear rules, AI-drafted amendments re-tested by code, dismissal rate before and after.
-- Privacy and security: personal data masked before any AI call; CSP and security headers; a threat model of 15 threats, each mapped to a test.
-- Easy to try: sample post, sample campaign, sample calendar, seven hard cases, guided tour, private workspace per visitor, works on a phone.
+**Team members, one per line:**
+Mahak Fahad
+Roshini R
 
-## Architecture and implementation summary
-One Next.js 16 (TypeScript) app on Vercel in Mumbai, with Supabase Postgres (9 migrations; every row scoped to a workspace; migration 009 adds a trigger that refuses approval while a violation is open). A review runs a fixed pipeline: redact personal data → code checks → AI checks → AI vision → campaign documents → cross-source consistency → verifier → fix re-test → risk routing → human approval and record. Only the AI steps use AI; numbers are always compared by code. One adapter covers Claude, Groq and Gemini with fallback, time caps, a circuit breaker, Zod validation and caching. Change impact (src/lib/impact.ts) runs in the same request as a fact or rule save. One governance module (src/lib/governance.ts) serves the app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all return the same findings. State changes on a draft are conditional updates, so racing actions get a 409 instead of duplicate approvals. Share links store only a SHA-256 hash. Security headers include a strict Content-Security-Policy. Details: docs/ARCHITECTURE.md; from demo to a real team: docs/PRODUCTION.md.
+## Your final product
 
-## Improvements made after Round 2
-The three we promised, all live and tested against the exact tests written at Round 2:
-1. Change impact: change a fact or rule, and every draft that used it is re-checked; approved pieces that no longer pass go back for re-approval with the reason; Insights shows each amended rule's dismissal rate before and after.
-2. API and MCP server: scoped keys, get_brief (only facts valid today) and check_draft (the same findings as the app) over REST and MCP, with a playground and an audit trail.
-3. Campaign review with AI vision: caption, creatives and documents reviewed together; price, date and promo-code mismatches found and cited; people shown in creatives flagged for consent and routed to compliance.
+**Final working project link:** https://guidewise-kohl.vercel.app
 
-Beyond the promises: bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review with precedents, time-limited exceptions and dual sign-off, approval bound to the Brand Kit version and a database approval gate, a web page reader with hidden-text detection, 31 Brand Kit rules, security headers and a threat model.
+**Source-code repository (public):** https://github.com/mahak867/Guide-wise
 
-Reliability: a bug hunt on the live site found and fixed lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; each now has a test. The AI helpers (guide compiler, rule amendment) were measured live, and the gaps found were fixed. Accessibility checks (axe-core) now run on every page; a load test passed; the demo's embargoed fact was moved so the sample still works throughout judging.
+**Google Drive link to the final PDF:** YOU: upload docs/round3/Guidewise_Round3.pdf, share as "Anyone with the link: Viewer", paste the link
+
+## The complete list of features
+
+Review a draft: paste copy or upload DOCX/PDF, with goal, audience, channel and locked phrases
+Campaign review: caption, up to 4 creatives and 4 documents (pasted, uploaded or read from a live web page) reviewed together
+Hidden-text detection on web pages read for a campaign
+Cross-source consistency: prices, figures, dates and promo codes compared across caption, creatives and documents
+31 Brand Kit rules checked by code, each with its own pass and fail test sentences
+Facts Register: every figure checked against an approved fact with evidence, owner and valid dates; embargoed, expired and wrong-subject figures flagged
+AI checks, one rule per call, run twice when they find something, with fallback across providers
+Verifier: a finding whose quote, rule or fact does not exist is dropped (no source, no flag)
+Every suggested fix re-tested by code before it is offered
+Image checks in the browser: OCR, palette, WCAG contrast per text line, text size, alt text, logo size, clear space, recoloured or stretched logo
+Image inspector: each image finding outlined on the image
+AI vision for stylised text and for people shown, who are flagged for a consent check
+Channel previews (Instagram, LinkedIn, Facebook ad, WhatsApp, email, web page) marking where text is cut
+Risk routing to the brand or compliance reviewer
+Four roles enforced on the server; dual sign-off for high-risk content
+Time-limited exceptions that only a reviewer can grant
+Approval bound to the Brand Kit version and blocked by a database trigger while a violation is open
+Approval record with a SHA-256 fingerprint; read-only share link valid 30 days, revocable
+Accept, edit, dismiss, reopen findings; undo a fix for 10 seconds; keyboard review
+Each finding shows how the team settled the same rule before
+Make this a rule: select words in a draft and get a tested rule proposal
+Change impact: changing a fact or rule re-checks every draft that used it and sends broken approved pieces back for re-approval
+REST API and MCP server with scoped, hashed, revocable keys; get_brief and check_draft; playground and audit trail
+Bulk check: a content calendar or CSV of up to 50 posts, verdict per post, results CSV
+Chrome extension: check selected text on LinkedIn, Gmail, X or any page
+Brand Kit: rule tests and enforce gate, per-channel rules, versions, JSON export and import
+Guide compiler: a PDF or Word brand guide turned into proposed rules with test sentences
+Insights: most-dismissed and unclear rules, AI-drafted amendments re-tested by code, dismissal rate before and after
+Privacy: personal data masked before any AI call; confidential drafts never sent to AI
+Comments, versions with word-level changes, audit log
+Sample post, sample campaign, sample calendar, seven hard cases, guided tour; a private workspace per visitor; works on a phone
+
+## Technical architecture and implementation summary
+
+One Next.js 16 (TypeScript) app on Vercel in Mumbai, next to a Supabase Postgres database (9 migrations; every row scoped to a workspace). The browser talks to the app's API routes; the app talks to Postgres and to the AI providers. One governance module serves the web app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all of them return the same findings.
+
+Data flow of a review: redact personal data, then code checks, AI checks, AI vision, campaign documents, cross-source consistency, the verifier, fix re-test, risk routing, and human approval with a fingerprinted record. Image analysis (OCR with tesseract.js, palette, contrast, logo matching) runs in the browser. Only the AI steps use AI.
+
+Models: one adapter covers Claude, Groq (gpt-oss-120b, with its smaller model as backup) and Gemini, with time caps, a circuit breaker, Zod validation of every answer and a cache. Without AI, code checks and the whole workflow still run.
+
+Hardest problem: making AI findings trustworthy enough to block a publication. AI may propose a finding, but code decides: the verifier drops any finding whose quote is not in the source or whose rule or fact does not exist, numbers are only ever compared by code, and every fix is re-checked before it is offered. On 40 held-out drafts this gives 92% precision and 98% recall with AI. The second hard problem was concurrency: approvals, sign-offs and saves are conditional database updates, and a trigger refuses approval while a violation is open, so racing clicks cannot approve twice or approve a broken draft.
+
+Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
-- 238 unit tests (CI on every push), including a deliberately wrong AI, fuzzing (26 hostile inputs) and the sample at three future dates.
-- On the live site (20 Nov 2026): browser journey 21/21; sweep 59/59 of every page and control at desktop and phone size; API probe 206/206 (bad input, wrong roles, other workspaces, the three improvements end to end with a real MCP client, race checks); Chrome extension end to end passes. The probe also runs every morning from GitHub Actions.
-- Accessibility: axe-core in the sweep, 0 serious or critical issues across 27 page checks.
-- Load test: 20 and then 50 concurrent visitors, 980 requests, 0 failed (docs/LOAD_TEST.md).
-- Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only. Images: 20 of 20 planted errors caught, 0 false alarms. Privacy: 0 leaks in 144 AI prompts.
-- AI helpers, measured before the fixes: the guide compiler proposed 16 of 17 expected rules and warned about 7 of 8 planted problems with 0 false warnings; the amendment helper passed the code gate 7 of 8 times but left the dismissed text flagged, which is now fixed and awaits re-measurement (docs/EVAL_HELPERS.md).
-- Hands-on user test: one student outside the team (2nd year CSE) used every feature without help in about 12 minutes and asked no questions; he liked the built-in demo and how simple it was. One tester is not a study; the December pilot is where real marketers use it.
-- Threat model: 15 threats, each mapped to the test that proves it (docs/THREAT_MODEL.md). All numbers come from our own test set and are optimistic.
 
-Details: docs/TESTING.md.
+Unit and integration: 290 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
-## Roadmap
-- Dec 2026: pilot with 3 coaching centres, re-measuring accuracy on their real drafts; accounts, organisations and row-level security.
-- Jan 2027: a paid AI tier with per-organisation budgets; scheduled fact expiry with impact emails.
-- Feb 2027: Instagram, WhatsApp Business and Google Docs integrations through the API.
-- Mar 2027: deeper visual checks (logo variants, layout rules).
-- Q2 2027: regulation packs for ed-tech, health and finance; pricing at ₹1,999 a month per centre.
+Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 219 checks (bad input, wrong roles, other workspaces, races, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
 
-Costed in docs/ROADMAP.md; what changes from demo to a real team in docs/PRODUCTION.md.
+Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
+
+User testing: one student outside the team (2nd year CSE) used every feature without help in about 12 minutes and asked no questions; he liked the built-in demo and how simple it was.
+
+What we found and fixed: a bug hunt on the live site found lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; all fixed, each with a test. The AI helpers were measured live and their gaps fixed.
+
+Still imperfect: accuracy numbers come from our own test set; only one outside user test; no sign-in or organisations yet (a random private workspace per visitor); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
+
+## Improvement 1
+
+Committed: change impact. Changing or expiring a fact, or amending a rule, lists every open draft and approved piece that used it, re-checks them, marks approved pieces that no longer pass as needing re-approval, and shows each amended rule's dismissal rate before and after. Test: change fact F-3 and see every draft that cited it listed, approved ones marked for re-approval.
+
+Delivered: all of it, live. Saving a fact or rule re-checks every affected draft in the same request; approved pieces that now fail go back for re-approval with the reason; Insights shows the dismissal rate before and after each amendment. The Round 2 test passes in the live browser journey and the API probe.
+
+## Improvement 2
+
+Committed: a REST API and an MCP server with scoped keys, exposing get_brief (rules in force, facts valid today) and check_draft (the same findings as the app), with an in-app playground and an audit entry per call. Test: call check_draft from the playground and an MCP client and get the same findings as the app, with an audit entry.
+
+Delivered: all of it, live. Keys are scoped, stored only as hashes, and revocable; get_brief never returns an expired or embargoed fact; check_draft returns the app's findings over REST and MCP. The live probe runs the Round 2 test with a real MCP client. Beyond the commitment, the same API now powers bulk check and the Chrome extension.
+
+## Improvement 3
+
+Committed: campaign review with AI vision. Caption, creatives, landing-page copy and PDF brochure reviewed together; figures, dates and claims that disagree across documents flagged; AI vision reads stylised text and flags photos of people for a consent check. Test: a three-asset campaign with a price mismatch between creative and brochure and a student photo without consent; both found, cited and routed to compliance.
+
+Delivered: live, and the Round 2 test passes. Documents can be pasted, uploaded or read from a live web page (with hidden text flagged); prices, figures, dates and promo codes are compared by code across every source and cited. AI vision reads stylised text and flags people shown, which routes the draft to compliance. One honest limit: a person in a photo is flagged for a consent check, but we do not identify who it is or match the face to a student record; the compliance reviewer confirms consent.
+
+## Anything else you improved after Round 2
+
+Bulk check of a content calendar; a Chrome extension; read-only share links; channel previews; make this a rule from selected words; an image inspector with recoloured-logo, stretched-logo and text-size checks; undo and keyboard review with precedents; time-limited exceptions and dual sign-off; approval bound to the Brand Kit version and a database approval gate; a web page reader with hidden-text detection; 31 Brand Kit rules (from 24); simpler main screens; security headers, a strict Content-Security-Policy and a threat model of 15 threats each mapped to a test; a bug hunt with fixes; accessibility checks on every page; a load test; a daily live probe; the first hands-on user test.
+
+## Product roadmap and future development plan
+
+For: marketing teams at Indian coaching centres first (outcome claims and results ads are where regulatory risk is highest), then ed-tech, health and finance marketing teams.
+
+1. Dec 2026: pilot with 3 coaching centres. Add sign-in, organisations and row-level security (about a week; every table already carries a workspace id). Re-measure accuracy on 50 real, anonymised drafts per centre and publish it beside our own numbers.
+2. Jan 2027: a paid AI tier with a monthly budget per organisation; scheduled fact expiry with impact emails to the fact's owner.
+3. Feb 2027: Instagram, WhatsApp Business and Google Docs integrations through the existing API, so drafts are checked where they are written.
+4. Mar 2027: deeper visual checks: logo variants, layout rules and fonts.
+5. Q2 2027: regulation packs for ed-tech, health and finance; pricing at ₹1,999 a month per centre.
+
+What it takes: two developers part-time, about ₹1,500 a month of AI per centre at 1,500 drafts, and Supabase Pro. Costed in docs/ROADMAP.md; demo to real team in docs/PRODUCTION.md.
+
+## Final confirmation (YOU)
+
+Tick all six boxes only after: every link opened in a private window, the PDF link opens signed out, and nothing is pushed after submitting.
