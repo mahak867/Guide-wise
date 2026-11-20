@@ -1,11 +1,11 @@
-import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
-import { Contacts, Disclaimers, Palette, firstIssue } from "@/lib/schemas";
+import { actor, bumpKit, db, fail, log, must, readBody, wsOf } from "@/lib/db";
+import { Contacts, Disclaimers, Palette, firstIssue, logoProblem } from "@/lib/schemas";
 
 // Assets: palette, approved disclaimers, approved contacts, the logo.
 export async function POST(req: Request) {
   try {
     if (actor(req).role !== "manager") return fail("Only the brand manager can change assets. Switch role to Meera.", 403);
-    const b = await req.json();
+    const b = await readBody(req);
     const patch: Record<string, unknown> = {};
     for (const [k, schema] of [["palette", Palette], ["disclaimers", Disclaimers], ["contacts", Contacts]] as const) {
       if (b[k] === undefined) continue;
@@ -16,12 +16,18 @@ export async function POST(req: Request) {
     if ("logo" in b) {
       const l = b.logo;
       if (l === null || l === "") patch.logo = null;
-      else if (typeof l === "string" && (/^data:image\/(png|webp);base64,/.test(l) || /^\/brand\/[\w.-]+\.png$/.test(l)) && l.length <= 400_000) patch.logo = l;
-      else return fail("The logo must be a PNG or WebP image under 300 KB.");
+      else {
+        const why = logoProblem(l);
+        if (why) return fail(why);
+        patch.logo = l;
+      }
     }
     if (b.profile && typeof b.profile === "object") {
       const n = b.profile.students_coached;
-      patch.profile = { sector: String(b.profile.sector ?? "").slice(0, 80), students_coached: n === "" || n === null || n === undefined ? null : Math.max(0, Math.floor(Number(n))) };
+      const count = n === "" || n === null || n === undefined ? null : Number(String(n).replace(/,/g, ""));
+      // "abc" or "1e400" used to clear the figure silently, and "-5" became 0.
+      if (count !== null && (!Number.isFinite(count) || count < 0 || count > 1e9)) return fail("Students coached must be a whole number of 0 or more, like 50000.");
+      patch.profile = { sector: String(b.profile.sector ?? "").slice(0, 80), students_coached: count === null ? null : Math.floor(count) };
     }
     if (!Object.keys(patch).length) return fail("Nothing to change.");
     must(await db().from("kit").update(patch).eq("ws", wsOf(req)));

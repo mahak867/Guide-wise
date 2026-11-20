@@ -60,10 +60,14 @@ async function seedApproved(ws: string): Promise<void> {
   if (existing.length) return;
   const a = SEED_APPROVED;
   const at = new Date(Date.now() - 3 * 864e5).toISOString();
-  const row = must(await d.from("drafts").insert({
-    ws, title: a.title, content_type: a.content_type, text: a.text, intent: a.intent, status: "approved", risk_tier: "high",
+  // The same ID for every seeding of this workspace, so two seedings at once (a double-clicked Reset demo, or a
+  // first visit opening several pages) insert it once: the second insert is ignored and adds nothing else.
+  const inserted = must(await d.from("drafts").upsert({
+    id: seedDraftId(ws), ws, title: a.title, content_type: a.content_type, text: a.text, intent: a.intent, status: "approved", risk_tier: "high",
     risk_reasons: ["Uses a results figure (F-3)"], author: "Riya", mode: "rules-only", created_at: at, updated_at: at,
-  }).select("id").single()) as { id: string };
+  }, { onConflict: "id", ignoreDuplicates: true }).select("id")) as { id: string }[];
+  const row = inserted[0];
+  if (!row) return;
   must(await d.from("versions").insert({ draft_id: row.id, version: 1, text: a.text, note: "Submitted for review" }));
   // High risk, so it carries both sign-offs: compliance (Kavya) first, then brand (Arjun).
   const hour = (h: number) => new Date(Date.parse(at) - h * 36e5).toISOString();
@@ -79,6 +83,12 @@ async function seedApproved(ws: string): Promise<void> {
     { ws, draft_id: row.id, actor: approvers[0].name, role: approvers[0].role, action: "approved_partial", detail: { version: 1, kit_version: 1, note, waiting_for: "brand" }, at: approvers[0].at },
     { ws, draft_id: row.id, actor: approvers[1].name, role: approvers[1].role, action: "approved", detail: { version: 1, kit_version: 1, note, approvers: approvers.map((x) => ({ name: x.name, role: x.role })) }, at: approvers[1].at },
   ]));
+}
+
+/** The seeded approved draft's ID in a workspace: a UUID derived from the workspace name. */
+export function seedDraftId(ws: string): string {
+  const h = createHash("sha256").update(`guidewise-seed:${ws}`, "utf8").digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
 export async function loadKit(ws: string): Promise<{ kit: Kit; rules: Rule[]; facts: Fact[] }> {
@@ -99,10 +109,16 @@ export async function loadKit(ws: string): Promise<{ kit: Kit; rules: Rule[]; fa
 /** Any change to rules, facts or assets creates a new Brand Kit version. */
 export async function bumpKit(ws: string): Promise<number> {
   const d = db();
-  const kit = must(await d.from("kit").select("version").eq("ws", ws).single()) as { version: number };
-  const version = kit.version + 1;
-  must(await d.from("kit").update({ version, updated_at: new Date().toISOString() }).eq("ws", ws));
-  return version;
+  // Compare and set: two changes saved at the same moment must make two versions, not one (bug hunt, 20 Nov:
+  // five fact saves at once moved the version from 1 to 3). The update applies only if nobody bumped it meanwhile.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const kit = must(await d.from("kit").select("version").eq("ws", ws).single()) as { version: number };
+    const version = kit.version + 1;
+    const done = must(await d.from("kit").update({ version, updated_at: new Date().toISOString() }).eq("ws", ws).eq("version", kit.version).select("version")) as unknown[];
+    if (done.length) return version;
+    await new Promise((r) => setTimeout(r, 20 + Math.random() * 60));
+  }
+  throw new Error("The Brand Kit is being changed by several people at once. Try again in a moment.");
 }
 
 export async function log(req: Request, draft_id: string | null, action: string, detail: Record<string, unknown> = {}): Promise<void> {
@@ -112,6 +128,14 @@ export async function log(req: Request, draft_id: string | null, action: string,
 
 /** A problem with what the caller sent. Reported as 400 with its message, never as a server error. */
 export class BadInput extends Error {}
+
+/** The request body as a JSON object. A body of null, a list, a string or a number is the caller's mistake (400), not a crash. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function readBody(req: Request): Promise<Record<string, any>> {
+  const b: unknown = await req.json();
+  if (!b || typeof b !== "object" || Array.isArray(b)) throw new BadInput("The request body must be a JSON object.");
+  return b as Record<string, unknown>;
+}
 
 export function fail(e: unknown, status = 400): Response {
   // A body that is not JSON, or input a helper rejected, is the caller's mistake, not ours.

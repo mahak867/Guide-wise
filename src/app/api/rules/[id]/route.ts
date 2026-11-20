@@ -1,4 +1,4 @@
-import { actor, bumpKit, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
+import { actor, bumpKit, db, fail, loadKit, log, must, readBody, wsOf } from "@/lib/db";
 import { checkAmendment, dismissedSentence, type Dismissed } from "@/lib/amend";
 import { aiAvailable, draftAmendment, type Amendment } from "@/lib/engine/ai";
 import { redact, restore } from "@/lib/engine/redact";
@@ -12,7 +12,7 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function POST(req: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    const body = await req.json();
+    const body = await readBody(req);
     const { action } = body;
     const { rules, facts, kit } = await loadKit(wsOf(req));
     const rule = rules.find((r) => r.id === id);
@@ -95,6 +95,9 @@ export async function DELETE(req: Request, ctx: Ctx) {
   try {
     if (actor(req).role !== "manager") return fail("Only the brand manager can delete rules. Switch role to Meera.", 403);
     const { id } = await ctx.params;
+    // Deleting a rule that is not there changes nothing: no new Brand Kit version, no impact check.
+    const gone = must(await db().from("rules").select("id").eq("ws", wsOf(req)).eq("id", id)) as unknown[];
+    if (!gone.length) return fail(`Rule ${id} was not found. It may already have been deleted.`, 404);
     must(await db().from("rules").delete().eq("ws", wsOf(req)).eq("id", id));
     const version = await bumpKit(wsOf(req));
     await log(req, null, "rule_deleted", { rule: id, kit_version: version });

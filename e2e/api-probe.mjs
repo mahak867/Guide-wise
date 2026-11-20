@@ -348,6 +348,42 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("share: an approved draft stays locked for other actions", await call("POST", `/api/drafts/${approved.id}`, { body: { action: "comment", comment: "x" } }), is(409));
 }
 
+// Bug hunt (20 Nov): repeated and racing calls, and odd bodies. Run in a workspace of their own.
+{
+  const other = { "x-workspace": "probe-race-" + randomUUID().slice(0, 12) };
+  const inWs = (method, path, o = {}) => call(method, path, { ...o, headers: { ...other, ...(o.headers ?? {}) } });
+  await Promise.all([1, 2, 3, 4].map(() => inWs("GET", "/api/state")));
+  await Promise.all([1, 2, 3].map(() => inWs("POST", "/api/reset")));
+  const seeded = await inWs("GET", "/api/drafts");
+  expect("race: 3 resets at once leave one seeded approved draft", seeded, (r) => r.s === 200 && r.j.drafts.length === 1 && r.j.drafts[0].status === "approved");
+  const v0 = (await inWs("GET", "/api/state")).j.kit.version;
+  const fact = { id: "F-77", statement: "We run 12 study centres", value: 12, evidence: "Ops list", keywords: "centres" };
+  const saves = await Promise.all([1, 2, 3, 4, 5].map(() => inWs("POST", "/api/facts", { role: "manager", body: fact })));
+  const v1 = (await inWs("GET", "/api/state")).j.kit.version;
+  expect("race: 5 fact saves at once make 5 Brand Kit versions", { s: saves.every((x) => x.s === 200) ? 200 : 500, j: { v0, v1 } }, (r) => r.s === 200 && v1 === v0 + 5);
+  const keys = await Promise.all(Array.from({ length: 13 }, (_, i) => inWs("POST", "/api/keys", { role: "manager", body: { name: `race ${i}`, scopes: ["brief:read", "brief:read"] } })));
+  const active = (await inWs("GET", "/api/keys")).j.keys.filter((k) => !k.revoked_at);
+  expect("race: 13 key creations at once stop at 10 active keys", { s: 200, j: { active: active.length, codes: keys.map((k) => k.s) } }, () => active.length === 10 && keys.filter((k) => k.s === 200).length === 10);
+  expect("keys: a scope listed twice is stored once", { s: 200, j: active[0] }, () => active[0].scopes.length === 1);
+  for (const p of ["/api/drafts", "/api/facts", "/api/rules", "/api/rules/R-12", "/api/kit", "/api/compile", "/api/extract"]) {
+    for (const raw of ["null", "\"x\"", "5"]) expect(`body ${raw} ${p} is a 400`, await inWs("POST", p, { role: "manager", raw }), (r) => is4xx(r) && r.s === 400);
+  }
+  expect("drafts: an unknown content type refused", await inWs("POST", "/api/drafts", { body: { text: "A normal post about our classes.", content_type: "<script>", useAI: false } }), (r) => is4xx(r) && r.s === 400);
+  expect("drafts: invisible characters only refused", await inWs("POST", "/api/drafts", { body: { text: "​".repeat(20), useAI: false } }), (r) => is4xx(r) && r.s === 400);
+  const long = await inWs("POST", "/api/drafts", { body: { title: "T".repeat(5000), text: "A normal post about our classes.", useAI: false } });
+  expect("drafts: a 5,000-character title is cut to 200", long, (r) => r.s === 200);
+  if (long.j?.id) expect("drafts: stored title is 200 characters", await inWs("GET", `/api/drafts/${long.j.id}`), (r) => r.j?.draft?.title?.length === 200);
+  expect("facts: deleting a fact that is not there is a 404", await inWs("DELETE", "/api/facts/NOPE-1", { role: "manager" }), (r) => is4xx(r) && r.s === 404);
+  expect("rules: deleting a rule that is not there is a 404", await inWs("DELETE", "/api/rules/NOPE-1", { role: "manager" }), (r) => is4xx(r) && r.s === 404);
+  const rule = { id: "BAD-5", kind: "code", category: "pattern", title: "t", description: "d", tests: [] };
+  expect("rule with an overlapping repeated choice (a|a)*$ refused", await inWs("POST", "/api/rules", { role: "manager", body: { ...rule, config: { patterns: ["(a|a)*$"] } } }), (r) => is4xx(r) && /options can match/.test(r.j.error));
+  expect("import: a rule that can flag nothing refused", await inWs("POST", "/api/kit/import", { role: "manager", body: { format: "guidewise-brand-kit", rules: [{ ...rule, category: "term", config: {} }] } }), (r) => is4xx(r) && /could never flag/.test(r.j.error));
+  expect("import: an overlapping pattern refused", await inWs("POST", "/api/kit/import", { role: "manager", body: { format: "guidewise-brand-kit", rules: [{ ...rule, config: { patterns: ["(\\w|\\d)+$"] } }] } }), is4xx);
+  expect("logo: base64 that is not a PNG refused", await inWs("POST", "/api/kit", { role: "manager", body: { logo: "data:image/png;base64,notbase64!!!" } }), is4xx);
+  expect("logo: a JPEG labelled PNG refused", await inWs("POST", "/api/kit", { role: "manager", body: { logo: "data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD" } }), is4xx);
+  for (const n of ["abc", "-5", "1e400"]) expect(`profile: students coached "${n}" refused`, await inWs("POST", "/api/kit", { role: "manager", body: { profile: { students_coached: n } } }), (r) => is4xx(r) && r.s === 400);
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));
