@@ -6,6 +6,7 @@ import { reviewDraft, riskTier } from "./engine/review";
 import { summarisePrecedents, type DismissEvent, type Precedent, type PrecedentRow } from "./review-extras";
 import type { Finding, Intent } from "./types";
 import type { DraftImage } from "./engine/visual";
+import { validBox, type Box, type ColourArea, type TextLine } from "./regions";
 
 export interface DraftRow {
   updated_at?: string;
@@ -85,7 +86,8 @@ export async function runReview(ws: string, draft: DraftRow, useAI: boolean, kee
   }
   const fresh = findings.filter((f) => !known.has(key(f)));
   if (fresh.length) {
-    must(await d.from("findings").insert(fresh.map((f) => ({ ...f, draft_id: draft.id, draft_version: draft.version, state: "open" }))));
+    // A region is not stored: it is worked out again from the stored image (regionFor in engine/visual.ts).
+    must(await d.from("findings").insert(fresh.map(({ region: _region, ...f }) => ({ ...f, draft_id: draft.id, draft_version: draft.version, state: "open" }))));
   }
   // A finding that was closed by an edit and has come back is reopened.
   const back = existing.filter((f) => f.state === "resolved" && found.has(key(f)));
@@ -151,12 +153,46 @@ function cleanLogo(l: unknown): DraftImage["logo"] {
   if (!l || typeof l !== "object") return null;
   const o = l as Record<string, unknown>;
   const n = (v: unknown) => Math.max(0, Math.min(1, Number(v) || 0));
-  const b = o.box as Record<string, unknown> | undefined;
+  const box = validBox(o.box);
+  const st = Number(o.stretch);
+  const hex = (v: unknown) => /^#[0-9A-F]{6}$/.test(String(v));
+  const colours = (Array.isArray(o.colours) ? o.colours : []).slice(0, 2)
+    .filter((c: { expected?: unknown; found?: unknown }) => hex(c?.expected) && hex(c?.found))
+    .map((c: { expected: string; found: string; share?: unknown }) => ({ expected: c.expected, found: c.found, share: n(c.share) }));
   return {
     found: o.found === true, score: n(o.score),
-    ...(b ? { box: { x: n(b.x), y: n(b.y), w: n(b.w), h: n(b.h) } } : {}),
+    ...(box ? { box: round(box) } : {}),
     ...(o.crowd !== undefined ? { crowd: n(o.crowd) } : {}),
+    ...(st >= 0.5 && st <= 2 ? { stretch: st } : {}),
+    ...(o.by === "edges" ? { by: "edges" as const } : {}),
+    ...(colours.length ? { colours } : {}),
   };
+}
+
+const round = (b: Box): Box => ({ x: +b.x.toFixed(4), y: +b.y.toFixed(4), w: +b.w.toFixed(4), h: +b.h.toFixed(4) });
+
+/** OCR lines from the browser: up to 40, each with its text, confidence, box and measured contrast. */
+function cleanLines(input: unknown): TextLine[] {
+  return (Array.isArray(input) ? input : []).slice(0, 40).flatMap((l: Record<string, unknown>) => {
+    const box = validBox(l?.box);
+    const text = String(l?.text ?? "").replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!box || !text) return [];
+    const c = Number(l.contrast);
+    const hex = (v: unknown) => /^#[0-9A-F]{6}$/.test(String(v));
+    return [{
+      text, conf: Math.max(0, Math.min(100, Math.round(Number(l.conf) || 0))), box: round(box),
+      ...(c >= 1 && c <= 21 && hex(l.fg) && hex(l.bg) ? { contrast: Math.round(c * 100) / 100, fg: String(l.fg), bg: String(l.bg) } : {}),
+    }];
+  });
+}
+
+/** Colour areas from the browser: up to 24, each a measured colour with its box. */
+function cleanAreas(input: unknown): ColourArea[] {
+  return (Array.isArray(input) ? input : []).slice(0, 24).flatMap((a: Record<string, unknown>) => {
+    const box = validBox(a?.box);
+    if (!box || !/^#[0-9A-F]{6}$/.test(String(a.hex))) return [];
+    return [{ hex: String(a.hex), share: Math.max(0, Math.min(1, Number(a.share) || 0)), box: round(box) }];
+  });
 }
 
 /** Validate campaign documents: up to 4, each named, 10 to 12,000 characters. */
@@ -189,6 +225,8 @@ export function cleanImages(input: unknown): DraftImage[] {
       ocr: String(i.ocr ?? "").slice(0, 4000),
       ocr_ok: i.ocr_ok !== false,
       logo: cleanLogo(i.logo),
+      lines: cleanLines(i.lines),
+      areas: cleanAreas(i.areas),
     };
   });
 }

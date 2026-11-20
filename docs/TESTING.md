@@ -20,7 +20,7 @@ Latest full run against the live site (20 Nov 2026 build): **185 unit tests, 21 
 | --- | --- | --- |
 | Text: 40 held-out planted-error drafts, code checks only | `npm run eval` | Precision 100% (93–100%), recall 74% (63–83%), 0 of 17 hard phrasings |
 | Text: same drafts, code and AI checks, run twice on the live site | `npx tsx scripts/eval.ts --ai` | Precision 92% (83–96%), recall 98% (92–100%), 17 of 17 hard phrasings, 83% same result on both runs |
-| Images: 20 generated creatives with planted colour, contrast and logo errors, and clean ones | `npm run eval:images` | 20 of 20 planted errors caught, 0 false alarms in 40 clean checks |
+| Images: 28 generated creatives with planted colour, contrast, logo (missing, small, crowded, recoloured, stretched) and text-size errors, and clean ones; the 8 with real text are read by the same OCR as the browser | `npm run eval:images` | 26 of 26 planted errors caught, 0 false alarms in 66 clean checks (Round 2 set: 20 of 20, 0 in 40) |
 | Privacy: 8 pieces of personal data of 5 kinds (emails, mobile and landline numbers, Aadhaar, PAN, a card number) planted in 24 drafts, plus 3 confidential drafts with canary words | `npm run eval:privacy` | 0 leaks in 144 prompts sent to the AI |
 | AI helpers, live: guide compiler on 10 passages with planted vague and contradictory text; rule amendment on 8 seeded rules with 16 real dismissals | `npm run eval:helpers` | Compiler: 16 of 17 expected rules, 15 of 18 proposals pass their own tests, 7 of 8 planted problems warned, 0 false warnings. Amendment: 7 of 8 accepted by the code gate, but the dismissed text is still flagged after all 7 |
 

@@ -24,7 +24,9 @@ export interface Precedent {
  *  caps      { allow?: string[] }   (no words in capitals for emphasis; acronyms allowed)
  *  length    { maxChars: number }   (text past the limit is hidden, e.g. behind "See more")
  *  readability { maxWords?: number } (sentences longer than this are hard to read on a phone)
- *  visual-logo { logo?: { minWidth?: number; clear?: number } } (the Brand Kit logo must appear, large enough, with clear space)
+ *  visual-logo { logo?: { minWidth?: number; clear?: number } } (the Brand Kit logo must appear, large enough, with clear space,
+ *             in its own colours and proportions)
+ *  visual-legibility { minPx?: number } (text read in a creative must be at least this size on a 1080-pixel-wide post)
  *  requires  { patterns: string[], requires: string[], missing: string, append?: string } (a trigger needs one of the required words in the same text,
  *             e.g. paid content needs "#ad"; append is added after the sentence as the fix)
  *  competitor { names: string[] }   (other coaching institutes; naming one is a comparison for the brand manager)
@@ -59,6 +61,8 @@ export interface Rule {
     maxChars?: number;
     maxWords?: number;
     logo?: { minWidth?: number; clear?: number };
+    /** visual-legibility: the smallest type size allowed, in pixels on a 1080-pixel-wide post. */
+    minPx?: number;
     /** requires: at least one of these patterns must appear in the same text as a trigger. */
     requires?: string[];
     /** requires: what the required words are, in plain words for the finding, e.g. '#ad, #sponsored or "Paid partnership"'. */
@@ -135,6 +139,8 @@ export interface Finding {
   fix?: string | null;
   fix_note?: string | null;
   fix_status: "verified" | "withdrawn" | "none";
+  /** Image findings: where in the image, as fractions of its width and height. Not stored (worked out again from the image). */
+  region?: { x: number; y: number; w: number; h: number } | null;
   /** Who wrote the fix: our code (approved wording) or the AI. AI-written fixes are held to a stricter re-test. */
   origin?: "code" | "ai";
   state?: string;
