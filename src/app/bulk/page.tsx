@@ -29,7 +29,7 @@ export default function BulkCheck() {
   const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [run, setRun] = useState<{ items: BulkItem[]; results: BulkResult[]; ms: number } | null>(null);
+  const [run, setRun] = useState<{ items: BulkItem[]; results: BulkResult[]; ms: number; kit: number | null } | null>(null);
   const [opening, setOpening] = useState<number | null>(null);
   const resultsHead = useRef<HTMLHeadingElement>(null);
 
@@ -55,8 +55,8 @@ export default function BulkCheck() {
     setError(null);
     const t = clock();
     try {
-      const out = await api<{ results: BulkResult[] }>("/api/bulk", { posts: valid.map(({ text, title, content_type, date }) => ({ text, title, content_type, date })) });
-      setRun({ items: valid, results: out.results, ms: clock() - t });
+      const out = await api<{ results: BulkResult[]; kit_version?: number }>("/api/bulk", { posts: valid.map(({ text, title, content_type, date }) => ({ text, title, content_type, date })) });
+      setRun({ items: valid, results: out.results, ms: clock() - t, kit: out.kit_version ?? state?.kit.version ?? null });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -167,7 +167,7 @@ export default function BulkCheck() {
             <div>
               <h2 id="bulk-results" ref={resultsHead} tabIndex={-1} className="focus:outline-none">Results</h2>
               <p className="mt-1 text-sm" role="status">
-                <b>{plural(summary.total, "post")}</b> checked in {(run.ms / 1000).toFixed(1)} s against Brand Kit v{state?.kit.version ?? "?"}:{" "}
+                <b>{plural(summary.total, "post")}</b> checked in {(run.ms / 1000).toFixed(1)} s against {run.kit ? `Brand Kit v${run.kit}` : "the Brand Kit"}:{" "}
                 <b className="text-brand">{summary.ready} ready for review</b>, <b className="text-crit">{summary.fix} {summary.fix === 1 ? "needs" : "need"} fixes</b>.
               </p>
               {summary.common.length > 0 && (
