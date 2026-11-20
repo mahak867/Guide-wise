@@ -331,6 +331,35 @@ await step(page, "new review: ad with an uploaded image and a locked phrase", as
   must(!titles.includes("The PrepPath mark on every creative"), "logo flagged although the creative carries it");
   return `${titles.length} findings`;
 });
+await step(page, "channel preview: the sample caption is cut on Instagram, with the missing disclaimer and the call to action after the cut", async () => {
+  await go("/review/new", "Brief card"); await role("creator");
+  await page.getByRole("button", { name: "Use the sample caption" }).click();
+  const panel = page.getByRole("tabpanel");
+  await panel.getByText("What a reader sees before tapping").waitFor({ timeout: 5000 });
+  must((await page.getByRole("tab", { selected: true }).innerText()).trim() === "Instagram", "social post did not open the Instagram tab");
+  must((await panel.locator("textarea, input").count()) === 0, "the preview contains a form field");
+  const t = await panel.innerText();
+  must(/Cut: hidden until the reader taps/.test(t) && /The first 125 of 274 characters/.test(t), "no cut shown at 125 characters");
+  must(/Disclaimer D-1 \(“Past results do not guarantee future selection\.”\) is required.*not in the draft/.test(t), "no warning that D-1 is missing");
+  must(/The call to action \(“Enrol today, limited seats”\) is after the cut/.test(t), "no warning that the call to action is after the cut");
+  // Arrow keys move between tabs; the ad tab shows "See more", WhatsApp the whole message.
+  await page.getByRole("tab", { selected: true }).press("ArrowRight");
+  must((await page.getByRole("tab", { selected: true }).innerText()).trim() === "LinkedIn", "ArrowRight did not move to LinkedIn");
+  await page.getByRole("tab", { name: "WhatsApp" }).click();
+  await panel.getByText("WhatsApp shows the whole message").waitFor({ timeout: 3000 });
+  await page.getByRole("tab", { name: "Instagram" }).click();
+  return await axeCheck(page);
+});
+await step(mp, "phone: channel preview starts folded, opens, and does not scroll sideways", async () => {
+  await mp.goto(L + "/review/new"); await mp.getByText("Brief card").first().waitFor({ timeout: 30000 });
+  await mp.getByRole("button", { name: "Use the sample caption" }).click();
+  must(!(await mp.locator("details", { hasText: "Preview on Instagram" }).evaluate((d) => d.open)), "preview is open on a phone");
+  await mp.getByText("Preview on Instagram").click();
+  await mp.getByText(/The call to action .* is after the cut/).first().waitFor({ timeout: 3000 });
+  const o = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  must(o <= 1, `scrolls sideways by ${o}px`);
+  return await axeCheck(mp);
+});
 await step(page, "hard cases: each fills the draft; hidden characters are caught, then the guarantee", async () => {
   await go("/review/new", "Brief card"); await role("creator");
   const labels = ["Prompt injection", "Right number, wrong subject", "Hindi claim, English disclaimer", "Personal data", "Paraphrase only AI catches", "Ad cut off at", "Hidden characters"];

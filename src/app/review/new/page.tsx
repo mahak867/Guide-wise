@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Button, Card, Field, Notice, PageHead, inputCls } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { CampaignDocs, type Doc } from "@/components/CampaignDocs";
+import { ChannelPreview } from "@/components/ChannelPreview";
 import { analyseImage } from "@/lib/image";
 import { api, useApp } from "@/lib/client";
 import type { ImageInput } from "@/lib/image";
@@ -174,7 +175,9 @@ export default function NewReview() {
               </Button>
               <Button type="button" variant="ghost" disabled={!!busy} onClick={loadCampaign}>
                 Use the sample campaign
-              </Button>            </div>
+              </Button>
+            </div>
+            <ChannelPreview text={text} title={title} type={type} kit={state?.kit} rules={brief?.rules ?? []} cta={intent.cta} image={images[0]} />
             <div id="hard" className="scroll-mt-24 rounded-md border border-dashed border-line px-3 py-2.5 text-sm">
               <span className="font-medium">Try a hard case</span> <span className="text-muted">Drafts built to get past a checker. Pick one, then run the review.</span>
               <div className="mt-2 flex flex-wrap gap-1.5">
