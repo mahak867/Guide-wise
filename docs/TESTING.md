@@ -1,6 +1,6 @@
 # Testing
 
-Latest full run against the live site (19 Nov 2026 build): **116 unit tests, 20 of 20 journey steps, 52 of 52 sweep steps, 102 of 102 API probe checks**, no server or page errors.
+Latest full run against the live site (20 Nov 2026 build): **185 unit tests, 21 of 21 journey steps, 55 of 55 sweep steps, 130 of 130 API probe checks**, no server or page errors.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |

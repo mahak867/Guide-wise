@@ -13,23 +13,25 @@ docs/round3/Guidewise_Round3.pdf (upload the file; it is also in the repository)
 
 ## Complete feature list
 - Review: paste copy or upload DOCX/PDF, up to 4 images and 4 campaign documents; goal, audience, channel and locked phrases; confidential mode (never sent to AI).
-- Code checks: preferred terms, banned phrases, approved contacts, student results with dated consent, results disclaimer (Hindi too), brand-name spelling, capitals, length per channel, sentence length, inclusive wording, hidden characters, and every figure checked against the Facts Register.
+- Code checks: preferred terms, banned phrases, approved contacts, student results with dated consent, results disclaimer (Hindi too), brand-name spelling, capitals, length per channel, sentence length, inclusive wording, hidden characters, paid-partnership labels, offer end dates and T&C, competitor names, vague link text, CamelCase hashtags, emoji and "!!" limits, and every figure checked against the Facts Register.
 - AI checks: one rule per call, run twice when they find something; Claude → Groq → Gemini fallback with time caps, a circuit breaker and an answer cache.
 - Verifier: no source, no flag. A finding whose quote, rule or fact does not exist is dropped.
 - Images: OCR, palette, WCAG contrast, alt text and logo size and clear space, all in the browser; AI vision for stylised text and for people shown.
 - Campaign review (new): documents pasted, uploaded as PDF or Word, or read from a live web page by its address; every code check and AI check on every document and on the text in each creative; prices, figures, dates and promo codes compared across the caption, images and documents.
-- Facts Register: evidence, owner, valid dates and disclosures; flags embargoed, expired and wrong-subject figures.
+- Facts Register: evidence, owner, valid dates and disclosures; flags embargoed, expired and wrong-subject figures; an expired fact points to the fact that replaced it.
 - Change impact (new): changing a fact or rule re-checks every draft that used it and sends broken approved pieces back for re-approval.
 - API and MCP server (new): scoped, hashed, revocable keys; get_brief and check_draft over REST and MCP; a playground and an audit trail.
 - Fixes re-tested before they are offered; Accept all; edit a fix before accepting.
 - Brand Kit: rules with test sentences and an enforce gate, per-channel rules, versions, export and import, and a guide compiler for PDF and Word guides.
-- Workflow: four roles enforced on the server, risk routing, comments, versions, request changes, an audit log and an approval record with a SHA-256 fingerprint.
+- Workflow: four roles enforced on the server, risk routing, comments, versions, request changes, an audit log and an approval record with a SHA-256 fingerprint. High-risk drafts need two sign-offs (compliance, then brand); time-limited exceptions only a reviewer can grant, which reopen when they expire; approval re-checks the draft if the Brand Kit changed; every review lists what was checked and what was skipped.
+- Bulk check (new): paste a content calendar or upload a CSV of up to 50 posts and get a verdict for each, with the most common problems and a CSV download.
+- Browser extension (new): "Check with Guidewise" for Chrome checks selected text on any page (LinkedIn, Gmail, X) through the API with a scoped key.
 - Insights: most-dismissed rules and unclear rules, AI-drafted amendments re-tested by code, and the dismissal rate before and after each amendment.
 - Privacy: personal data masked before any AI call.
 - Hard cases: seven drafts built to beat a checker. Plus a sample post, a sample campaign and a guided tour.
 
 ## Architecture and implementation summary
-Next.js 16 (TypeScript) on Vercel in Mumbai, with Supabase Postgres (8 migrations; every row scoped to a private workspace per visitor). A review runs a fixed pipeline: redact personal data → code checks → AI checks → AI vision → campaign documents → cross-source consistency → verifier → fix re-test → risk routing → approval record. Only the two AI steps use AI, and numbers are always compared by code, never by AI. One AI adapter covers Claude, Groq and Gemini with fallback, time caps, a circuit breaker, Zod validation and caching. Change impact (src/lib/impact.ts) runs in the same request as a fact or rule save. The REST API, the MCP server (official SDK, Streamable HTTP) and the app share one governance module (src/lib/governance.ts), so all three return the same findings. Details: docs/ARCHITECTURE.md.
+Next.js 16 (TypeScript) on Vercel in Mumbai, with Supabase Postgres (8 migrations; every row scoped to a private workspace per visitor). A review runs a fixed pipeline: redact personal data → code checks → AI checks → AI vision → campaign documents → cross-source consistency → verifier → fix re-test → risk routing → approval record. Only the AI steps (text checks, vision, and the AI checks on campaign documents) use AI, and numbers are always compared by code, never by AI. One AI adapter covers Claude, Groq and Gemini with fallback, time caps, a circuit breaker, Zod validation and caching. Change impact (src/lib/impact.ts) runs in the same request as a fact or rule save. The REST API, the MCP server (official SDK, Streamable HTTP) and the app share one governance module (src/lib/governance.ts), so all three return the same findings. Details: docs/ARCHITECTURE.md.
 
 ## Improvements made after Round 2
 The three we promised, all live and tested against the exact tests written at Round 2:
@@ -40,12 +42,17 @@ The three we promised, all live and tested against the exact tests written at Ro
 Also new: the Gemini backup was repaired (it now uses Gemini 3.5 Flash Lite and a circuit breaker), and Groq's smaller model takes over while the main one is rate-limited. We added image and privacy evaluations, and the privacy evaluation found and fixed a landline-masking leak. False flags on promo codes and offer caps were fixed. One new rule (people shown in a creative) was added and the consistency rule was extended to dates, promo codes and documents. The documentation was completed (architecture, testing, known issues, roadmap, API reference, changelog).
 
 ## Testing details
-- 95 unit tests (CI on every push).
-- On the live site: a 20-step browser journey, a 52-step sweep of every page and control at desktop and phone sizes, and a 102-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
+- 185 unit tests (CI on every push).
+- On the live site: a 21-step browser journey, a 55-step sweep of every page and control at desktop and phone sizes, and a 130-check API probe (bad input, wrong roles, cross-workspace access, the three improvements end to end, including a real MCP client). All pass.
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only.
 - Images: 20 of 20 planted errors caught, with 0 false alarms.
 - Privacy: 0 leaks in 144 AI prompts.
-- Fuzzing: 26 hostile inputs, with no crash; slowest review 25 ms.
+- Fuzzing: 26 hostile inputs, with no crash; slowest review under 30 ms.
+- Load test on the live site: 20 and then 50 concurrent visitors, 980 requests, 0 failed (docs/LOAD_TEST.md).
+- Accessibility: axe-core runs on every page at desktop and phone size in the sweep: 0 critical and 0 serious issues.
+- Browser extension: tested in a real Chromium against the live API (selection, findings, copy fix, wrong key, and web pages still blocked by CORS).
+- AI helpers measured: the guide compiler proposed 16 of 17 expected rules and warned about 7 of 8 planted problems with 0 false warnings; the bugs that run found were fixed and are re-measured after release (docs/EVAL_HELPERS.md).
+- Every morning the API probe runs against the live site from GitHub Actions; a threat model maps 14 threats to the test that covers each (docs/THREAT_MODEL.md).
 
 Details: docs/TESTING.md.
 
