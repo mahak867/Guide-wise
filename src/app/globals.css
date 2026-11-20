@@ -1,22 +1,63 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --gw-white: #fffdf9;
+  --gw-brand: #1f4d3f;
+  --gw-brand-dark: #163a2f;
+  --gw-brand-soft: #e7ede5;
+  --gw-ink: #1c1b18;
+  --gw-muted: #6b665c;
+  --gw-line: #e2dccf;
+  --gw-mist: #f3efe6;
+  --gw-paper: #f8f5ee;
+  --gw-crit: #a8281c;
+  --gw-crit-soft: #f7e4df;
+  --gw-major: #8a5a0b;
+  --gw-major-soft: #f5ead3;
+  --gw-minor: #2f5d8a;
+  --gw-minor-soft: #e3ebf2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --gw-white: #1f1e1b;
+    --gw-brand: #7cc4a6;
+    --gw-brand-dark: #9dd6bd;
+    --gw-brand-soft: #20342c;
+    --gw-ink: #ece8df;
+    --gw-muted: #a8a196;
+    --gw-line: #3a3732;
+    --gw-mist: #2a2824;
+    --gw-paper: #171614;
+    --gw-crit: #f08a7c;
+    --gw-crit-soft: #3d221e;
+    --gw-major: #e2b25c;
+    --gw-major-soft: #3a2e18;
+    --gw-minor: #8fb7e0;
+    --gw-minor-soft: #1e2a36;
+  }
+  /* white text sits on the brand green; in dark mode the green is light, so the text goes dark */
+  .text-white { color: #10201a; }
+}
+
 /* Guidewise looks like an editor's proof desk: warm paper, ink, hairlines, one green, a red pen for what matters. */
 @theme inline {
-  --color-white: #fffdf9;
-  --color-brand: #1f4d3f;
-  --color-brand-dark: #163a2f;
-  --color-brand-soft: #e7ede5;
-  --color-ink: #1c1b18;
-  --color-muted: #6b665c;
-  --color-line: #e2dccf;
-  --color-mist: #f3efe6;
-  --color-paper: #f8f5ee;
-  --color-crit: #a8281c;
-  --color-crit-soft: #f7e4df;
-  --color-major: #8a5a0b;
-  --color-major-soft: #f5ead3;
-  --color-minor: #2f5d8a;
-  --color-minor-soft: #e3ebf2;
+  --color-white: var(--gw-white);
+  --color-brand: var(--gw-brand);
+  --color-brand-dark: var(--gw-brand-dark);
+  --color-brand-soft: var(--gw-brand-soft);
+  --color-ink: var(--gw-ink);
+  --color-muted: var(--gw-muted);
+  --color-line: var(--gw-line);
+  --color-mist: var(--gw-mist);
+  --color-paper: var(--gw-paper);
+  --color-crit: var(--gw-crit);
+  --color-crit-soft: var(--gw-crit-soft);
+  --color-major: var(--gw-major);
+  --color-major-soft: var(--gw-major-soft);
+  --color-minor: var(--gw-minor);
+  --color-minor-soft: var(--gw-minor-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-newsreader);

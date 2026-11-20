@@ -103,7 +103,7 @@ export function ImageInspector({ image, index, findings, minPx, minContrast, cle
                 onClick={() => setPinned((a) => (a === r.key ? null : r.key))}
                 className="w-full rounded-[5px] border border-line bg-white px-2.5 py-1.5 text-left text-[13px] hover:border-ink/40 aria-pressed:border-ink"
               >
-                <span className="mr-1.5 inline-block rounded-[3px] px-1.5 py-px font-mono text-[11px] text-white" style={{ background: STROKE[r.kind] }}>{r.label}</span>
+                <span className="mr-1.5 inline-block rounded-[3px] px-1.5 py-px font-mono text-[11px] text-[#fff]" style={{ background: STROKE[r.kind] }}>{r.label}</span>
                 {r.summary}
                 {r.messages.length > 0 && (
                   <span className="mt-0.5 block text-muted">{r.messages.join(" ")}</span>
