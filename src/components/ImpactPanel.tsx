@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Impact } from "@/lib/impact";
+import { fmtDate } from "@/lib/client";
+import { STATUS } from "./ui";
 
 /** After any fact or rule change, shows which drafts used it, what the re-check found, and which approvals were reopened. */
 export function ImpactPanel() {
@@ -25,6 +27,7 @@ export function ImpactPanel() {
         <div className="flex-1">
           <h2 className="text-base">Impact of this change</h2>
           <p className="mt-0.5 text-muted">{impact.change.what}</p>
+          <p className="mt-0.5 text-xs text-muted">{impact.change.kind === "fact" ? "Fact" : "Rule"} {impact.change.id} · assessed {fmtDate(impact.at)} · every draft in this workspace was checked for whether it uses it</p>
         </div>
         <button className="text-xs text-muted underline hover:text-ink" onClick={() => setImpact(null)}>Close</button>
       </div>
@@ -36,12 +39,25 @@ export function ImpactPanel() {
             {impact.affected.length} of {impact.checked} draft{impact.checked === 1 ? "" : "s"} used it and {impact.affected.length === 1 ? "was" : "were"} checked again against the new Brand Kit.
             {reopened.length > 0 && <b className="text-crit"> {reopened.length} approved piece{reopened.length === 1 ? " no longer passes and was" : "s no longer pass and were"} sent back for re-approval.</b>}
           </p>
+          <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted">
+            {(Object.keys(label) as (keyof typeof label)[]).map((k) => <span key={k}><b className="font-medium text-ink">{impact.affected.filter((a) => a.outcome === k).length}</b> {label[k].toLowerCase()}</span>)}
+          </p>
           <ul className="mt-2 divide-y divide-line rounded-md border border-line">
             {impact.affected.map((a) => (
               <li key={a.id} className="flex flex-wrap items-start gap-2 px-3 py-2">
                 <Link className="font-medium underline-offset-2 hover:underline" href={`/review/${a.id}`}>{a.title}</Link>
                 <span className={`rounded px-1.5 text-xs ${a.outcome === "reapproval" ? "bg-crit-soft text-crit" : a.outcome === "still_passes" ? "bg-brand-soft text-brand-dark" : "bg-mist"}`}>{label[a.outcome]}</span>
-                {a.findings.length > 0 && <span className="w-full text-xs text-muted">{a.findings.map((f) => `“${f.quote}”: ${f.message}`).join(" · ").slice(0, 300)}</span>}
+                <span className="text-xs text-muted">
+                  Now {(STATUS[a.status]?.label ?? a.status).toLowerCase()}
+                  {a.outcome === "reapproval" ? (a.status === "compliance_review" ? ": compliance signs off again, then brand" : ": the brand reviewer approves it again") : ""}
+                  {" · "}{a.findings.length ? `${a.findings.length} finding${a.findings.length === 1 ? "" : "s"} about this change` : "no new finding"}
+                </span>
+                {a.findings.length > 0 && (
+                  <ul className="w-full space-y-0.5 text-xs text-muted">
+                    {a.findings.slice(0, 3).map((f, i) => <li key={i}><span className="font-mono">{f.rule_id}</span> “{f.quote}”: {f.message.length > 160 ? `${f.message.slice(0, 160)}…` : f.message}</li>)}
+                    {a.findings.length > 3 && <li>and {a.findings.length - 3} more on its review page</li>}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

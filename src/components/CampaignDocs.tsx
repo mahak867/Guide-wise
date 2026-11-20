@@ -38,6 +38,10 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
   return (
     <fieldset className="rounded-md border border-line p-3">
       <legend className="px-1 text-sm font-medium">Campaign documents <span className="font-normal text-muted">Optional, up to 4: paste text, upload a PDF or Word file, or read a live web page. Reviewed with the caption; prices, dates and promo codes are compared across all of them.</span></legend>
+      <p className="mb-2 text-xs text-muted">
+        Each document gets every text rule (terms, contacts, disclaimers, claims against the Facts Register, and the AI checks when they are on). Post-length and sentence-length rules are skipped, since they are about the caption.
+        Fixes are shown as wording to change in that document. {docs.length}/4 added.
+      </p>
       <div className="space-y-3">
         {docs.map((d, i) => (
           <div key={i} className="rounded-md border border-line p-2 text-sm">
@@ -49,7 +53,9 @@ export function CampaignDocs({ docs, onChange }: { docs: Doc[]; onChange: (d: Do
             </div>
             <label className="sr-only" htmlFor={`doc-${i}`}>Text of document {i + 1}</label>
             <textarea id={`doc-${i}`} rows={3} className={inputCls + " mt-2"} value={d.text} onChange={(e) => set(i, { text: e.target.value })} placeholder="Paste the document text" />
-            {d.text.trim().length > 0 && d.text.trim().length < 10 && <p className="text-xs text-crit">Add at least 10 characters, or remove this document.</p>}
+            {d.text.trim().length > 0 && d.text.trim().length < 10 ? <p className="text-xs text-crit">Add at least 10 characters, or remove this document.</p>
+              : d.text.trim() ? <p className="mt-1 text-xs text-muted">{d.text.trim().split(/\s+/).length} words · {d.text.trim().length.toLocaleString("en-IN")} characters{d.text.length >= 12000 ? " (the first 12,000 are checked)" : ""}. Findings here are labelled “{d.name}”.</p>
+              : <p className="mt-1 text-xs text-muted">Empty documents are left out of the review.</p>}
           </div>
         ))}
         {docs.length < 4 && (
