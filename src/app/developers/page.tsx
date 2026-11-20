@@ -201,6 +201,16 @@ export default function Developers() {
           </tbody>
         </table>
       </Card>
+
+      <Card className="mt-6 min-w-0 space-y-2 p-4 text-sm">
+        <h2>Check where you write: browser extension</h2>
+        <p className="text-muted">Select a draft in LinkedIn, Gmail, X or any page, click <b className="font-medium text-ink">Check with Guidewise</b>, and see the verdict and the same cited findings as this app, each with a Copy fix button. It calls the REST API above with a key that has the <code className="rounded bg-mist px-1">draft:check</code> scope. It reads a page only when you click its button, and sends the key only to the Guidewise site you set.</p>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li>Get the <a className="underline" href="https://github.com/mahak867/Guide-wise/tree/main/extension" target="_blank" rel="noopener noreferrer">extension folder from GitHub<span className="sr-only"> (opens in a new tab)</span></a>: Code, then Download ZIP, then unzip it.</li>
+          <li>In Chrome, open <code className="rounded bg-mist px-1">chrome://extensions</code> and turn on <b className="font-medium">Developer mode</b>.</li>
+          <li>Click <b className="font-medium">Load unpacked</b>, choose the <code className="rounded bg-mist px-1">extension</code> folder, then open the extension and paste your key in Settings.</li>
+        </ol>
+      </Card>
     </>
   );
 }
