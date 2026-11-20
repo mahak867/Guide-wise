@@ -128,6 +128,8 @@ export async function log(req: Request, draft_id: string | null, action: string,
 
 /** A problem with what the caller sent. Reported as 400 with its message, never as a server error. */
 export class BadInput extends Error {}
+/** Someone else changed the same record first; the caller should reload and try again (409). */
+export class Conflict extends Error {}
 
 /** The request body as a JSON object. A body of null, a list, a string or a number is the caller's mistake (400), not a crash. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,6 +143,7 @@ export function fail(e: unknown, status = 400): Response {
   // A body that is not JSON, or input a helper rejected, is the caller's mistake, not ours.
   if (e instanceof SyntaxError) return Response.json({ error: "The request body is not valid JSON." }, { status: 400 });
   if (e instanceof BadInput) status = 400;
+  if (e instanceof Conflict) status = 409;
   if (status >= 500) console.error("[guidewise]", e);
   return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status });
 }

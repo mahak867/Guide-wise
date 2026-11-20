@@ -1,5 +1,5 @@
 import { BRAND_SIGNERS, approverLabel, canGrantException, complianceSignOff, exceptionReason, isIsoDate, parseException, type SignEvent } from "@/lib/approval";
-import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
+import { actor, db, fail, loadKit, log, must, readBody, wsOf } from "@/lib/db";
 import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
 import { createShare, sharesOf, withoutHashes, type ShareEvent } from "@/lib/share";
@@ -41,7 +41,7 @@ const REVIEW = ["brand_review", "compliance_review"];
 export async function POST(req: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    const b = await req.json();
+    const b = await readBody(req);
     const a = actor(req);
     const d = db();
     const ws = wsOf(req);
@@ -225,7 +225,9 @@ export async function POST(req: Request, ctx: Ctx) {
         await runReview(ws, draft, false);
         const risk = riskTier(await getFindings(id));
         const status = risk.tier === "high" ? "compliance_review" : "brand_review";
-        must(await d.from("drafts").update({ status, risk_tier: risk.tier, risk_reasons: risk.reasons, updated_at: new Date().toISOString() }).eq("id", id));
+        // Only the request that finds the draft still with the creator moves it: a second submit at once gets a 409.
+        const moved = must(await d.from("drafts").update({ status, risk_tier: risk.tier, risk_reasons: risk.reasons, updated_at: new Date().toISOString() }).eq("id", id).eq("status", draft.status).select("id")) as unknown[];
+        if (!moved.length) return fail("This draft has already been submitted.", 409);
         await log(req, id, "submitted", { routed_to: status, risk: risk.tier, reasons: risk.reasons, version: draft.version });
         break;
       }
@@ -273,14 +275,22 @@ export async function POST(req: Request, ctx: Ctx) {
         if (open.length) return fail(`${open.length} finding${open.length > 1 ? "s are" : " is"} still open. Dismiss each with a reason, or request changes.`, 409);
         if (dual && a.role === "compliance") {
           // First of two sign-offs: recorded, and the draft stays with review until brand signs off.
+          // Claim the sign-off first: of two compliance approvals at once, only the one that saw this exact state records it.
+          let claim = d.from("drafts").update({ updated_at: new Date().toISOString() }).eq("id", id).eq("status", draft.status);
+          if (draft.updated_at) claim = claim.eq("updated_at", draft.updated_at);
+          const claimed = must(await claim.select("id")) as unknown[];
+          if (!claimed.length) return fail("This draft changed while you were signing off (another sign-off may have just been given). Reload and check.", 409);
           await log(req, id, "approved_partial", { version: draft.version, kit_version: kit.version, note: b.comment ?? "", waiting_for: "brand" });
-          must(await d.from("drafts").update({ updated_at: new Date().toISOString() }).eq("id", id));
           return Response.json({ ok: true, approved: false, waiting_for: "brand", message: `Approved by ${a.name}, waiting for brand sign-off.` });
         }
         const now = new Date().toISOString();
         const approvers = [...(dual && signed ? [{ name: signed.actor, role: "compliance", at: signed.at }] : []), { name: a.name, role: a.role, at: now }];
         const count = (s: string) => current.filter((f) => f.state === s).length;
-        must(await d.from("receipts").insert({
+        // Move to approved first, only from the review state this request saw: of two approvals at once, one wins and
+        // the other gets a 409, so a draft never gets two receipts. (The database trigger still refuses open violations.)
+        const won = must(await d.from("drafts").update({ status: "approved", impact: null, updated_at: now }).eq("id", id).eq("status", draft.status).select("id")) as unknown[];
+        if (!won.length) return fail("This draft has just been approved by someone else.", 409);
+        const receipt = await d.from("receipts").insert({
           draft_id: id,
           text_hash: fingerprint(draft.text),
           approved_text: draft.text,
@@ -297,8 +307,12 @@ export async function POST(req: Request, ctx: Ctx) {
             dismissals: current.filter((f) => f.state === "dismissed").map((f) => ({ rule: f.rule_id, reason: f.dismiss_reason, by: f.resolved_by })),
             draft_version: draft.version, risk_tier: draft.risk_tier,
           },
-        }));
-        must(await d.from("drafts").update({ status: "approved", impact: null, updated_at: new Date().toISOString() }).eq("id", id));
+        });
+        if (receipt.error) {
+          // Without a receipt the approval does not stand: put the draft back where it was.
+          await d.from("drafts").update({ status: draft.status }).eq("id", id);
+          throw new Error(receipt.error.message);
+        }
         await log(req, id, "approved", { version: draft.version, kit_version: kit.version, note: b.comment ?? "", approvers: approvers.map((x) => ({ name: x.name, role: x.role })) });
         break;
       }

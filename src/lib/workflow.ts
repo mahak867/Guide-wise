@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { isLapsed, parseException } from "./approval";
-import { BadInput, db, loadKit, must } from "./db";
+import { BadInput, Conflict, db, loadKit, must } from "./db";
 import { today } from "./engine/code";
 import { reviewDraft, riskTier } from "./engine/review";
 import { summarisePrecedents, type DismissEvent, type Precedent, type PrecedentRow } from "./review-extras";
@@ -8,6 +8,7 @@ import type { Finding, Intent } from "./types";
 import type { DraftImage } from "./engine/visual";
 
 export interface DraftRow {
+  updated_at?: string;
   id: string;
   title: string;
   content_type: string;
@@ -128,7 +129,9 @@ export async function loadPrecedents(ws: string, draftId: string, ruleIds: strin
 export async function saveText(draft: DraftRow, text: string, note: string): Promise<DraftRow> {
   const d = db();
   const version = draft.version + 1;
-  must(await d.from("drafts").update({ text, version, updated_at: new Date().toISOString() }).eq("id", draft.id));
+  // Only the request that read the current version may save the next one: two at once cannot both write version N+1.
+  const saved = must(await d.from("drafts").update({ text, version, updated_at: new Date().toISOString() }).eq("id", draft.id).eq("version", draft.version).select("id")) as unknown[];
+  if (!saved.length) throw new Conflict("This draft changed while you were working on it. Reload the page and try again.");
   must(await d.from("versions").insert({ draft_id: draft.id, version, text, note }));
   return { ...draft, text, version };
 }
