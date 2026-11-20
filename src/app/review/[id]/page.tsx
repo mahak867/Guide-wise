@@ -20,7 +20,9 @@ interface Draft {
 }
 interface Ev { id: number; actor: string; role: string; action: string; detail: Record<string, unknown>; at: string }
 interface Receipt { id: string; text_hash: string; approved_text: string; kit_version: number; approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> }
-interface Data { draft: Draft; findings: Finding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null }
+/** A stored finding also carries when it was raised and on which version of the draft. */
+type StoredFinding = Finding & { created_at?: string; draft_version?: number };
+interface Data { draft: Draft; findings: StoredFinding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null }
 
 const REASONS = ["The rule is unclear", "The rule does not apply to this content", "The flag is wrong", EXCEPTION];
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -38,7 +40,39 @@ function ExceptionNote({ reason, by, open }: { reason?: string | null; by?: stri
     </span>
   );
 }
-const CHECK = { code: "Code check", claims: "Claims check", voice: "Voice check", visual: "Visual check" } as const;
+/** Which kind of check raised a finding, in a word and in one sentence. */
+function checkOf(f: Finding, category?: string): { label: string; short: string; how: string } {
+  if (category === "visual-people") return { label: "AI vision", short: "AI vision", how: "An AI vision model looked at the creative and described the people shown; publishing a person needs a consent record." };
+  if (category === "consistency") return { label: "Consistency check", short: "Consistency", how: "Code compared the prices, figures, dates and promo codes in the caption, each image and each document, and found two that disagree." };
+  if (f.origin === "ai") return { label: "AI check", short: "AI", how: "A language model judged the words against the rule's guidance, twice; the verifier confirmed the quote is really there and the rule exists." };
+  if (f.check_type === "visual") return { label: "Image check", short: "Image", how: "Code measured the image in the browser (colours, contrast, logo, alt text) or ran the text rules on the words read from it." };
+  if (f.check_type === "claims") return { label: "Code check: claims", short: "Code", how: "Code compared the figure or claim with the Facts Register: its value, its dates and the disclosure it needs." };
+  return { label: "Code check", short: "Code", how: "A fixed rule in code (a word list, a pattern or a limit) matched these exact words. The same text always gives the same result." };
+}
+
+/** "Text", "Image 1 (sample-creative.png)", "Landing page (document 2)". */
+function whereOf(location: string | undefined, d: Draft): string {
+  if (location?.startsWith("image:")) { const n = Number(location.slice(6)); const img = d.images?.[n - 1]; return `Image ${n}${img ? ` (${img.name})` : ""}`; }
+  if (location?.startsWith("asset:")) { const n = Number(location.slice(6)); const a = d.assets?.[n - 1]; return a ? `${a.name[0].toUpperCase()}${a.name.slice(1)} (document ${n})` : `Document ${n}`; }
+  return "Draft text";
+}
+
+/** The risk reasons in plain words, with rule titles in place of bare IDs. */
+function plainReasons(reasons: string[], title: (id: string) => string, liveCritical: number): string[] {
+  return reasons.map((r) => {
+    const m = /^Outcome, claim or regulated content was flagged \(([^)]+)\)/.exec(r);
+    if (m) {
+      const ids = m[1].split(/,\s*/);
+      return `A rule about outcomes, claims or regulated content was flagged: ${ids.map((id) => `${title(id)} (${id})`).join("; ")}. This counts even after a fix is accepted, so the compliance reviewer sees what was claimed.`;
+    }
+    const c = /^(\d+) critical findings? still unresolved/.exec(r);
+    // The stored reason is from the last review run or submission; the count of open critical findings is live.
+    if (c) return liveCritical > 0
+      ? `${liveCritical} critical finding${liveCritical === 1 ? " is" : "s are"} still open.`
+      : `${c[1]} critical finding${c[1] === "1" ? " was" : "s were"} open when the risk was set; ${c[1] === "1" ? "it has" : "all have"} since been fixed or dismissed.`;
+    return r.endsWith(".") ? r : `${r}.`;
+  });
+}
 
 function Highlighted({ text, findings, active, onPick }: { text: string; findings: Finding[]; active: string | null; onPick: (id: string) => void }) {
   const parts = useMemo(() => {
@@ -87,6 +121,8 @@ function describe(e: Ev): string {
     case "changes_requested": return `requested changes: ${d.comment}`;
     case "comment": return `commented: ${d.comment}`;
     case "images_updated": return `updated the images (version ${d.version}) and re-ran the checks`;
+    case "assets_updated": return "updated the campaign documents and re-ran the checks";
+    case "reapproval_needed": return `sent it back for re-approval after a Brand Kit change: ${d.change}${d.findings ? ` (${d.findings} new finding${d.findings === 1 ? "" : "s"})` : ""}`;
     default: return e.action;
   }
 }
@@ -164,6 +200,17 @@ export default function ReviewPage() {
   const canAct = needed !== null && (needed === "creator" ? role === "creator" : canApprove);
   const canEdit = !inReview && !approved;
   const fixable = open.filter((f) => f.fix !== null && f.fix !== undefined && (f.location ?? "text") === "text");
+  const tally = {
+    critical: open.filter((f) => f.severity === "critical").length,
+    major: open.filter((f) => f.severity === "major").length,
+    minor: open.filter((f) => f.severity === "minor").length,
+    violations: openViolations.length,
+    suggestions: open.length - openViolations.length,
+    fixed: findings.filter((f) => f.state === "accepted" || f.state === "resolved").length,
+    dismissed: findings.filter((f) => f.state === "dismissed").length,
+  };
+  /** The latest event about a finding (its dismissal or fix), matched on rule and quote. */
+  const eventFor = (f: Finding, action: string) => events.find((e) => e.action === action && e.detail.rule === f.rule_id && (e.detail.quote === undefined || e.detail.quote === f.quote) && (action !== "fix_accepted" || e.detail.from === f.quote));
 
   async function acceptAll() {
     setBusy("Applying fixes…");
@@ -216,7 +263,7 @@ export default function ReviewPage() {
           ) : inReview && signed ? (
             <><b>Approved by {signed.actor}, waiting for brand sign-off.</b> High-risk content needs two sign-offs: compliance, then brand ({ROLES.brand.name} or {ROLES.manager.name}).</>
           ) : inReview ? (
-            <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b> {draft.risk_reasons.length ? `Why: ${draft.risk_reasons.join("; ")}.` : "Nothing high-risk was flagged, so the brand reviewer can approve."}{draft.status === "compliance_review" ? ` High risk needs two sign-offs: ${ROLES.compliance.name} first, then brand.` : ""}</>
+            <><b>Waiting for {ROLES[needed!].name}, the {ROLES[needed!].title.toLowerCase()}.</b>{draft.status === "compliance_review" ? ` High risk needs two sign-offs: ${ROLES.compliance.name} first, then brand.` : " One approval completes it."}</>
           ) : draft.status === "changes_requested" ? (
             <><b>Changes requested.</b> {ROLES.creator.name} edits the draft and submits it again.</>
           ) : (
@@ -227,6 +274,24 @@ export default function ReviewPage() {
           <Button onClick={() => setRole(needed)}>Act as {ROLES[needed].name}</Button>
         )}
         {canEdit && role === "creator" && <Button variant="primary" disabled={!!busy} onClick={() => act("Submitting…", { action: "submit" })}>{busy === "Submitting…" ? busy : "Submit for review"}</Button>}
+        {draft.risk_tier && !approved && (
+          <div className="w-full border-t border-line pt-2.5 text-[13px]">
+            <p>
+              <b className="font-medium">{inReview ? "Why it was routed here: " : "Where it goes when submitted: "}</b>
+              {draft.risk_tier === "high"
+                ? `high risk, so ${ROLES.compliance.name} (compliance) signs off first and then ${ROLES.brand.name} or ${ROLES.manager.name} (brand) gives a second sign-off.`
+                : `low risk, so one approval from ${ROLES.brand.name} (brand reviewer) or ${ROLES.manager.name} is enough.`}
+              {inReview ? "" : " The risk is worked out again at submission, from the findings as they stand then."}
+            </p>
+            {draft.risk_tier === "high" && draft.risk_reasons.length > 0 ? (
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted">
+                {plainReasons(draft.risk_reasons, (rid) => state?.rules.find((r) => r.id === rid)?.title ?? rid, openViolations.filter((f) => f.severity === "critical").length).map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            ) : draft.risk_tier !== "high" ? (
+              <p className="mt-0.5 text-muted">No rule about outcomes, claims or regulated content was flagged, and no critical finding is open.</p>
+            ) : null}
+          </div>
+        )}
       </Card>
 
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
@@ -241,7 +306,7 @@ export default function ReviewPage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5 break-words">
           <Card className="p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2>Draft</h2>
@@ -452,10 +517,19 @@ export default function ReviewPage() {
             <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted">Version history ({versions.length})</summary>
               <ol className="mt-2 space-y-2">{versions.map((v, i) => {
                 const prev = versions[i + 1];
+                const diff = prev ? wordDiff(prev.text, v.text) : null;
+                const wc = (t: "add" | "del") => (diff ?? []).filter((p) => p.t === t).reduce((n, p) => n + (p.s.trim() ? p.s.trim().split(/\s+/).length : 0), 0);
+                const raised = findings.filter((f) => f.draft_version === v.version);
+                const fixedHere = events.filter((e) => e.action === "fix_accepted" && Number(e.detail.version) === v.version).length;
                 return (
                   <li key={v.version} className="rounded-md border border-line p-2">
                     <div className="text-xs text-muted">v{v.version} · {v.note} · {fmtDate(v.at)}</div>
-                    <div className="mt-1 whitespace-pre-wrap leading-relaxed">{prev ? wordDiff(prev.text, v.text).map((p, k) => p.t === "same" ? <span key={k}>{p.s}</span> : p.t === "add" ? <ins key={k} className="bg-brand-soft no-underline">{p.s}</ins> : <del key={k} className="text-crit/80">{p.s}</del>) : v.text}</div>
+                    <div className="mt-0.5 text-xs text-muted">
+                      {diff ? (wc("add") || wc("del") ? `${wc("add")} word${wc("add") === 1 ? "" : "s"} added, ${wc("del")} removed` : "Text unchanged (images, documents or a re-check)") : `First version, ${v.text.trim().split(/\s+/).length} words`}
+                      {raised.length ? ` · ${raised.length} finding${raised.length === 1 ? "" : "s"} first raised on it` : ""}
+                      {fixedHere ? ` · made by accepting ${fixedHere} fix${fixedHere === 1 ? "" : "es"}` : ""}
+                    </div>
+                    <div className="mt-1 whitespace-pre-wrap leading-relaxed">{diff ? diff.map((p, k) => p.t === "same" ? <span key={k}>{p.s}</span> : p.t === "add" ? <ins key={k} className="bg-brand-soft no-underline">{p.s}</ins> : <del key={k} className="text-crit/80">{p.s}</del>) : v.text}</div>
                   </li>
                 );
               })}</ol>
@@ -463,11 +537,33 @@ export default function ReviewPage() {
           </Card>
         </div>
 
-        <div className="space-y-3 lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+        <div className="min-w-0 space-y-3 break-words lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2>{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
             {canEdit && role === "creator" && fixable.length > 1 && <Button disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
           </div>
+          {findings.length > 0 && (
+            <div className="rounded-md border border-line bg-white px-3 py-2 text-xs" aria-label="Findings summary" role="group">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-muted">Open by severity</span>
+                {(["critical", "major", "minor"] as const).map((s) => (
+                  <span key={s} className="inline-flex items-center gap-1"><span aria-hidden className={`h-2 w-2 rounded-full ${{ critical: "bg-crit", major: "bg-major", minor: "bg-minor" }[s]}`} /><b className="font-medium">{tally[s]}</b> {s}</span>
+                ))}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-muted">All {findings.length} by state</span>
+                <span><b className="font-medium">{tally.violations}</b> open violation{tally.violations === 1 ? "" : "s"}</span>
+                <span><b className="font-medium">{tally.suggestions}</b> suggestion{tally.suggestions === 1 ? "" : "s"}</span>
+                <span><b className="font-medium">{tally.fixed}</b> fixed</span>
+                <span><b className="font-medium">{tally.dismissed}</b> dismissed</span>
+              </div>
+              {/* A proportion bar of the same four states. */}
+              <div aria-hidden className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-mist">
+                {([["violations", "bg-crit"], ["suggestions", "bg-minor"], ["fixed", "bg-brand"], ["dismissed", "bg-major"]] as const).map(([k, c]) => tally[k] > 0 && <span key={k} className={c} style={{ width: `${(tally[k] / findings.length) * 100}%` }} />)}
+              </div>
+              <p className="mt-1.5 text-muted">Open violations block approval until each is fixed or dismissed with a reason; suggestions never block it.</p>
+            </div>
+          )}
           {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : "No findings. This draft follows the rules in force."}</Card>}
           {open.length > 0 && <Card className="divide-y divide-line overflow-hidden">
           {open.map((f) => {
@@ -475,6 +571,7 @@ export default function ReviewPage() {
             // One finding is open at a time; the rest stay as one-line rows.
             const expanded = active === "" ? null : open.some((x) => x.id === active) ? active : open[0]?.id;
             const isOpen = expanded === f.id;
+            const check = checkOf(f, rule?.category);
             return (
               <div key={f.id} id={`f-${f.id}`} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
                 <button className="flex w-full items-start gap-3 px-4 py-2.5 text-left" aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
@@ -483,7 +580,7 @@ export default function ReviewPage() {
                     {!isOpen && <span className="mt-0.5 block truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
                   </span>
                   <span className="shrink-0 pt-1 text-right text-[10.5px] font-medium uppercase leading-4 tracking-[0.06em] text-muted">
-                    {f.severity}{f.level === "suggestion" ? " · suggestion" : ""}
+                    {f.severity}{f.level === "suggestion" ? " · suggestion" : ""} · {check.short}
                     <span className="block">{f.location?.startsWith("image:") ? `Image ${f.location.slice(6)}` : f.location?.startsWith("asset:") ? (draft.assets?.[Number(f.location.slice(6)) - 1]?.name ?? "Document") : "Text"}{f.fix != null ? " · fix ready" : ""}</span>
                   </span>
                   <span aria-hidden className="shrink-0 pt-0.5 text-muted">{isOpen ? "–" : "+"}</span>
@@ -491,13 +588,18 @@ export default function ReviewPage() {
                 {isOpen && (<div className="px-4 pb-4">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge tone={f.severity}>{f.severity[0].toUpperCase() + f.severity.slice(1)}</Badge>
-                  <Badge>{CHECK[f.check_type]}</Badge>
+                  <span title={check.how}><Badge>{check.label}</Badge></span>
                   {f.level === "suggestion" && <Badge>Suggestion</Badge>}
                   {f.location?.startsWith("image:") && <Badge tone="ink">Image {f.location.slice(6)}</Badge>}
                   <button className="ml-auto text-xs text-muted underline-offset-2 hover:underline" onClick={() => show(f)}>{f.location?.startsWith("image:") ? "Show image" : "Show in draft"}</button>
                 </div>
                 <blockquote className="mt-1 flex items-center gap-1.5 font-serif text-[15px] italic text-muted">{/^#[0-9A-F]{6}$/.test(f.quote) && <span className="h-3.5 w-3.5 rounded-sm border border-line" style={{ background: f.quote }} aria-hidden />}"{f.quote}"</blockquote>
                 <p className="mt-2">{f.message}</p>
+                <dl className="mt-2 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs text-muted">
+                  <dt>Check</dt><dd><b className="font-medium text-ink">{check.label}.</b> {check.how}</dd>
+                  <dt>Where</dt><dd>{whereOf(f.location, draft)}</dd>
+                  {f.created_at && <><dt>Raised</dt><dd>{fmtDate(f.created_at)}{f.draft_version ? `, on version ${f.draft_version}` : ""}{f.level === "suggestion" ? ". A suggestion: it does not block approval" : ""}</dd></>}
+                </dl>
                 {parseException(f.dismiss_reason) && <div className="mt-2"><ExceptionNote reason={f.dismiss_reason} open /></div>}
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
                 {f.precedent && (
@@ -576,18 +678,25 @@ export default function ReviewPage() {
               </button>
               {showResolved && (
                 <ul className="mt-2 space-y-2">
-                  {closed.map((f) => (
+                  {closed.map((f) => {
+                    const rule = state?.rules.find((r) => r.id === f.rule_id);
+                    const ev = f.state === "dismissed" ? eventFor(f, "finding_dismissed") : f.state === "accepted" ? eventFor(f, "fix_accepted") : undefined;
+                    return (
                     <li key={f.id} className="rounded-md border border-line bg-white p-2.5 text-sm">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge tone={f.state === "dismissed" ? "major" : "green"}>{f.state === "accepted" ? "Fix accepted" : f.state === "dismissed" ? "Dismissed" : "Resolved by edit"}</Badge>
                         <span className="font-mono text-xs text-muted">{f.rule_id}</span>
-                        {f.resolved_by && f.resolved_by !== "edit" && <span className="text-xs text-muted">by {f.resolved_by}</span>}
+                        {f.resolved_by && f.resolved_by !== "edit" && <span className="text-xs text-muted">by {f.resolved_by}{ev ? `, ${fmtDate(ev.at)}` : ""}</span>}
                       </div>
+                      <div className="mt-1 font-medium">{rule?.title ?? f.rule_id}</div>
+                      <div className="text-xs text-muted">{f.severity} · {checkOf(f, rule?.category).label} · {whereOf(f.location, draft)}{f.created_at ? ` · raised ${fmtDate(f.created_at)}` : ""}</div>
                       <div className="mt-1 text-muted">"{f.quote}"{f.state === "accepted" && f.fix ? ` → "${f.fix}"` : ""}</div>
+                      {f.state === "resolved" && <div className="mt-1 text-xs text-muted">Closed by itself: after an edit, these words were no longer in the draft.</div>}
                       {f.state === "dismissed" && parseException(f.dismiss_reason) && <div className="mt-1"><ExceptionNote reason={f.dismiss_reason} by={f.resolved_by} /></div>}
-                      {f.dismiss_reason && <div className="mt-1 text-xs">Reason: {f.dismiss_reason}{!approved && <button className="ml-2 underline" onClick={() => act("…", { action: "reopen", finding_id: f.id })}>Reopen</button>}</div>}
+                      {f.dismiss_reason && <div className="mt-1 text-xs">{f.state === "dismissed" && f.resolved_by ? `${f.resolved_by} gave the reason: ` : "Reason: "}{f.dismiss_reason}{!approved && <button className="ml-2 underline" onClick={() => act("…", { action: "reopen", finding_id: f.id })}>Reopen</button>}</div>}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>
