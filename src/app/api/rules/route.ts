@@ -1,5 +1,5 @@
 import { actor, bumpKit, db, fail, log, must, wsOf } from "@/lib/db";
-import { RuleIn, firstIssue } from "@/lib/schemas";
+import { RuleIn, firstIssue, flagsNothing } from "@/lib/schemas";
 import { assessImpact } from "@/lib/impact";
 
 // Create or edit a rule. Only the brand manager may change the Brand Kit.
@@ -15,6 +15,9 @@ export async function POST(req: Request) {
       source: b.source || "Brand guide", risk: b.risk === "high" ? "high" : "low", status: "advisory",
     });
     if (!parsed.success) return fail(`That rule can't be saved (${firstIssue(parsed.error)}).`);
+    // A code rule that can flag nothing would pass its "should pass" tests and look healthy while checking nothing.
+    const empty = flagsNothing(parsed.data);
+    if (empty) return fail(`That rule can't be saved: ${empty}.`);
     const row = { ...parsed.data, status: "advisory", last_test: null, updated_at: new Date().toISOString() };
     must(await db().from("rules").upsert({ ...row, ws: wsOf(req) }));
     const version = await bumpKit(wsOf(req));

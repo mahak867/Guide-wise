@@ -1,6 +1,6 @@
 import type { Fact, Kit, Rule } from "../types";
 import { aiAvailable, judgeRule } from "./ai";
-import { patternHits, runCodeRule } from "./code";
+import { dropExcepted, patternHits, runCodeRule } from "./code";
 import { consistencyHits, parseConsistencyTest } from "./consistency";
 import { altHits, contrastHits, logoHits, paletteHits, parseColourTest, parseLogoTest, peopleHits } from "./visual";
 
@@ -33,7 +33,7 @@ export async function runRuleTests(rule: Rule, facts: Fact[], kit: Kit): Promise
       got = "flag";
     } else if (ai) {
       try {
-        got = (await judgeRule(rule, t.text, null)).length ? "flag" : "pass";
+        got = dropExcepted(rule, t.text, await judgeRule(rule, t.text, null)).length ? "flag" : "pass";
       } catch {
         got = "AI check failed";
       }

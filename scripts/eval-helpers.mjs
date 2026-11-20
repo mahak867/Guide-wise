@@ -122,7 +122,8 @@ async function evalCompiler() {
       // Saved exactly as the Brand Kit page's "Add as advisory" button saves a proposal, then its own tests are run.
       const save = await call(ws, "POST", "/api/rules", { body: {
         id, title: pr.title, description: pr.description, severity: pr.severity, kind: pr.kind, category: pr.category,
-        source: "Compiled from pasted guide text", config: pr.category === "term" ? { avoid: pr.avoid, prefer: pr.prefer } : {},
+        // Since the fixes the API returns the config each proposal is saved with; older deployments did not.
+        source: "Compiled from pasted guide text", config: pr.config ?? (pr.category === "term" ? { avoid: pr.avoid, prefer: pr.prefer } : {}),
         tests: [{ text: pr.flag_example, expect: "flag" }, { text: pr.pass_example, expect: "pass" }],
       } });
       let test = null;
@@ -141,7 +142,11 @@ async function evalCompiler() {
         from_vague_passage: has(pr.source_passage, vagueSrc),
       });
     }
-    row.warnings = r.j.warnings.map((w) => ({ ...w, planted: p.planted.some((x) => has(w.passage, x.src)) }));
+    // Warnings of kind "dropped" or "check" are about a proposal Guidewise left out, not about the guide's wording,
+    // so they are kept apart and not scored as warnings about the guide.
+    const aboutProposal = (w) => w.kind === "dropped" || w.kind === "check";
+    row.proposal_notes = r.j.warnings.filter(aboutProposal);
+    row.warnings = r.j.warnings.filter((w) => !aboutProposal(w)).map((w) => ({ ...w, planted: p.planted.some((x) => has(w.passage, x.src)) }));
     for (const e of p.rules) {
       const hit = row.rules.find((x) => has(x.source_passage, e.src) || (e.avoid && (x.avoid ?? []).some((a) => has(a, e.avoid))));
       row.expected.push({ kind: e.kind, found: !!hit, by: hit?.id ?? null, category: hit?.category ?? null });
@@ -168,6 +173,7 @@ async function evalCompiler() {
     planted_contradictions: pl.filter((x) => x.type === "contradiction").length, planted_contradictions_warned: pl.filter((x) => x.type === "contradiction" && x.warned).length,
     warnings: warns.length, false_warnings: warns.filter((w) => !w.planted).length,
     dropped_by_source_check: out.reduce((s, x) => s + x.dropped, 0),
+    left_out_by_config_check: out.reduce((s, x) => s + (x.proposal_notes?.length ?? 0), 0),
   };
   return { workspace_note: "fresh random workspace", summary, passages: PASSAGES, results: out };
 }
@@ -228,7 +234,11 @@ async function evalAmend() {
     row.new_tests = results.filter(isNew).map((t) => ({ text: t.text, expect: t.expect, got: t.got, ok: t.ok }));
     row.new_tests_correct = row.new_tests.length === 2 && row.new_tests.every((t) => t.ok);
     // Examples identical to a test the rule already has are not added (the route skips duplicates).
-    row.tests_added = [p.flag_example, p.pass_example].filter((t) => t && !(seeded.get(a.rule)?.tests ?? []).some((x) => x.text === t)).length;
+    row.tests_added = dr.j.added ? dr.j.added.length : [p.flag_example, p.pass_example].filter((t) => t && !(seeded.get(a.rule)?.tests ?? []).some((x) => x.text === t)).length;
+    // Since the fixes: what code says about the draft (changes to the check, refusals, the dismissed text re-checked).
+    row.check_changes = dr.j.changes ?? null;
+    row.problems = dr.j.problems ?? null;
+    row.claims_to_resolve = dr.j.resolves ?? null;
     row.all_tests_pass_at_draft = dr.j.run.passed;
     row.failing_tests = results.filter((t) => !t.ok).map((t) => ({ text: t.text, expect: t.expect, got: t.got, new: isNew(t) }));
 
@@ -259,6 +269,9 @@ async function evalAmend() {
     accepted_by_gate: drafted.filter((x) => x.gate === "accepted").length, accepted_by_gate_pct: pct(drafted.filter((x) => x.gate === "accepted").length, drafted.length),
     rerun_passed_after_apply: drafted.filter((x) => x.rerun_passed === true).length,
     dismissed_text_still_flagged_after_apply: drafted.filter((x) => x.dismissed_text_still_flagged === true).length,
+    amendments_changing_the_check: drafted.filter((x) => x.check_changes?.length).length,
+    amendments_saying_they_resolve: drafted.filter((x) => x.claims_to_resolve === true).length,
+    resolve_claims_contradicted_by_resubmission: drafted.filter((x) => x.claims_to_resolve === true && x.dismissed_text_still_flagged === true).length,
   };
   return { summary, rules: AMEND, results: out };
 }

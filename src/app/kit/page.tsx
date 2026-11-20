@@ -19,7 +19,17 @@ const KINDS = [
 const blank = { id: "", title: "", description: "", type: "term", severity: "major", risk: "low", avoid: "", prefer: "", phrases: "", flag: "", pass: "", channels: "", param: "" };
 const typeLabel = (v: string) => CONTENT_TYPES.find((t) => t.v === v)?.l ?? v;
 
-interface Proposal { title: string; description: string; kind: string; category: string; severity: string; avoid: string[]; prefer: string; flag_example: string; pass_example: string; source_passage: string }
+// The compiler returns each proposal with the exact config it is saved with (see src/lib/compile.ts).
+interface Proposal { title: string; description: string; kind: string; category: string; severity: string; avoid: string[]; prefer: string; required_phrase?: string; config: Rule["config"]; own_examples_ok: boolean | null; conflict?: string; flag_example: string; pass_example: string; source_passage: string }
+interface CompileWarning { passage: string; problem: string; kind?: string }
+const patternText = (p: NonNullable<Rule["config"]["patterns"]>[number]) => (typeof p === "string" ? p : p.re).replace(/\(\?<!\[A-Za-z\]\)|\(\?!\[A-Za-z\]\)|\(\?:e\?s\)\?/g, "").replace(/\\s\+/g, " ").replace(/\\(.)/g, "$1");
+function proposalCheck(p: Proposal): string {
+  const c = p.config;
+  if (p.category === "requires") return `Needs ${c.missing ?? "the required line"}${c.patterns?.[0] === "^\\s*\\S" ? " in every text" : ` when the text mentions ${c.patterns?.map(patternText).join(", ")}`}.`;
+  if (p.category === "term") return `Flags ${c.avoid?.map((a) => `"${a}"`).join(", ")}${c.prefer ? `; use "${c.prefer}" instead` : ""}.`;
+  if (p.category === "pattern") return `Flags ${c.patterns?.map((x) => `"${patternText(x)}"`).join(", ")}.`;
+  return "";
+}
 
 function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; onChange: (msg?: string, err?: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -64,6 +74,7 @@ function RuleCard({ rule, manager, onChange }: { rule: Rule; manager: boolean; o
           {rule.config.avoid && <p>Flags: {rule.config.avoid.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)} Use instead: <code className="rounded bg-mist px-1">{rule.config.prefer || "(remove)"}</code></p>}
           {rule.config.names && <p>{rule.category === "competitor" ? "Competitors named" : "Exact spelling"}: {rule.config.names.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
           {rule.config.missing && <p>Needs, in the same text: {rule.config.missing}</p>}
+          {!!rule.config.except?.length && <p>Not flagged inside: {rule.config.except.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
           {rule.config.maxEmoji !== undefined && <p>Limit: {rule.config.maxEmoji} emoji per post</p>}
           {rule.config.allow && <p>Allowed in capitals: {rule.config.allow.map((a) => <code key={a} className="mr-1 rounded bg-mist px-1">{a}</code>)}</p>}
           {rule.config.maxChars && <p>Limit: {rule.config.maxChars} characters</p>}
@@ -108,7 +119,7 @@ export default function KitPage() {
   const [busy, setBusy] = useState(false);
   const [guide, setGuide] = useState("");
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
-  const [warnings, setWarnings] = useState<{ passage: string; problem: string }[]>([]);
+  const [warnings, setWarnings] = useState<CompileWarning[]>([]);
   const manager = role === "manager";
   const set = (k: keyof typeof blank, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -161,7 +172,7 @@ export default function KitPage() {
     setErr(null);
     setProposals(null);
     try {
-      const out = await api<{ rules: Proposal[]; warnings: { passage: string; problem: string }[] }>("/api/compile", { guide });
+      const out = await api<{ rules: Proposal[]; warnings: CompileWarning[] }>("/api/compile", { guide });
       setProposals(out.rules);
       setWarnings(out.warnings);
     } catch (e) {
@@ -210,7 +221,8 @@ export default function KitPage() {
     const ok = await save({
       id: `G-${String(n).padStart(2, "0")}`, title: p.title, description: p.description, severity: p.severity, kind: p.kind, category: p.category,
       source: "Compiled from pasted guide text",
-      config: p.category === "term" ? { avoid: p.avoid, prefer: p.prefer } : {},
+      // Saved exactly as proposed; the API validates it and refuses a code check that could flag nothing.
+      config: p.config ?? {},
       tests: [{ text: p.flag_example, expect: "flag" }, { text: p.pass_example, expect: "pass" }],
     });
     if (ok) setProposals((ps) => ps?.filter((_, j) => j !== i) ?? null);
@@ -338,7 +350,7 @@ export default function KitPage() {
           {warnings.length > 0 && (
             <div className="mt-3">
               <h3 className="text-sm font-medium">Passages that need a clearer rule</h3>
-              <ul className="mt-1 space-y-1 text-sm">{warnings.map((w, i) => <li key={i} className="rounded-md border border-major/30 bg-major-soft px-2 py-1.5">"{w.passage}" <span className="text-muted">· {w.problem}</span></li>)}</ul>
+              <ul className="mt-1 space-y-1 text-sm">{warnings.map((w, i) => <li key={i} className="rounded-md border border-major/30 bg-major-soft px-2 py-1.5">{w.kind === "dropped" && <b className="mr-1">Not proposed:</b>}{w.kind === "contradiction" && <b className="mr-1">Contradiction:</b>}"{w.passage}" <span className="text-muted">· {w.problem}</span></li>)}</ul>
             </div>
           )}
           {proposals && (
@@ -348,7 +360,10 @@ export default function KitPage() {
                 <li key={i} className="rounded-md border border-line p-2.5">
                   <div className="flex flex-wrap items-center gap-1.5"><b>{p.title}</b><Badge>{p.kind === "code" ? "Code check" : "AI check"}</Badge><Badge tone={p.severity}>{p.severity}</Badge></div>
                   <p className="mt-1 text-muted">{p.description}</p>
+                  {proposalCheck(p) && <p className="mt-1 text-xs">Check: {proposalCheck(p)}</p>}
                   <p className="mt-1 text-xs text-muted">From the guide: "{p.source_passage}"</p>
+                  {p.own_examples_ok === false && <p className="mt-1 text-xs text-crit">Its check does not flag its own &ldquo;should flag&rdquo; sentence, or flags its &ldquo;should pass&rdquo; one. It can be saved as advisory, but it cannot be enforced until the tests pass.</p>}
+                  {p.conflict && <p className="mt-1 text-xs text-major">{p.conflict}</p>}
                   <p className="mt-1 text-xs">Should flag: {p.flag_example}<br />Should pass: {p.pass_example}</p>
                   <div className="mt-2 flex gap-2"><Button variant="primary" disabled={busy} onClick={() => confirm(p, i)}>Confirm as advisory</Button><Button onClick={() => setProposals(proposals.filter((_, j) => j !== i))}>Discard</Button></div>
                 </li>

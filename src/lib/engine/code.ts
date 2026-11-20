@@ -3,6 +3,32 @@ import { findEmails, findPhones } from "./redact";
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** A literal phrase as a loose pattern: any run of spaces matches any whitespace, and case is ignored. */
+export function phraseRe(phrase: string, flags = "gi"): RegExp {
+  return new RegExp(esc(phrase.trim()).replace(/\s+/g, "\\s+"), flags);
+}
+
+/**
+ * A rule's exceptions (config.except): phrases in which its words are allowed, e.g. "cheap tricks" for the
+ * "affordable, not cheap" rule. A finding is dropped only when every place its quote occurs sits inside an
+ * exception, so the same word elsewhere in the text is still flagged.
+ */
+export function dropExcepted<T extends { quote: string }>(rule: Rule, text: string, findings: T[]): T[] {
+  const except = (rule.config.except ?? []).filter((e) => e.trim());
+  if (!except.length || !findings.length) return findings;
+  const spans: [number, number][] = [];
+  for (const e of except) for (const m of text.matchAll(phraseRe(e))) spans.push([m.index ?? 0, (m.index ?? 0) + m[0].length]);
+  if (!spans.length) return findings;
+  const find = (hay: string, q: string) => { const at: number[] = []; for (let i = hay.indexOf(q); i >= 0; i = hay.indexOf(q, i + 1)) at.push(i); return at; };
+  return findings.filter((f) => {
+    const q = f.quote.trim();
+    if (!q) return true;
+    // Findings quote the text as written ("Cheap" and "cheap" are separate findings); an AI quote may differ in case.
+    const at = find(text, q).length ? find(text, q) : find(text.toLowerCase(), q.toLowerCase());
+    return !at.length || !at.every((i) => spans.some(([a, b]) => i >= a && i + q.length <= b));
+  });
+}
+
 export function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -76,7 +102,7 @@ export function patternHits(rule: Rule, text: string, facts: Fact[]): Finding[] 
       });
     }
   }
-  return out;
+  return dropExcepted(rule, text, out);
 }
 
 function termHits(rule: Rule, text: string): Finding[] {
@@ -512,14 +538,14 @@ function requiresHits(rule: Rule, text: string): Finding[] {
         const quote = (s.text + (text.slice(s.end).match(/^[.!?]+/)?.[0] ?? "")).trim();
         out.push({
           ...b, quote,
-          message: `"${word}" reads as paid or partner content, but the post has no ${missing}.`,
+          message: rule.config.message ? `${rule.config.message} The text has no ${missing}.` : `"${word}" reads as paid or partner content, but the post has no ${missing}.`,
           fix: `${quote} ${rule.config.append}`,
           fix_note: `Adds ${rule.config.append} after the sentence. A label at the start of the post is clearer still.`,
         });
       } else {
         out.push({
           ...b, quote: word,
-          message: `"${word}" is an offer, but the text gives no ${missing}. A reader cannot tell when it ends or what it excludes.`,
+          message: rule.config.message ? `${rule.config.message} The text has no ${missing}.` : `"${word}" is an offer, but the text gives no ${missing}. A reader cannot tell when it ends or what it excludes.`,
           fix: null,
           fix_note: `Add ${missing}, in the same text as the offer.`,
         });
@@ -678,6 +704,10 @@ function excessHits(rule: Rule, text: string, skipQuotes: string[]): Finding[] {
 }
 
 export function runCodeRule(rule: Rule, text: string, facts: Fact[], kit: Kit, claims?: NumberClaim[], skipQuotes: string[] = []): Finding[] {
+  return dropExcepted(rule, text, codeRuleHits(rule, text, facts, kit, claims, skipQuotes));
+}
+
+function codeRuleHits(rule: Rule, text: string, facts: Fact[], kit: Kit, claims: NumberClaim[] | undefined, skipQuotes: string[]): Finding[] {
   switch (rule.category) {
     case "requires": return requiresHits(rule, text);
     case "competitor": return competitorHits(rule, text);

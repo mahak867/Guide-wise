@@ -41,7 +41,38 @@ export const RuleConfig = z.object({
   append: z.string().max(200).optional(),
   words: z.array(z.string().min(2).max(40)).max(500).optional(),
   maxEmoji: z.number().int().min(0).max(100).optional(),
+  except: z.array(z.string().trim().min(3).max(120)).max(30).optional(),
+  message: z.string().max(300).optional(),
 }).passthrough();
+
+/** Code checks that read their words, names or limits from the rule's own config; the rest use built-in lists or the Brand Kit. */
+const NEEDS: Record<string, { key: "avoid" | "patterns" | "names" | "requires" | "maxChars"; what: string }[]> = {
+  term: [{ key: "avoid", what: "no words to flag" }],
+  pattern: [{ key: "patterns", what: "no phrases or patterns to flag" }],
+  "brand-name": [{ key: "names", what: "no names to check" }],
+  competitor: [{ key: "names", what: "no competitor names" }],
+  requires: [{ key: "patterns", what: "no words that trigger it" }, { key: "requires", what: "no required words" }],
+  disclaimer: [{ key: "patterns", what: "no words that trigger it" }],
+  length: [{ key: "maxChars", what: "no character limit" }],
+};
+const BUILT_IN = new Set(["contact", "claims", "student", "caps", "readability", "link-text", "hashtag", "excess", "hidden", "consistency"]);
+
+/**
+ * Why a code rule's check could never flag anything, or null. A term rule with no words, or a pattern rule with no
+ * patterns, would pass every test sentence that should pass and look healthy while checking nothing.
+ */
+export function flagsNothing(rule: { kind: string; category: string; config: Record<string, unknown> }): string | null {
+  if (rule.kind !== "code" || BUILT_IN.has(rule.category) || rule.category.startsWith("visual-")) return null;
+  const needs = NEEDS[rule.category] ?? NEEDS.pattern; // any other category runs as a pattern check
+  for (const n of needs) {
+    const v = rule.config[n.key];
+    const empty = Array.isArray(v)
+      ? !v.some((x) => (typeof x === "string" ? x : (x as { re?: string } | null)?.re ?? "").trim())
+      : typeof v !== "number" || v <= 0;
+    if (empty) return `its check has ${n.what}, so it could never flag anything`;
+  }
+  return null;
+}
 
 export const RuleId = z.string().regex(/^[A-Z0-9-]{1,24}$/, "use capital letters, digits and hyphens, up to 24 characters");
 export const RuleIn = z.object({
