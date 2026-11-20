@@ -38,6 +38,6 @@ AI writing tools (MCP clients, scripts) ──────►            └─ 
 
 Claude, Groq and Gemini are tried in that order, whichever keys are set (the live site: Groq `openai/gpt-oss-120b`, then Groq `openai/gpt-oss-20b`, then Gemini `gemini-3.5-flash-lite`). Groq limits each model separately, so the smaller model takes over text checks while the main one is rate-limited. Images go to Gemini first. Each call has a time cap (12 s for text, 25 s for images); a provider that is rate-limited or slow is rested for 30–60 s so later calls do not wait on it; answers are cached in Postgres (`ai_cache`). With no provider, the code checks and the whole workflow still run, and the app says so.
 
-## Data (`supabase/migrations/001`–`008`)
+## Data (`supabase/migrations/001`–`009`)
 
 `kit`, `rules`, `facts`, `drafts`, `findings`, `events`, `versions`, `receipts`, `ai_cache`, `api_keys`. Every table carries a workspace id; each visitor gets a random workspace, so judges never see each other's work. Browsers never receive database credentials — every read and write goes through the API, which enforces roles.

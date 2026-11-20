@@ -106,7 +106,7 @@ cp .env.example .env.local   # fill in the values
 npm run dev
 ```
 
-Apply the migrations in `supabase/migrations/` (001 to 008, in order) to a Supabase project first. The app seeds the PrepPath demo on first load. To check the setup, open `http://localhost:3000/api/health`: `database.ok` should be `true`, and `ai.chain` lists the AI services your keys switched on ("none" means rules-only mode, which still runs every code check and the whole workflow). Verified on a clean checkout: `npm ci`, `npm test` (all pass, no keys needed) and `npm run build`.
+Apply the migrations in `supabase/migrations/` (001 to 009, in order) to a Supabase project first. The app seeds the PrepPath demo on first load. To check the setup, open `http://localhost:3000/api/health`: `database.ok` should be `true`, and `ai.chain` lists the AI services your keys switched on ("none" means rules-only mode, which still runs every code check and the whole workflow). Verified on a clean checkout: `npm ci`, `npm test` (all pass, no keys needed) and `npm run build`.
 
 | Variable | Purpose |
 | --- | --- |
