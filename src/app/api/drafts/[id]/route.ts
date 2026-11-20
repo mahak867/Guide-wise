@@ -3,7 +3,8 @@ import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
 import { createShare, sharesOf, withoutHashes, type ShareEvent } from "@/lib/share";
-import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, lapseExceptions, runReview, saveText } from "@/lib/workflow";
+import { planUndo } from "@/lib/review-extras";
+import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, lapseExceptions, loadPrecedents, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
@@ -14,11 +15,14 @@ export async function GET(req: Request, ctx: Ctx) {
     const d = db();
     const draft = await getDraft(wsOf(req), id);
     if (!draft) return fail("That draft was not found. It may have been removed by a demo reset.", 404);
-    const [findings, events, versions, receipt] = await Promise.all([
-      getFindings(id),
+    // Precedents need the draft's rule IDs, so they follow the findings; everything else runs alongside.
+    const findingsP = getFindings(id);
+    const [findings, events, versions, receipt, precedents] = await Promise.all([
+      findingsP,
       d.from("events").select("*").eq("ws", wsOf(req)).eq("draft_id", id).order("at", { ascending: false }),
       d.from("versions").select("*").eq("draft_id", id).order("version", { ascending: false }),
       d.from("receipts").select("*").eq("draft_id", id).order("at", { ascending: false }).limit(1).maybeSingle(),
+      findingsP.then((fs) => loadPrecedents(wsOf(req), id, fs.map((f) => f.rule_id))),
     ]);
     const raw = must(events) as (SignEvent & ShareEvent)[];
     // Read-only share links: listed without their tokens (never stored) or token hashes (never sent).
@@ -26,7 +30,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const evs = withoutHashes(raw) as SignEvent[];
     // A high-risk draft needs compliance and then brand. Which sign-off still stands is derived from the events log.
     const sign_off = draft.status === "compliance_review" ? { compliance: complianceSignOff(evs), waiting_for: complianceSignOff(evs) ? "brand" : "compliance" } : null;
-    return Response.json({ draft, findings, events: evs, versions: must(versions), receipt: must(receipt), sign_off, shares });
+    return Response.json({ draft, findings, events: evs, versions: must(versions), receipt: must(receipt), sign_off, shares, precedents });
   } catch (e) {
     return fail(e, 500);
   }
@@ -84,7 +88,8 @@ export async function POST(req: Request, ctx: Ctx) {
         // Re-check the new text with the code checks, so overlapping findings are recomputed, not just closed.
         await runReview(ws, draft, false);
         await log(req, id, "fix_accepted", { rule: f.rule_id, from: f.quote, to: replacement, edited: !!edited, version: draft.version });
-        break;
+        // The version lets the page offer "Undo fix" for exactly this step.
+        return Response.json({ ok: true, version: draft.version });
       }
       case "accept_all": {
         if (inReview) return fail("The draft is with a reviewer. Text can change again if they request changes.", 409);
@@ -118,7 +123,32 @@ export async function POST(req: Request, ctx: Ctx) {
         }
         await runReview(ws, draft, false);
         must(await d.from("events").insert(applied.map((x) => ({ ws, draft_id: id, actor: a.name, role: a.role, action: "fix_accepted", detail: { rule: x.rule, from: x.from, to: x.to, version: draft!.version } }))));
-        break;
+        return Response.json({ ok: true, version: draft.version, applied: applied.length });
+      }
+      case "undo_accept": {
+        // Undo an accepted fix (or every fix of one "Accept all") by restoring the text before it as a new version.
+        if (inReview) return fail("The draft is with a reviewer, so its text is locked. Undo is only possible before it is submitted.", 409);
+        const [evs, vers] = await Promise.all([
+          d.from("events").select("action, detail, at").eq("ws", ws).eq("draft_id", id).eq("action", "fix_accepted").order("at", { ascending: false }),
+          d.from("versions").select("version, text").eq("draft_id", id),
+        ]);
+        const plan = planUndo({
+          text: draft.text,
+          findings: findings.map((f) => ({ id: f.id!, rule_id: f.rule_id, quote: f.quote, state: f.state ?? "open", draft_version: (f as { draft_version?: number }).draft_version, location: f.location })),
+          events: must(evs) as { action: string; detail: Record<string, unknown>; at: string }[],
+          versions: must(vers) as { version: number; text: string }[],
+          finding_id: typeof b.finding_id === "string" ? b.finding_id : undefined,
+          version: b.version === undefined || b.version === null ? undefined : Number(b.version),
+        });
+        if (!plan.ok) return fail(plan.error, plan.status);
+        const n = plan.fixes.length;
+        draft = await saveText(draft, plan.restore, `Undid ${n === 1 ? `the fix for ${plan.fixes[0].rule}` : `${n} fixes`} (back to the text of version ${plan.restoredVersion})`);
+        if (plan.remove.length) must(await d.from("findings").delete().in("id", plan.remove));
+        if (plan.reopen.length) must(await d.from("findings").update({ state: "open", resolved_by: null }).in("id", plan.reopen));
+        // Code checks only, keeping the AI findings: the text is back to one the AI has already judged.
+        await runReview(ws, draft, false, true);
+        await log(req, id, "fix_undone", { rules: plan.fixes.map((x) => x.rule), fixes: plan.fixes, count: n, undid_version: plan.version, restored_version: plan.restoredVersion, version: draft.version });
+        return Response.json({ ok: true, version: draft.version, reopened: plan.reopen });
       }
       case "dismiss": {
         const f = findings.find((x) => x.id === b.finding_id);

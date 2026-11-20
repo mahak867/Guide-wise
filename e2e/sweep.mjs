@@ -378,10 +378,32 @@ await step(page, "hard cases: each fills the draft; hidden characters are caught
   await page.goto(back.replace(/\/review\/.*/, "/review/" + rid2));
   await msg(/open finding|No findings/, 60000);
 });
+await step(page, "review: accept a fix, Undo fix, the finding is open again; keyboard help opens", async () => {
+  const row = () => page.locator("button[aria-expanded]", { hasText: 'Write "PrepPath" exactly' });
+  await row().first().click();
+  await page.getByRole("button", { name: "Accept fix" }).first().click();
+  await page.getByRole("button", { name: "Undo fix" }).waitFor({ timeout: 30000 });
+  must(!(await row().count()), "the finding is still open after accepting its fix");
+  await page.getByRole("button", { name: "Undo fix" }).click();
+  await row().first().waitFor({ timeout: 30000 });
+  await msg("Fix undone");
+  must(!(await page.locator("body").innerText()).includes("at PrepPath:"), "the text was not restored");
+  // Keyboard review: J moves focus to a finding, ? opens the shortcuts, Esc closes them.
+  await page.locator("h1").first().click();
+  await page.keyboard.press("j");
+  await page.waitForTimeout(300);
+  must(await page.evaluate(() => !!document.activeElement?.matches("[data-fid] > button[aria-expanded]")), "J did not move to a finding");
+  await page.keyboard.press("Shift+Slash");
+  await page.getByRole("heading", { name: "Keyboard shortcuts" }).waitFor({ timeout: 5000 });
+  await page.keyboard.press("Escape");
+  await page.getByRole("heading", { name: "Keyboard shortcuts" }).waitFor({ state: "hidden", timeout: 5000 });
+  // Undo expanded the reopened finding; collapse it so the next step opens it with one click.
+  if ((await row().first().getAttribute("aria-expanded")) === "true") await row().first().click();
+});
 await step(page, "review: fix the brand name, dismiss and reopen, comment, edit text", async () => {
   await page.locator("button[aria-expanded]", { hasText: 'Write "PrepPath" exactly' }).first().click();
   await page.getByRole("button", { name: "Accept fix" }).first().click();
-  await page.waitForTimeout(2500);
+  for (let i = 0; i < 60 && !(await page.locator("body").innerText()).includes("at PrepPath:"); i++) await page.waitForTimeout(500);
   must((await page.locator("body").innerText()).includes("at PrepPath:"), "brand-name fix not applied");
   await page.locator("button[aria-expanded]", { hasText: "Short sentences" }).first().click().catch(() => {});
   await page.locator("button[aria-expanded]", { hasText: 'Ad text fits before "See more"' }).first().click();

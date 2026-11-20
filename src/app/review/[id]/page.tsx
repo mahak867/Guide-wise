@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DemoGuide } from "@/components/DemoGuide";
 import { ImagePicker } from "@/components/ImagePicker";
 import { Badge, Button, Card, Notice, STATUS, inputCls } from "@/components/ui";
@@ -9,6 +9,7 @@ import type { ImageInput } from "@/lib/image";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { wordDiff } from "@/lib/diff";
 import { BRAND_SIGNERS, EXCEPTION, approversOf, canGrantException, complianceSignOff, exceptionLapsed, exceptionsOf, parseException } from "@/lib/approval";
+import { canAcceptFix, moveCursor, precedentLine, reviewKey, whyNoAccept, type Precedent } from "@/lib/review-extras";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
@@ -22,7 +23,15 @@ interface Ev { id: number; actor: string; role: string; action: string; detail: 
 interface Receipt { id: string; text_hash: string; approved_text: string; kit_version: number; approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> }
 /** A stored finding also carries when it was raised and on which version of the draft. */
 type StoredFinding = Finding & { created_at?: string; draft_version?: number };
-interface Data { draft: Draft; findings: StoredFinding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null }
+interface Data { draft: Draft; findings: StoredFinding[]; events: Ev[]; versions: { version: number; text: string; note: string; at: string }[]; receipt: Receipt | null; precedents?: Record<string, Precedent> }
+
+const SEV_ORDER = { critical: 0, major: 1, minor: 2 } as const;
+/** Open findings in the order the list shows them: most severe first, then by where they are. */
+const sortOpen = (findings: StoredFinding[]) => findings.filter((f) => f.state === "open").sort((x, y) => SEV_ORDER[x.severity] - SEV_ORDER[y.severity] || (x.location ?? "").localeCompare(y.location ?? ""));
+/** Which finding is expanded: the one picked, or the first when none is ("" means all are collapsed). */
+const expandedOf = (open: Finding[], active: string | null) => (active === "" ? null : open.some((x) => x.id === active) ? active : open[0]?.id ?? null);
+const UNDO_MS = 10_000;
+const SHORTCUTS: [string, string][] = [["J or ↓", "Next finding"], ["K or ↑", "Previous finding"], ["Enter or Space", "Expand or collapse the finding"], ["A", "Accept the finding's fix"], ["D", "Dismiss the finding (choose a reason)"], ["U", "Undo the fix just accepted"], ["?", "Show or hide these shortcuts"], ["Esc", "Close this help or the undo notice"]];
 
 const REASONS = ["The rule is unclear", "The rule does not apply to this content", "The flag is wrong", EXCEPTION];
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -106,6 +115,10 @@ function describe(e: Ev): string {
   switch (e.action) {
     case "review_run": return `ran the review on version ${d.version} (${d.mode === "ai" ? "code and AI checks" : "code checks"})`;
     case "fix_accepted": return `accepted the fix for ${d.rule}: "${d.from}" became "${d.to}"`;
+    case "fix_undone": {
+      const fx = (e.detail.fixes as { rule: string; from: string; to: string }[] | undefined) ?? [];
+      return `undid ${fx.length === 1 ? `the fix for ${fx[0].rule}: "${fx[0].from}" is back` : `${fx.length} fixes accepted in one step`} (version ${d.version} restores the text of version ${d.restored_version})`;
+    }
     case "finding_dismissed": return `dismissed ${d.rule} ("${d.quote}"). Reason: ${d.reason}`;
     case "finding_reopened": return `reopened ${d.rule}`;
     case "text_edited": return `edited the text (version ${d.version})`;
@@ -143,6 +156,14 @@ export default function ReviewPage() {
   const [showResolved, setShowResolved] = useState(false);
   const [imgEdit, setImgEdit] = useState<ImageInput[] | null>(null);
   const [fixEdit, setFixEdit] = useState<{ id: string; text: string } | null>(null);
+  // Undo after accepting a fix: offered for UNDO_MS, held while the pointer or focus is on the notice.
+  const [undo, setUndo] = useState<{ key: number; text: string; body: Record<string, unknown>; findingId?: string; many?: boolean } | null>(null);
+  const [undoHeld, setUndoHeld] = useState(false);
+  // Keyboard review: the finding J/K last moved to, and what is announced to screen readers.
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [announce, setAnnounce] = useState("");
+  const helpRef = useRef<HTMLDialogElement>(null);
+  const undoSeq = useRef(0);
 
   const load = useCallback(async () => {
     try {
@@ -153,15 +174,17 @@ export default function ReviewPage() {
   }, [id]);
   useEffect(() => { queueMicrotask(load); }, [load]);
 
-  async function act(label: string, body: Record<string, unknown>, done?: string) {
+  async function act(label: string, body: Record<string, unknown>, done?: string): Promise<Record<string, unknown> | false> {
     setBusy(label);
     setError(null);
     setNotice(null);
+    // Any other change ends the offer to undo the last fix (an edit would make it impossible anyway).
+    setUndo(null);
     try {
-      await api(`/api/drafts/${id}`, body);
+      const r = await api(`/api/drafts/${id}`, body);
       await load();
       if (done) setNotice(done);
-      return true;
+      return r ?? {};
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       return false;
@@ -179,13 +202,116 @@ export default function ReviewPage() {
     if (f.location?.startsWith("image:")) document.getElementById(`img-${f.location.slice(6)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (f.location?.startsWith("asset:")) document.getElementById(`doc-${f.location.slice(6)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
+  const titleOf = (f: Finding) => state?.rules.find((r) => r.id === f.rule_id)?.title ?? f.rule_id;
+  /** Put keyboard focus on a finding's row button once React has rendered it. */
+  const focusFinding = (fid: string) => setTimeout(() => document.querySelector<HTMLElement>(`[data-fid="${fid}"] > button[aria-expanded]`)?.focus(), 30);
+  // Repeated announcements of the same words are still read: alternate a trailing no-break space.
+  const say = (s: string) => setAnnounce((prev) => (prev === s ? s + " " : s));
+
+  // The undo notice goes away after UNDO_MS, unless the pointer or keyboard focus is on it.
+  useEffect(() => {
+    if (!undo || undoHeld) return;
+    const t = setTimeout(() => setUndo(null), UNDO_MS);
+    return () => clearTimeout(t);
+  }, [undo, undoHeld]);
+
+  /** Accept a finding's fix, or an edited fix, then offer to undo it. */
+  async function acceptFix(f: Finding, edited?: string): Promise<boolean> {
+    const r = await act("…", { action: "accept", finding_id: f.id, ...(edited !== undefined ? { fix: edited } : {}) }, edited !== undefined ? "Edited fix applied. The checks ran again on the new text." : undefined);
+    if (!r) return false;
+    setUndo({ key: ++undoSeq.current, text: `Fix accepted for ${titleOf(f)}${r.version ? `, saved as version ${r.version}` : ""}.`, body: { action: "undo_accept", finding_id: f.id }, findingId: f.id });
+    return true;
+  }
+  async function undoFix() {
+    const u = undo;
+    if (!u) return;
+    setUndoHeld(false);
+    const r = await act("Undoing…", u.body, u.many
+      ? "Fixes undone. The text is back to how it was before Accept all, and those findings are open again."
+      : "Fix undone. The text is back to how it was, and the finding is open again.");
+    if (r && u.findingId) { setActive(u.findingId); focusFinding(u.findingId); }
+  }
+
+  // Keyboard review. One listener on the document; it calls the latest handler, so it always sees the current state.
+  const keyHandler = useRef<(e: KeyboardEvent) => void>(() => {});
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => keyHandler.current(e);
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, []);
+  function onKey(e: KeyboardEvent) {
+    if (!data || e.defaultPrevented) return;
+    const t = e.target instanceof HTMLElement ? e.target : null;
+    const help = helpRef.current;
+    const action = reviewKey({
+      key: e.key, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey, shift: e.shiftKey,
+      tag: t?.tagName, editable: !!t?.isContentEditable,
+      interactive: !!t?.closest("button, a, summary, [role=button], input, select, textarea"),
+      inList: !!t?.closest("#findings-list"), dialogOpen: !!help?.open,
+    });
+    if (!action) return;
+    const open = sortOpen(data.findings);
+    const st = data.draft.status;
+    const locked = st === "approved";
+    const canEditNow = !locked && st !== "brand_review" && st !== "compliance_review";
+    const focused = t?.closest<HTMLElement>("[data-fid]")?.dataset.fid;
+    const current = open.find((f) => f.id === focused) ?? open.find((f) => f.id === cursor);
+    // A and D act on the focused finding, or else on the one that is expanded.
+    const target = current ?? open.find((f) => f.id === expandedOf(open, active));
+    switch (action) {
+      case "help":
+        e.preventDefault();
+        help?.showModal();
+        return;
+      case "close":
+        if (help?.open) { e.preventDefault(); help.close(); return; }
+        if (undo) { e.preventDefault(); setUndo(null); say("Undo notice closed."); }
+        return;
+      case "next": case "prev": {
+        e.preventDefault();
+        if (!open.length) { say("No open findings."); return; }
+        const ids = open.map((f) => f.id!);
+        const nid = moveCursor(ids, current?.id, action === "next" ? 1 : -1)!;
+        const f = open.find((x) => x.id === nid)!;
+        setCursor(nid);
+        focusFinding(nid);
+        say(`Finding ${ids.indexOf(nid) + 1} of ${ids.length}: ${titleOf(f)}. ${f.severity}${f.level === "suggestion" ? " suggestion" : ""}${f.fix != null ? ", fix ready" : ""}.`);
+        return;
+      }
+      case "toggle":
+        if (!target) return;
+        e.preventDefault();
+        if (expandedOf(open, active) === target.id) setActive(""); else show(target);
+        return;
+      case "accept":
+        e.preventDefault();
+        if (busy) { say("Still working on the last change. Try again in a moment."); return; }
+        if (!canAcceptFix(target, canEditNow)) { say(whyNoAccept(target, canEditNow)); return; }
+        say(`Accepting the fix for ${titleOf(target!)}.`);
+        void acceptFix(target!);
+        return;
+      case "dismiss":
+        e.preventDefault();
+        if (!target) { say("Move to a finding first with J or K."); return; }
+        if (locked) { say("This draft is approved and locked."); return; }
+        setActive(target.id!); setError(null); setGranting(null); setDismissing(target.id!);
+        setTimeout(() => document.getElementById(`r-${target.id}`)?.focus(), 30);
+        say(`Dismissing ${titleOf(target)}: choose a reason.`);
+        return;
+      case "undo":
+        if (!undo) { say("Nothing to undo."); return; }
+        e.preventDefault();
+        void undoFix();
+        return;
+    }
+  }
+  useEffect(() => { keyHandler.current = onKey; });
 
   if (error && !data) return <Notice tone="error">{error} <Link className="underline" href="/">Back to reviews</Link></Notice>;
   if (!data) return <p className="text-sm text-muted">Loading the review…</p>;
 
   const { draft, findings, events, versions, receipt } = data;
-  const sevOrder = { critical: 0, major: 1, minor: 2 } as const;
-  const open = findings.filter((f) => f.state === "open").sort((x, y) => sevOrder[x.severity] - sevOrder[y.severity] || (x.location ?? "").localeCompare(y.location ?? ""));
+  const open = sortOpen(findings);
   const closed = findings.filter((f) => f.state !== "open");
   const openViolations = open.filter((f) => f.level === "violation");
   const st = draft.stats;
@@ -215,9 +341,12 @@ export default function ReviewPage() {
   async function acceptAll() {
     setBusy("Applying fixes…");
     setError(null);
+    setUndo(null);
     try {
-      await api(`/api/drafts/${id}`, { action: "accept_all" });
+      const r = await api<{ version?: number; applied?: number }>(`/api/drafts/${id}`, { action: "accept_all" });
       await load();
+      // Every fix of this step is undone together: back to the version before it.
+      if (r?.version) setUndo({ key: ++undoSeq.current, text: `Accepted ${r.applied ?? "all"} fix${r.applied === 1 ? "" : "es"} in one step, saved as version ${r.version}.`, body: { action: "undo_accept", version: r.version }, many: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -542,6 +671,11 @@ export default function ReviewPage() {
             <h2>{open.length} open finding{open.length === 1 ? "" : "s"}</h2>
             {canEdit && role === "creator" && fixable.length > 1 && <Button disabled={!!busy} onClick={acceptAll}>{busy === "Applying fixes…" ? busy : `Accept all ${fixable.length} fixes`}</Button>}
           </div>
+          {open.length > 0 && (
+            <p className="text-xs text-muted" id="kbd-hint">
+              <span className="sr-only">Shortcuts on this page. </span>Keyboard: J/K move · A accept · D dismiss · ? help
+            </p>
+          )}
           {findings.length > 0 && (
             <div className="rounded-md border border-line bg-white px-3 py-2 text-xs" aria-label="Findings summary" role="group">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -565,16 +699,16 @@ export default function ReviewPage() {
             </div>
           )}
           {open.length === 0 && <Card className="p-4 text-sm text-muted">{findings.length ? "Every finding is resolved." : "No findings. This draft follows the rules in force."}</Card>}
-          {open.length > 0 && <Card className="divide-y divide-line overflow-hidden">
+          {open.length > 0 && <div id="findings-list"><Card className="divide-y divide-line overflow-hidden">
           {open.map((f) => {
             const rule = state?.rules.find((r) => r.id === f.rule_id);
             // One finding is open at a time; the rest stay as one-line rows.
-            const expanded = active === "" ? null : open.some((x) => x.id === active) ? active : open[0]?.id;
+            const expanded = expandedOf(open, active);
             const isOpen = expanded === f.id;
             const check = checkOf(f, rule?.category);
             return (
-              <div key={f.id} id={`f-${f.id}`} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
-                <button className="flex w-full items-start gap-3 px-4 py-2.5 text-left" aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
+              <div key={f.id} id={`f-${f.id}`} data-fid={f.id} className={`border-l-[3px] text-sm ${{ critical: "border-l-crit", major: "border-l-major", minor: "border-l-minor" }[f.severity]} ${isOpen ? "bg-white" : "bg-paper/60"}`}>
+                <button className={`flex w-full items-start gap-3 px-4 py-2.5 text-left focus-visible:-outline-offset-2 ${cursor === f.id ? "bg-mist/60" : ""}`} aria-expanded={isOpen} onClick={() => (isOpen ? setActive("") : show(f))}>
                   <span className="min-w-0 flex-1">
                     <span className="block font-serif text-[15.5px] font-medium leading-snug">{rule?.title ?? f.rule_id}</span>
                     {!isOpen && <span className="mt-0.5 block truncate font-serif text-[13.5px] italic text-muted">“{f.quote}”</span>}
@@ -601,6 +735,11 @@ export default function ReviewPage() {
                   {f.created_at && <><dt>Raised</dt><dd>{fmtDate(f.created_at)}{f.draft_version ? `, on version ${f.draft_version}` : ""}{f.level === "suggestion" ? ". A suggestion: it does not block approval" : ""}</dd></>}
                 </dl>
                 {parseException(f.dismiss_reason) && <div className="mt-2"><ExceptionNote reason={f.dismiss_reason} open /></div>}
+                {(() => {
+                  // How this team settled the same rule on its other drafts.
+                  const line = precedentLine(data.precedents?.[f.rule_id]);
+                  return line && <p className="mt-2 text-xs text-muted" title="From this workspace's other drafts">{line}</p>;
+                })()}
                 <p className="mt-2 rounded-md bg-mist px-2 py-1.5 text-xs text-muted"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
                 {f.precedent && (
                   <p className="mt-2 rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-xs">
@@ -652,13 +791,13 @@ export default function ReviewPage() {
                           <label className="sr-only" htmlFor={`fx-${f.id}`}>Edit the fix</label>
                           <textarea id={`fx-${f.id}`} rows={2} className={inputCls} value={fixEdit?.text ?? ""} onChange={(e) => setFixEdit({ id: f.id!, text: e.target.value })} />
                           <div className="flex gap-2">
-                            <Button variant="primary" disabled={!!busy || !fixEdit?.text.trim()} onClick={async () => { if (await act("…", { action: "accept", finding_id: f.id, fix: fixEdit?.text }, "Edited fix applied. The checks ran again on the new text.")) setFixEdit(null); }}>Apply edited fix</Button>
+                            <Button variant="primary" disabled={!!busy || !fixEdit?.text.trim()} onClick={async () => { if (await acceptFix(f, fixEdit?.text ?? "")) setFixEdit(null); }}>Apply edited fix</Button>
                             <Button onClick={() => setFixEdit(null)}>Cancel</Button>
                           </div>
                         </div>
                       ) : (
                         <>
-                          <Button variant="primary" disabled={!!busy} onClick={() => act("…", { action: "accept", finding_id: f.id })}>Accept fix</Button>
+                          <Button variant="primary" disabled={!!busy} onClick={() => acceptFix(f)}>Accept fix</Button>
                           <Button disabled={!!busy} onClick={() => setFixEdit({ id: f.id!, text: f.fix ?? "" })}>Edit fix</Button>
                         </>
                       ))}
@@ -670,7 +809,7 @@ export default function ReviewPage() {
               </div>
             );
           })}
-          </Card>}
+          </Card></div>}
           {closed.length > 0 && (
             <div>
               <button className="text-sm text-muted underline-offset-2 hover:underline" aria-expanded={showResolved} onClick={() => setShowResolved(!showResolved)}>
@@ -703,6 +842,33 @@ export default function ReviewPage() {
           )}
         </div>
       </div>
+
+      {/* Screen-reader announcements for keyboard review. */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">{announce}</div>
+
+      {/* Undo after accepting a fix. The live region is always there, so its content is announced when it appears. */}
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center sm:inset-x-auto sm:right-4">
+        {undo && (
+          <div key={undo.key} className="pointer-events-auto flex w-full max-w-sm flex-wrap items-center gap-2 rounded-md border border-ink/20 bg-white px-3 py-2 text-sm shadow-lg"
+            onMouseEnter={() => setUndoHeld(true)} onMouseLeave={() => setUndoHeld(false)} onFocus={() => setUndoHeld(true)} onBlur={() => setUndoHeld(false)}>
+            <span className="min-w-0 flex-1">{undo.text}</span>
+            <Button variant="primary" disabled={!!busy} onClick={undoFix}>{busy === "Undoing…" ? busy : undo.many ? "Undo fixes" : "Undo fix"}</Button>
+            <Button variant="ghost" aria-label="Close the undo notice" onClick={() => { setUndo(null); setUndoHeld(false); }}>×</Button>
+          </div>
+        )}
+      </div>
+
+      <dialog ref={helpRef} aria-labelledby="kbd-title" className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-md border border-line bg-white p-4 text-sm text-ink backdrop:bg-ink/30">
+        <h2 id="kbd-title">Keyboard shortcuts</h2>
+        <p className="mt-1 text-xs text-muted">On the findings list. Ignored while you type in a box, or with Ctrl, Alt or Cmd held.</p>
+        <dl className="mt-3 grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5">
+          {SHORTCUTS.flatMap(([k, what]) => [
+            <dt key={`${k}-k`}><kbd className="rounded border border-line bg-mist px-1.5 py-0.5 font-mono text-xs">{k}</kbd></dt>,
+            <dd key={`${k}-d`}>{what}</dd>,
+          ])}
+        </dl>
+        <form method="dialog" className="mt-4 flex justify-end"><Button type="submit">Close</Button></form>
+      </dialog>
     </>
   );
 }
