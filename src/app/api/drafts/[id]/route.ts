@@ -2,6 +2,7 @@ import { BRAND_SIGNERS, approverLabel, canGrantException, complianceSignOff, exc
 import { actor, db, fail, loadKit, log, must, wsOf } from "@/lib/db";
 import { reviewDraft } from "@/lib/engine/review";
 import { riskTier } from "@/lib/engine/review";
+import { createShare, sharesOf, withoutHashes, type ShareEvent } from "@/lib/share";
 import { cleanAssets, cleanImages, fingerprint, getDraft, getFindings, lapseExceptions, runReview, saveText } from "@/lib/workflow";
 
 export const maxDuration = 60;
@@ -19,10 +20,13 @@ export async function GET(req: Request, ctx: Ctx) {
       d.from("versions").select("*").eq("draft_id", id).order("version", { ascending: false }),
       d.from("receipts").select("*").eq("draft_id", id).order("at", { ascending: false }).limit(1).maybeSingle(),
     ]);
-    const evs = must(events) as SignEvent[];
+    const raw = must(events) as (SignEvent & ShareEvent)[];
+    // Read-only share links: listed without their tokens (never stored) or token hashes (never sent).
+    const shares = sharesOf(raw).filter((s) => s.active);
+    const evs = withoutHashes(raw) as SignEvent[];
     // A high-risk draft needs compliance and then brand. Which sign-off still stands is derived from the events log.
     const sign_off = draft.status === "compliance_review" ? { compliance: complianceSignOff(evs), waiting_for: complianceSignOff(evs) ? "brand" : "compliance" } : null;
-    return Response.json({ draft, findings, events: evs, versions: must(versions), receipt: must(receipt), sign_off });
+    return Response.json({ draft, findings, events: evs, versions: must(versions), receipt: must(receipt), sign_off, shares });
   } catch (e) {
     return fail(e, 500);
   }
@@ -39,11 +43,31 @@ export async function POST(req: Request, ctx: Ctx) {
     const ws = wsOf(req);
     let draft = await getDraft(ws, id);
     if (!draft) return fail("That draft was not found.", 404);
+    // Reviewers: brand (Arjun), compliance (Kavya), and the brand manager (Meera), who can stand in for brand.
+    const reviewer = a.role === "brand" || a.role === "compliance" || a.role === "manager";
+    // Read-only share links of the approval record. Sharing does not change the draft, so it works on a locked one.
+    if (b.action === "share") {
+      if (draft.status !== "approved") return fail("Only an approved draft has an approval record to share.", 409);
+      const receipt = must(await d.from("receipts").select("id").eq("draft_id", id).order("at", { ascending: false }).limit(1).maybeSingle()) as { id: string } | null;
+      if (!receipt) return fail("This draft has no approval record yet.", 409);
+      const made = await createShare(ws, id, a, receipt.id, new URL(req.url).origin);
+      if (!made) return fail("This draft already has 20 active links. Revoke one first.", 409);
+      return Response.json({ ok: true, ...made });
+    }
+    if (b.action === "unshare") {
+      if (!reviewer) return fail("Only a reviewer (Arjun, Kavya or Meera) can revoke a share link.", 403);
+      const shareId = Number(b.share_id);
+      if (!Number.isSafeInteger(shareId) || shareId <= 0) return fail("Say which link to revoke (share_id).");
+      const evs = must(await d.from("events").select("id, actor, role, action, at, detail").eq("ws", ws).eq("draft_id", id).in("action", ["share_created", "share_revoked"])) as ShareEvent[];
+      const s = sharesOf(evs).find((x) => x.id === shareId);
+      if (!s) return fail("That share link was not found on this draft.", 404);
+      if (s.revoked_at) return fail("That link is already revoked.", 409);
+      await log(req, id, "share_revoked", { share_id: String(shareId) });
+      return Response.json({ ok: true });
+    }
     if (draft.status === "approved") return fail("This draft is approved and locked. Start a new review to change it.", 409);
     const findings = await getFindings(id);
     const inReview = REVIEW.includes(draft.status);
-    // Reviewers: brand (Arjun), compliance (Kavya), and the brand manager (Meera), who can stand in for brand.
-    const reviewer = a.role === "brand" || a.role === "compliance" || a.role === "manager";
 
     switch (b.action) {
       case "accept": {

@@ -3,7 +3,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { approversOf, exceptionLapsed, exceptionsOf, parseException } from "@/lib/approval";
-import { api, fmtDate } from "@/lib/client";
+import { Button } from "@/components/ui";
+import { api, fmtDate, useApp } from "@/lib/client";
+import { checksOf } from "@/lib/record";
 import { CONTENT_TYPES, ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Rec {
@@ -13,26 +15,80 @@ interface Rec {
   };
   findings: Finding[];
   events: { id: number; actor: string; action: string; detail: Record<string, unknown>; at: string }[];
+  shares?: Share[];
   receipt: { id: string; text_hash: string; approved_text: string; kit_version: number; approver: string; approver_role: string; at: string; findings_summary: Record<string, unknown> } | null;
 }
 
-const ACTION: Record<string, string> = { approved_partial: "approved for compliance (first of two sign-offs)", exception_lapsed: "an approved exception lapsed; finding reopened" };
+const ACTION: Record<string, string> = {
+  approved_partial: "approved for compliance (first of two sign-offs)", exception_lapsed: "an approved exception lapsed; finding reopened",
+  share_created: "created a read-only share link", share_revoked: "revoked a read-only share link",
+};
 const STATE: Record<string, string> = { accepted: "Fixed (fix accepted)", resolved: "Fixed (text edited)", dismissed: "Dismissed with a reason", open: "Open suggestion" };
 
-/** What ran on the draft and what was skipped, from the review's own statistics. */
-function checksOf(d: Rec["draft"]): { name: string; ran: boolean | null; note: string }[] {
-  const st = d.stats ?? {};
-  const ai = d.mode === "ai", conf = !!d.intent.confidential;
-  const imgs = st.images ?? d.images?.length ?? 0, docs = st.assets ?? d.assets?.length ?? 0;
-  const n = (k: number | undefined, w: string) => `${k ?? 0} ${w}${k === 1 ? "" : w.endsWith("x") ? "es" : "s"}`;
-  return [
-    { name: "Code checks", ran: true, note: `terms, contacts, students, disclaimers, figures against the Facts Register; ${n(st.codeFindings, "finding")} on the last run` },
-    { name: "AI checks", ran: conf ? null : ai, note: conf ? "skipped: confidential draft, never sent to AI" : ai ? `${n(st.aiFindings, "finding")} from ${n(st.aiCalls, "call")}` : `skipped: ${st.aiError ? st.aiError.slice(0, 80) : "the AI service was off"}` },
-    { name: "Images", ran: imgs ? true : null, note: imgs ? `${n(imgs, "image")}: text, colours, contrast, logo, alt text` : "none attached" },
-    { name: "AI vision", ran: !imgs || conf ? null : (st.visionRead ?? 0) > 0 && !st.visionError, note: !imgs ? "no images" : conf ? "skipped: confidential" : st.visionError ? "skipped: the AI service did not answer" : `${n(st.visionRead, "creative")} read for people shown` },
-    { name: "Campaign documents", ran: docs ? true : null, note: docs ? `${n(docs, "document")}, every text rule` : "none attached" },
-    { name: "Verifier", ran: true, note: `${n(st.droppedByVerifier?.length, "unsupported finding")} dropped; ${n(st.fixesWithdrawn, "fix")} withdrawn after re-testing` },
-  ];
+interface Share { id: number; created_at: string; created_by: string; expires_at: string }
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+/**
+ * Read-only share links: anyone can create one (valid 30 days) to send the approved record outside the workspace.
+ * The link is shown once, when it is made; only its hash is stored. Reviewers and the brand manager can revoke links.
+ */
+function SharePanel({ id, initial }: { id: string; initial: Share[] }) {
+  const { role } = useApp();
+  const [links, setLinks] = useState(initial);
+  const [made, setMade] = useState<{ url: string; expires_at: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const canRevoke = role === "brand" || role === "compliance" || role === "manager";
+  async function share() {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await api<{ url: string; expires_at: string; share: Share }>(`/api/drafts/${id}`, { action: "share" });
+      setMade({ url: r.url, expires_at: r.expires_at });
+      setLinks((l) => [r.share, ...l]);
+    } catch (e) { setMsg(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  }
+  async function copy() {
+    if (!made) return;
+    try { await navigator.clipboard.writeText(made.url); setMsg("Link copied."); } catch { setMsg("Copying was blocked by the browser: select the link and copy it."); }
+  }
+  async function revoke(s: Share) {
+    if (!window.confirm("Revoke this link? Anyone who has it will no longer be able to open the record.")) return;
+    setBusy(true); setMsg(null);
+    try {
+      await api(`/api/drafts/${id}`, { action: "unshare", share_id: s.id });
+      setLinks((l) => l.filter((x) => x.id !== s.id));
+      setMsg("Link revoked.");
+    } catch (e) { setMsg(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  }
+  return (
+    <section aria-labelledby="share-h" className="mb-6 rounded-md border border-line p-4 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="share-h" className="!text-[15px]">Share outside the workspace</h2>
+        <Button onClick={share} disabled={busy}>{busy ? "Working…" : "Share read-only link"}</Button>
+      </div>
+      <p className="mt-1 text-muted">A read-only copy of this record (approved text, fingerprint, approvers, findings, exceptions, checks), valid for 30 days. It shows nothing else from the workspace.</p>
+      {made && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label htmlFor="share-url" className="sr-only">Read-only link</label>
+          <input id="share-url" readOnly value={made.url} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-md border border-line bg-white px-2 py-1.5 font-mono text-[12px]" />
+          <Button variant="primary" onClick={copy}>Copy link</Button>
+          <a href={made.url} target="_blank" rel="noreferrer" className="text-muted underline">Open</a>
+          <p className="w-full text-[12px] text-muted">Valid until {fmtDay(made.expires_at)}. Copy it now: the link is shown only once, and Guidewise keeps only a fingerprint of it.</p>
+        </div>
+      )}
+      {msg && <p role="status" className="mt-2 text-[12px]">{msg}</p>}
+      <h3 className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted">Active links</h3>
+      {links.length ? (
+        <ul className="mt-1 space-y-1">{links.map((s) => (
+          <li key={s.id} className="flex flex-wrap items-center justify-between gap-2">
+            <span>Created by {s.created_by} on {fmtDate(s.created_at)} · valid until {fmtDay(s.expires_at)}</span>
+            {canRevoke && <Button variant="danger" onClick={() => revoke(s)} disabled={busy} aria-label={`Revoke the link created on ${fmtDate(s.created_at)}`}>Revoke</Button>}
+          </li>
+        ))}</ul>
+      ) : <p className="mt-1 text-muted">None.</p>}
+      {links.length > 0 && !canRevoke && <p className="mt-1 text-[12px] text-muted">A reviewer (Arjun, Kavya) or the brand manager (Meera) can revoke a link.</p>}
+    </section>
+  );
 }
 
 /** A printable approval record: what was approved, against which rules, and who decided. Save as PDF from the print dialog. */
@@ -71,6 +127,7 @@ export default function Record() {
         <Link href={`/review/${id}`} className="text-muted underline">Back to the review</Link>
         <button onClick={() => window.print()} className="rounded-[5px] bg-ink px-3 py-1.5 text-[13px] font-medium text-paper">Print or save as PDF</button>
       </div>
+      {d.draft.status === "approved" && <SharePanel id={id} initial={d.shares ?? []} />}
       <p className="text-[11px] uppercase tracking-[0.14em] text-muted">Guidewise approval record</p>
       <h1 className="mt-1">{d.draft.title}</h1>
       <dl className="mt-5 grid grid-cols-2 gap-x-8 gap-y-3 border-y border-line py-4">

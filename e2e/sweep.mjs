@@ -416,6 +416,25 @@ await step(page, "approved draft is locked", async () => {
   const r = await page.request.post(L + `/api/drafts/${rid2}`, { data: { action: "edit", text: "Changed after approval." }, headers: { "x-workspace": await page.evaluate(() => localStorage.getItem("gw-ws") ?? "") } });
   must(r.status() === 409 || r.status() === 404, `expected 409, got ${r.status()}`);
 });
+await step(page, "record: share a read-only link and open it outside the workspace", async () => {
+  await page.goto(L + `/review/${rid2}/record`);
+  await page.getByRole("button", { name: "Share read-only link" }).click();
+  const box = page.getByLabel("Read-only link");
+  await box.waitFor({ timeout: 30000 });
+  const url = await box.inputValue();
+  must(/\/r\/[A-Za-z0-9_-]{43}$/.test(url), `not a share link: ${url}`);
+  await msg(/Created by .* valid until/);
+  const outside = await browser.newContext({ viewport: { width: 1360, height: 900 }, ignoreHTTPSErrors: true });
+  const op = await outside.newPage();
+  watch(op, "shared");
+  await op.goto(url.replace(/^https?:\/\/[^/]+/, L), { waitUntil: "networkidle" });
+  await op.getByText(/Read-only copy shared from Guidewise; valid until/).waitFor({ timeout: 30000 });
+  must(await op.locator('meta[name="robots"][content="noindex"]').count() > 0, "no noindex meta");
+  must(!(await op.getByRole("combobox").count()), "the shared page shows workspace controls");
+  const axe = await axeCheck(op);
+  await outside.close();
+  return axe;
+});
 
 // ---------- 6. Results, insights, tour, reset ----------
 await step(page, "developers: create a key, call check_draft via REST and MCP, see the audit trail", async () => {

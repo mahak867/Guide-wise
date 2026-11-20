@@ -39,6 +39,9 @@ export function Shell({ children }: { children: ReactNode }) {
     }
   }
 
+  // A shared read-only record is opened by someone outside the workspace: no navigation, roles or reset.
+  if (path?.startsWith("/r/")) return <main className="mx-auto w-full max-w-4xl px-4 py-6">{children}</main>;
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="print:hidden z-20 sm:sticky sm:top-0 border-b border-line bg-paper/90 backdrop-blur">

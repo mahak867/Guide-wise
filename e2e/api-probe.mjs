@@ -309,6 +309,45 @@ expect("edit to empty text", await call("POST", `/api/drafts/${id}`, { body: { a
   expect("bulk: an unknown content type refused", await call("POST", "/api/bulk", { body: { posts: [{ ...post, content_type: "fax" }] } }), (r) => is4xx(r) && r.s === 400);
 }
 
+// Read-only share links of an approval record: only for approved drafts; the public copy needs no workspace,
+// shows the record and nothing that identifies the workspace; reviewers revoke; other workspaces cannot.
+{
+  expect("share: refused for a draft that is not approved", await call("POST", `/api/drafts/${id}`, { body: { action: "share" } }), (r) => is4xx(r) && r.s === 409);
+  const approved = (await call("GET", "/api/drafts")).j.drafts.find((x) => x.status === "approved");
+  const sh = await call("POST", `/api/drafts/${approved.id}`, { body: { action: "share" } });
+  const days = (Date.parse(sh.j?.expires_at) - Date.now()) / 864e5;
+  expect("share: an approved draft gives a /r/ link valid 30 days", sh, (r) => r.s === 200 && /\/r\/[A-Za-z0-9_-]{43}$/.test(r.j?.url ?? "") && days > 29.9 && days <= 30);
+  const token = sh.j.url.split("/r/")[1];
+  const rec = (await call("GET", `/api/drafts/${approved.id}`)).j;
+  const pub = await fetch(`${L}/api/share/${token}`);
+  const pj = await pub.json().catch(() => null);
+  const pubText = JSON.stringify(pj);
+  expect("share: the public copy needs no workspace, and has the approved text and fingerprint", { s: pub.status, j: pj }, (r) => r.s === 200
+    && r.j?.record?.approved_text === rec.receipt.approved_text && r.j.record.fingerprint === rec.receipt.text_hash && r.j.record.approvers.length >= 1);
+  expect("share: the public copy has no workspace id, draft id or token hash", { s: pub.status, j: pj }, () => !pubText.includes(ws) && !pubText.includes(approved.id) && !/"(hash|ws|draft_id)"/.test(pubText));
+  expect("share: the public copy is not indexed or cached", { s: pub.status, j: {} }, () => /noindex/.test(pub.headers.get("x-robots-tag") ?? "") && /no-store/.test(pub.headers.get("cache-control") ?? ""));
+  const page = await fetch(`${L}/r/${token}`);
+  const html = await page.text();
+  expect("share: the /r/ page shows the record, noindex, with the validity footer", { s: page.status, j: {} }, (r) => r.s === 200 && /<meta name="robots" content="noindex"/.test(html)
+    && /Read-only copy shared from Guidewise; valid until/.test(html) && html.includes(rec.receipt.text_hash) && !html.includes(ws));
+  const listed = (await call("GET", `/api/drafts/${approved.id}`)).j;
+  expect("share: the draft lists its active link, without token or hash", { s: 200, j: listed }, (r) => r.j.shares?.length === 1 && r.j.shares[0].expires_at === sh.j.expires_at
+    && !JSON.stringify(r.j).includes(token) && !JSON.stringify(r.j.events).includes('"hash"'));
+  const shareId = listed.shares[0].id;
+  expect("share: the creator cannot revoke", await call("POST", `/api/drafts/${approved.id}`, { body: { action: "unshare", share_id: shareId } }), is(403));
+  const otherWs = { "x-workspace": "probe-" + randomUUID().slice(0, 12), "x-role": "brand", "content-type": "application/json" };
+  const foreign = await fetch(`${L}/api/drafts/${approved.id}`, { method: "POST", headers: otherWs, body: JSON.stringify({ action: "unshare", share_id: shareId }) });
+  expect("share: another workspace cannot revoke", { s: foreign.status, j: await foreign.json().catch(() => null) }, (r) => r.s === 404 || r.s === 403);
+  expect("share: another workspace cannot list the shares", await fetch(`${L}/api/drafts/${approved.id}`, { headers: otherWs }).then(async (r) => ({ s: r.status, j: await r.json().catch(() => null) })), (r) => r.s === 404 && !r.j?.shares);
+  expect("share: a reviewer revokes it", await call("POST", `/api/drafts/${approved.id}`, { role: "brand", body: { action: "unshare", share_id: shareId } }), is(200));
+  expect("share: a revoked link is not found", { s: (await fetch(`${L}/api/share/${token}`)).status, j: {} }, is(404));
+  expect("share: the revoked /r/ page is a 404", { s: (await fetch(`${L}/r/${token}`)).status, j: {} }, is(404));
+  expect("share: an unknown token is not found", { s: (await fetch(`${L}/api/share/${randomUUID().replace(/-/g, "")}${"x".repeat(11)}`)).status, j: {} }, is(404));
+  expect("share: a malformed token is not found", { s: (await fetch(`${L}/api/share/not-a-token`)).status, j: {} }, is(404));
+  expect("share: revoking again is refused", await call("POST", `/api/drafts/${approved.id}`, { role: "brand", body: { action: "unshare", share_id: shareId } }), (r) => is4xx(r) && r.s === 409);
+  expect("share: an approved draft stays locked for other actions", await call("POST", `/api/drafts/${approved.id}`, { body: { action: "comment", comment: "x" } }), is(409));
+}
+
 // Still healthy afterwards
 const st = await call("GET", "/api/state");
 expect("state still loads", st, (r) => r.s === 200 && Array.isArray(r.j?.rules));
