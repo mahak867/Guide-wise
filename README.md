@@ -75,7 +75,7 @@ Each one is tested live against exactly what we promised at Round 2 ([`docs/TEST
 
 ## Documentation
 
-[Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Known issues](docs/KNOWN_ISSUES.md) · [Roadmap](docs/ROADMAP.md) · [API and MCP](docs/API.md) · [Threat model](docs/THREAT_MODEL.md) · [Changelog](docs/CHANGELOG.md) · [Contributions](docs/CONTRIBUTIONS.md)
+[Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Known issues](docs/KNOWN_ISSUES.md) · [Roadmap](docs/ROADMAP.md) · [From demo to a real team](docs/PRODUCTION.md) · [API and MCP](docs/API.md) · [Threat model](docs/THREAT_MODEL.md) · [Changelog](docs/CHANGELOG.md) · [Contributions](docs/CONTRIBUTIONS.md)
 
 ## Team
 
