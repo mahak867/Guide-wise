@@ -1,6 +1,6 @@
 # Round 3 submission: form answers
 
-Paste each block into the matching field. Submitted once, by the team leader (Mahak Fahad). Before submitting, fill in the user-test line under "Testing details" and rebuild the PDF (`node docs/round3/build-pdf.mjs`) if `docs/round3/user-tests.json` was added.
+Paste each block into the matching field. Submitted once, by the team leader (Mahak Fahad). Before submitting, rebuild the PDF (`node docs/round3/build-pdf.mjs`).
 
 ## Final working link
 https://guidewise-kohl.vercel.app
@@ -52,7 +52,7 @@ Reliability: a bug hunt on the live site found and fixed lost Brand Kit versions
 - Load test: 20 and then 50 concurrent visitors, 980 requests, 0 failed (docs/LOAD_TEST.md).
 - Text accuracy on 40 held-out drafts: 92% precision and 98% recall with AI; 100% and 74% with code only. Images: 20 of 20 planted errors caught, 0 false alarms. Privacy: 0 leaks in 144 AI prompts.
 - AI helpers, measured before the fixes: the guide compiler proposed 16 of 17 expected rules and warned about 7 of 8 planted problems with 0 false warnings; the amendment helper passed the code gate 7 of 8 times but left the dismissed text flagged, which is now fixed and awaits re-measurement (docs/EVAL_HELPERS.md).
-- Hands-on user test: (fill in after tonight's sessions) [N] students, [X] of [4N] tasks done without help, median [M] minutes; what we changed: [...].
+- Hands-on user test: one student outside the team (2nd year CSE) used every feature without help in about 12 minutes and asked no questions; he liked the built-in demo and how simple it was. One tester is not a study; the December pilot is where real marketers use it.
 - Threat model: 15 threats, each mapped to the test that proves it (docs/THREAT_MODEL.md). All numbers come from our own test set and are optimistic.
 
 Details: docs/TESTING.md.

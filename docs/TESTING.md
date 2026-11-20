@@ -63,6 +63,10 @@ The earlier manual run (axe-core 4.10, 12 desktop pages) found two minor issues,
 
 `tests/fuzz.test.ts` (runs with the unit tests): 26 hostile inputs (12,000 emoji, Hindi, regex characters, HTML, null bytes, invisible characters, right-to-left overrides, prompt injection, broken surrogate pairs, an 11,000-letter word, repeated figures) through the whole engine, as a social post and as an ad: no crash, no finding quoting words not in the draft, slowest review 25 ms. Writing it as a test found one real problem: the email pattern took quadratic time on a long run of letters (about 1 s for 11,000), now bounded to the 64-character limit of an email address.
 
+## Hands-on user test (20 Nov)
+
+One student outside the team (T.R., 2nd year CSE) used the live site with no instructions beyond the link: every feature, about 12 minutes, no questions asked, no task needed help. He liked the built-in demo and how simple it was to operate. A team member (who owns the UI) also walked through every screen in about 8 minutes; that is not counted. One tester is not a study: the December pilot is where real marketers use it.
+
 ## Bug hunt (20 Nov)
 
 A deliberate hunt for hidden faults on the live site (build 7d921e8), using it the way a judge would: repeated and racing actions, refresh and navigation, invalid input, empty states, phone size and the keyboard. Every check ran in its own fresh workspace; AI was off (`useAI: false` or a confidential draft) except where a page turns it on itself.

@@ -1,0 +1,8 @@
+{
+  "date": "20 Nov 2026",
+  "participants": [
+    { "initials": "T.R.", "year_branch": "2nd year CSE", "tasks": ["Y", "Y", "Y", "Y"], "minutes": 12, "confused": "Nothing; no questions asked", "liked": "The built-in demo, and that it was simple to operate" }
+  ],
+  "internal": "Roshini R (team member, owns the UI) also walked through every screen in about 8 minutes; not counted as a user test.",
+  "changes_made": []
+}
