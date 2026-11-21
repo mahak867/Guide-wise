@@ -54,11 +54,14 @@ Guide compiler: a PDF or Word brand guide turned into proposed rules with test s
 Insights: most-dismissed and unclear rules, AI-drafted amendments re-tested by code, dismissal rate before and after
 Privacy: personal data masked before any AI call; confidential drafts never sent to AI
 Comments, versions with word-level changes, audit log
+Optional sign-in and organisations: members with roles, invite links with a role, approvals signed by the named signed-in person; the demo still opens in one click with no sign-in
+Dark mode that follows the system setting
+Accuracy measured live on two brands (Results page, with a brand selector)
 Sample post, sample campaign, sample calendar, seven hard cases, guided tour; a private workspace per visitor; works on a phone
 
 ## Technical architecture and implementation summary
 
-One Next.js 16 (TypeScript) app on Vercel in Mumbai, next to a Supabase Postgres database (9 migrations; every row scoped to a workspace). The browser talks to the app's API routes; the app talks to Postgres and to the AI providers. One governance module serves the web app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all of them return the same findings.
+One Next.js 16 (TypeScript) app on Vercel in Mumbai, next to a Supabase Postgres database (10 migrations; every row scoped to a workspace). The browser talks to the app's API routes; the app talks to Postgres and to the AI providers. One governance module serves the web app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all of them return the same findings.
 
 Data flow of a review: redact personal data, then code checks, AI checks, AI vision, campaign documents, cross-source consistency, the verifier, fix re-test, risk routing, and human approval with a fingerprinted record. Image analysis (OCR with tesseract.js, palette, contrast, logo matching) runs in the browser. Only the AI steps use AI.
 
@@ -70,17 +73,17 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
 
-Unit and integration: 290 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
+Unit and integration: 324 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
-Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 219 checks (bad input, wrong roles, other workspaces, races, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
+Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 268 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites and direct database writes refused, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
 
-Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
+Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 91% precision and 79% recall with code only; 96% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
 
 User testing: one student outside the team (2nd year CSE) used every feature without help in about 12 minutes and asked no questions; he liked the built-in demo and how simple it was.
 
 What we found and fixed: a bug hunt on the live site found lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; all fixed, each with a test. The AI helpers were measured live and their gaps fixed.
 
-Still imperfect: accuracy numbers come from our own test set; only one outside user test; no sign-in or organisations yet (a random private workspace per visitor); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
+Still imperfect: accuracy numbers come from our own test sets (both brands written by us); on the second brand code checks flagged 2 of 10 clean drafts; only one outside user test; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
 
 ## Improvement 1
 
@@ -102,13 +105,13 @@ Delivered: live, and the Round 2 test passes. Documents can be pasted, uploaded 
 
 ## Anything else you improved after Round 2
 
-Bulk check of a content calendar; a Chrome extension; read-only share links; channel previews; make this a rule from selected words; an image inspector with recoloured-logo, stretched-logo and text-size checks; undo and keyboard review with precedents; time-limited exceptions and dual sign-off; approval bound to the Brand Kit version and a database approval gate; a web page reader with hidden-text detection; 31 Brand Kit rules (from 24); simpler main screens; security headers, a strict Content-Security-Policy and a threat model of 15 threats each mapped to a test; a bug hunt with fixes; accessibility checks on every page; a load test; a daily live probe; the first hands-on user test.
+Bulk check of a content calendar; a Chrome extension; read-only share links; channel previews; make this a rule from selected words; an image inspector with recoloured-logo, stretched-logo and text-size checks; undo and keyboard review with precedents; time-limited exceptions and dual sign-off; approval bound to the Brand Kit version and a database approval gate; a web page reader with hidden-text detection; 31 Brand Kit rules (from 24); simpler main screens; security headers, a strict Content-Security-Policy and a threat model of 16 threats each mapped to a test; optional sign-in and organisations; dark mode; a second-brand evaluation; a bug hunt with fixes; accessibility checks on every page; a load test; a daily live probe; the first hands-on user test.
 
 ## Product roadmap and future development plan
 
 For: marketing teams at Indian coaching centres first (outcome claims and results ads are where regulatory risk is highest), then ed-tech, health and finance marketing teams.
 
-1. Dec 2026: pilot with 3 coaching centres. Add sign-in, organisations and row-level security (about a week; every table already carries a workspace id). Re-measure accuracy on 50 real, anonymised drafts per centre and publish it beside our own numbers.
+1. Dec 2026: pilot with 3 coaching centres. Extend row-level security from members and invites to every table (every table already carries a workspace id); password reset and email invitations. Re-measure accuracy on 50 real, anonymised drafts per centre and publish it beside our own numbers.
 2. Jan 2027: a paid AI tier with a monthly budget per organisation; scheduled fact expiry with impact emails to the fact's owner.
 3. Feb 2027: Instagram, WhatsApp Business and Google Docs integrations through the existing API, so drafts are checked where they are written.
 4. Mar 2027: deeper visual checks: logo variants, layout rules and fonts.

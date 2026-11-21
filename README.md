@@ -64,7 +64,7 @@ Each is tested against exactly the test we wrote down at Round 2 ([docs/TESTING.
 - **Approval bound to the Brand Kit version, and a database approval gate**: approval re-checks against the current kit, and a trigger (migration 009) refuses approval while a violation is open.
 - **Web page reader with hidden-text detection**: text a page hides from readers is labelled and checked; private and metadata addresses are refused.
 - **31 Brand Kit rules**, each with its own flag and pass test sentences, including paid-partnership labels, offer end dates, competitor names and vague link text.
-- **Security headers and a threat model**: CSP, no framing, HSTS; 15 threats, each mapped to the test that proves it ([THREAT_MODEL.md](docs/THREAT_MODEL.md)).
+- **Security headers and a threat model**: CSP, no framing, HSTS; 16 threats, each mapped to the test that proves it ([THREAT_MODEL.md](docs/THREAT_MODEL.md)).
 - **Load test** and **accessibility checks** (axe-core in every sweep), above.
 
 ## What runs
@@ -109,14 +109,14 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                         # 238 unit tests, including a deliberately wrong AI and fuzzing
+npm test                                                         # 324 unit tests, including a deliberately wrong AI and fuzzing
 npm run eval                                                     # accuracy on the held-out set (code checks)
 npm run eval:images                                              # 28 creatives with planted colour, contrast, logo and text-size errors
 npm run eval:privacy                                             # personal data and confidential canaries never reach the AI
 npm run eval:helpers                                             # the guide compiler and the rule-amendment helper, live (about 30 AI calls)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e           # 21-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep     # 59 steps: every page and control, desktop and phone, with axe-core
-BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api       # 206 checks: bad input, wrong roles, other workspaces, races
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api       # 268 checks: bad input, wrong roles, other workspaces, races, accounts
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:extension # the Chrome extension in Chromium against the live API
 BASE_URL=https://guidewise-kohl.vercel.app VISITORS=20 npm run test:load  # concurrent visitors, AI off
 ```
@@ -129,7 +129,7 @@ cp .env.example .env.local   # fill in the values
 npm run dev
 ```
 
-Apply the migrations in `supabase/migrations/` (001 to 009, in order) to a Supabase project first. The app seeds the PrepPath demo on first load. To check the setup, open `http://localhost:3000/api/health`: `database.ok` should be `true`, and `ai.chain` lists the AI services your keys switched on ("none" means rules-only mode, which still runs every code check and the whole workflow). Verified on a clean checkout: `npm ci`, `npm test` (all pass, no keys needed) and `npm run build`.
+Apply the migrations in `supabase/migrations/` (001 to 010, in order) to a Supabase project first. The app seeds the PrepPath demo on first load. To check the setup, open `http://localhost:3000/api/health`: `database.ok` should be `true`, and `ai.chain` lists the AI services your keys switched on ("none" means rules-only mode, which still runs every code check and the whole workflow). Verified on a clean checkout: `npm ci`, `npm test` (all pass, no keys needed) and `npm run build`.
 
 | Variable | Purpose |
 | --- | --- |
