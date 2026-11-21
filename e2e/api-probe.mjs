@@ -4,7 +4,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 const L = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 const ws = "probe-" + randomUUID().slice(0, 12);
-let bad = 0;
+let bad = 0, checks = 0;
 async function call(method, path, { role = "creator", body, raw, form, headers = {} } = {}) {
   const h = { "x-workspace": ws, "x-role": role, ...headers };
   let payload;
@@ -17,6 +17,7 @@ async function call(method, path, { role = "creator", body, raw, form, headers =
 }
 function expect(name, r, ok) {
   const pass = ok(r);
+  checks++;
   if (!pass) bad++;
   console.log(`${pass ? "ok  " : "BAD "} ${r.s} ${name}${pass ? "" : "  → " + JSON.stringify(r.j).slice(0, 160)}`);
 }
@@ -665,5 +666,6 @@ await call("POST", "/api/reset");
   }
 }
 
+console.log(`${checks - bad} of ${checks} checks passed.`);
 console.log(bad ? `${bad} problem(s).` : "No problems.");
 process.exit(bad ? 1 : 0);
