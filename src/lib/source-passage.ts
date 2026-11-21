@@ -11,5 +11,6 @@ export function sourcePassage(rule: Pick<Rule, "source" | "config"> | null | und
   const text = raw.replace(/\s+/g, " ").trim().replace(/^["“”']+|["“”']+$/g, "").trim();
   if (text.length < 3) return null;
   const quote = text.length <= max ? text : text.slice(0, text.lastIndexOf(" ", max - 1) > max / 2 ? text.lastIndexOf(" ", max - 1) : max - 1).trimEnd() + "…";
-  return { quote, from: rule?.source?.trim() || "Brand guide" };
+  const named = rule?.config?.source_name;
+  return { quote, from: (typeof named === "string" && named.trim()) || rule?.source?.trim() || "Brand guide" };
 }

@@ -79,6 +79,8 @@ export interface Rule {
     message?: string;
     /** The guide passage the rule was compiled from, quoted exactly; shown under each finding of the rule. */
     source_passage?: string;
+    /** Where source_passage comes from, e.g. "PrepPath Brand Guide, section 3"; the rule's source when missing. */
+    source_name?: string;
     /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
     channels?: string[];
   };

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { sourcePassage } from "../src/lib/source-passage";
-import { SEED_RULES } from "../src/lib/seed";
 
 describe("source passage per finding", () => {
   it("returns the compiled guide passage with its source", () => {
@@ -18,7 +17,6 @@ describe("source passage per finding", () => {
     expect(sourcePassage(null)).toBeNull();
     expect(sourcePassage({ source: "Brand guide", config: {} })).toBeNull();
     expect(sourcePassage({ source: "Brand guide", config: { source_passage: " " } })).toBeNull();
-    for (const r of SEED_RULES) expect(sourcePassage(r)).toBeNull();
   });
   it("falls back to a plain source name", () => {
     expect(sourcePassage({ source: "", config: { source_passage: "Use mentor, not tutor." } })?.from).toBe("Brand guide");

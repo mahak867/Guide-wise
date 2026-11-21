@@ -89,6 +89,7 @@ export const RuleConfig = z.object({
   except: z.array(z.string().trim().min(3).max(120)).max(30).optional(),
   message: z.string().max(300).optional(),
   source_passage: z.string().max(1200).optional(),
+  source_name: z.string().max(200).optional(),
 }).passthrough();
 
 /** Code checks that read their words, names or limits from the rule's own config; the rest use built-in lists or the Brand Kit. */

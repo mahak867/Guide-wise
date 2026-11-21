@@ -1,3 +1,4 @@
+import { DEMO_GUIDE_PASSAGES } from "./demo-guide";
 import type { Fact, Kit, Rule } from "./types";
 
 // PrepPath Academy is fictional. Its rules and facts were written by the team for the demo.
@@ -99,7 +100,7 @@ export const SEED_FACTS: Fact[] = [
 
 const CCPA = "Guidelines for Prevention of Misleading Advertisement in Coaching Sector, 2024 (CCPA)";
 
-export const SEED_RULES: Rule[] = [
+const BASE_RULES: Rule[] = [
   {
     id: "R-12", kind: "judgment", category: "claim", severity: "critical", status: "enforced", source: CCPA, risk: "high",
     title: "No guaranteed outcomes",
@@ -555,6 +556,13 @@ export const SEED_RULES: Rule[] = [
     precedent: null,
   },
 ];
+
+// Each demo rule quotes the section of the (fictional) PrepPath Brand Guide it was written from, shown under its findings.
+// Only config.source_passage and config.source_name are added: checks, tests and ids are unchanged.
+export const SEED_RULES: Rule[] = BASE_RULES.map((r) => {
+  const g = DEMO_GUIDE_PASSAGES[r.id];
+  return g ? { ...r, config: { ...r.config, source_passage: g.passage, source_name: `PrepPath Brand Guide, section ${g.section}` } } : r;
+});
 
 /** A piece approved before the visitor arrives; it uses fact F-3, so changing F-3 shows change impact straight away. */
 export const SEED_APPROVED = {
