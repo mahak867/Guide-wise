@@ -26,7 +26,9 @@ async function main() {
     return;
   }
   if (useAI && !aiAvailable()) throw new Error("Set GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY to run with the AI checks.");
-  const a = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test" });
+  // EVAL_PACE_MS, EVAL_RETRIES and EVAL_RETRY_WAIT_MS slow the AI run down for a free tier (the nightly workflow sets them).
+  const pace = { paceMs: Number(process.env.EVAL_PACE_MS ?? 0), retries: Number(process.env.EVAL_RETRIES ?? 0), retryWaitMs: Number(process.env.EVAL_RETRY_WAIT_MS ?? 30000) };
+  const a = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test", ...pace });
   console.log(`${a.mode}: precision ${pct(a.precision)} [${a.precisionCI.map(pct).join(", ")}], recall ${pct(a.recall)} [${a.recallCI.map(pct).join(", ")}], critical recall ${pct(a.criticalRecall)}, hard ${a.hardCaught}/${a.hardPlanted}, ${a.ms} ms`);
   const c = a.cleanDrafts;
   console.log(`clean drafts with no violations flagged: ${c.noViolations} of ${c.clean} (with no findings at all: ${c.noFindings} of ${c.clean})`);
@@ -37,7 +39,7 @@ async function main() {
   if (a.mode !== "ai") throw new Error("The AI checks did not run; nothing saved.");
   console.log(`AI answered on ${a.aiDocs} of ${a.docs} drafts${a.aiErrors?.length ? `; AI errors: ${a.aiErrors.join(" | ")}` : ""}`);
   // Second run: how often does the same draft produce the same set of findings?
-  const b = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test" });
+  const b = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test", ...pace });
   const sig = (r: typeof a, i: number) => JSON.stringify([...r.results[i].planted.map((p) => p.caught), ...r.results[i].extra.map((e) => e.rule + e.quote).sort()]);
   const same = a.results.filter((_, i) => sig(a, i) === sig(b, i)).length;
   const agreement = same / a.results.length;

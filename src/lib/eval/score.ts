@@ -94,7 +94,7 @@ export function summarise(results: DocResult[], rules: Rule[], mode: string, spl
   };
 }
 
-export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { useAI: boolean; split?: "dev" | "test" | "all"; set?: EvalSet }): Promise<EvalReport> {
+export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { useAI: boolean; split?: "dev" | "test" | "all"; set?: EvalSet; paceMs?: number; retries?: number; retryWaitMs?: number }): Promise<EvalReport> {
   const started = Date.now();
   const split = opts.split ?? "test";
   const set = opts.set ?? { docs: EVAL_DOCS, ruleIds: EVAL_RULES };
@@ -104,7 +104,13 @@ export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { us
   const aiErrors: string[] = [];
   const results: DocResult[] = [];
   for (const d of docs) {
-    const r = await scoreDoc(d, rules, facts, kit, opts.useAI, set.ruleIds);
+    let r = await scoreDoc(d, rules, facts, kit, opts.useAI, set.ruleIds);
+    // On a free tier the AI can refuse for a minute (rate limit): wait and score the draft again, a fixed number of times.
+    for (let k = 0; opts.useAI && r.mode !== "ai" && k < (opts.retries ?? 0); k++) {
+      await new Promise((ok) => setTimeout(ok, opts.retryWaitMs ?? 30000));
+      r = await scoreDoc(d, rules, facts, kit, opts.useAI, set.ruleIds);
+    }
+    if (opts.paceMs) await new Promise((ok) => setTimeout(ok, opts.paceMs));
     if (r.mode === "ai") { mode = "ai"; aiDocs++; }
     if (r.aiError && aiErrors.length < 5) aiErrors.push(r.aiError.slice(0, 200));
     const { mode: _m, aiError: _e, ...rest } = r;
