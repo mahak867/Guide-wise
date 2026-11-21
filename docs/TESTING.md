@@ -66,7 +66,7 @@ The earlier manual run (axe-core 4.10, 12 desktop pages) found two minor issues,
 
 ## Hands-on user test (20 Nov)
 
-One student outside the team (T.R., 2nd year CSE) used the live site with no instructions beyond the link: every feature, about 12 minutes, no questions asked, no task needed help. He liked the built-in demo and how simple it was to operate. A team member (who owns the UI) also walked through every screen in about 8 minutes; that is not counted. One tester is not a study: the December pilot is where real marketers use it.
+Two students outside the team used the live site with no instructions beyond the link. T.R. (2nd year CSE) used every feature in about 12 minutes, asked no questions, and liked the built-in demo and how simple it was. K.K. spent about 20 minutes on every tab and button, using his own draft instead of the demo; it took him a while to understand what was happening after a review ran. What we changed: New review now says, under Run review, what happens next (findings quote your words and the rule; fix or dismiss; submit to the right reviewer). A team member (who owns the UI) also walked through every screen in about 8 minutes; that is not counted. Two testers are not a study: the December pilot is where real marketers use it.
 
 ## Bug hunt (20 Nov)
 

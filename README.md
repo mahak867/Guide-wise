@@ -24,7 +24,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Round 3, improvement 3: campaign with AI vision | **New review → Use the sample campaign → Run review**. Price, date and promo-code mismatches across caption, creative, brochure and landing page; a person in a creative flagged for consent |
 | Try to break it | **New review → Try a hard case**: seven drafts built to get past a checker |
 
-**What is measured.** Accuracy on 40 held-out drafts for each of two fictional brands, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (one outside student so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
+**What is measured.** Accuracy on 40 held-out drafts for each of two fictional brands, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (two outside students so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
 
 ## Measured on our own test set
 
@@ -88,7 +88,7 @@ Without any AI key, the code checks and the whole workflow still run, and the ap
 - **Sign-in (optional):** Supabase Auth with email and password. Nobody has to sign in: the demo is still a private workspace per visitor. Signing up claims the current workspace as an organisation's (you become its manager); from then on only its members open it, each with the role stored for them, and invite links add members. Roles are enforced on the server either way.
 - **Image review:** planned for Round 3; a first version shipped in Round 2 (palette, contrast, alt text, OCR, logo), and AI vision in Round 3.
 - **Writing-style libraries** (alex, write-good): replaced by Brand Kit rules with test sentences.
-- **Hands-on tests with students:** moved from Round 2 to Round 3; one outside student tested every feature unaided in about 12 minutes (see [known issue 13](docs/KNOWN_ISSUES.md)).
+- **Hands-on tests with students:** moved from Round 2 to Round 3; two outside students tested it (about 12 and 20 minutes); one found what happens after a review unclear at first, so New review now explains it (see [known issue 13](docs/KNOWN_ISSUES.md)).
 - **Round 1 penalty figure** ("up to ₹10 lakh / ₹50 lakh"): withdrawn, because we could not confirm it.
 
 Full table with reasons: [`docs/round2/SUBMISSION.md`](docs/round2/SUBMISSION.md).
@@ -142,7 +142,7 @@ Apply the migrations in `supabase/migrations/` (001 to 010, in order) to a Supab
 
 - **No sign-in.** Judges open the link directly and switch roles with "Acting as". Browsers never receive database credentials; every read and write goes through our API, which enforces the role rules and scopes each query to the visitor's random workspace ID, and the API probe checks that one workspace cannot read another's drafts. A real deployment adds sign-in and per-organisation row-level security ([PRODUCTION.md](docs/PRODUCTION.md)).
 - **Our numbers come from our own test set.** Real marketers' drafts will be harder; the December pilot re-measures on them. The AI-helper numbers are from before their fixes.
-- **Only one hands-on user test** (one student, every feature, unaided, about 12 minutes); otherwise usability rests on our own browser tests at desktop and phone size.
+- **Only two hands-on user tests** (two students; one found what happens after a review unclear at first); otherwise usability rests on our own browser tests at desktop and phone size.
 - **Free AI tiers.** Heavy simultaneous use can hit rate limits; the review then continues with code checks and says so. The load test ran with AI off to keep the quota for judges.
 - The logo check matches the logo file itself: a redrawn, recoloured or heavily stretched logo is reported as missing, and a reviewer can dismiss that with a reason. AI vision flags people shown for a consent check but does not recognise who they are.
 - A PDF brochure is read as text; pictures inside it are not checked. The web page reader reads the HTML the server sends, so a page built entirely in JavaScript shows little text.

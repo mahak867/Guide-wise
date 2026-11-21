@@ -1,8 +1,35 @@
 {
-  "date": "20 Nov 2026",
+  "date": "20–21 Nov 2026",
   "participants": [
-    { "initials": "T.R.", "year_branch": "2nd year CSE", "tasks": ["Y", "Y", "Y", "Y"], "minutes": 12, "confused": "Nothing; no questions asked", "liked": "The built-in demo, and that it was simple to operate" }
+    {
+      "initials": "T.R.",
+      "year_branch": "2nd year CSE",
+      "tasks": [
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "minutes": 12,
+      "confused": "Nothing; no questions asked",
+      "liked": "The built-in demo, and that it was simple to operate"
+    },
+    {
+      "initials": "K.K.",
+      "year_branch": "Student outside the team",
+      "tasks": [
+        "Y",
+        "Y",
+        "Y",
+        "help"
+      ],
+      "minutes": 20,
+      "confused": "Tried his own draft instead of the demo; it took him a while to understand what happens after a review runs",
+      "liked": "Explored every tab and button"
+    }
   ],
   "internal": "Roshini R (team member, owns the UI) also walked through every screen in about 8 minutes; not counted as a user test.",
-  "changes_made": []
+  "changes_made": [
+    "New review now says, under Run review, what happens next: each finding quotes your words and the rule, fix or dismiss, then submit to the right reviewer."
+  ]
 }

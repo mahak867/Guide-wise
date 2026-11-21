@@ -24,6 +24,7 @@ Roshini R
 
 ## The complete list of features
 
+Proof you can check in a minute: the Results page re-runs our accuracy evaluation live on two brands, and a 268-check probe runs against the live site every morning on GitHub Actions
 Review a draft: paste copy or upload DOCX/PDF, with goal, audience, channel and locked phrases
 Campaign review: caption, up to 4 creatives and 4 documents (pasted, uploaded or read from a live web page) reviewed together
 Hidden-text detection on web pages read for a campaign
@@ -79,11 +80,11 @@ Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of eve
 
 Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 91% precision and 79% recall with code only; 96% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
 
-User testing: one student outside the team (2nd year CSE) used every feature without help in about 12 minutes and asked no questions; he liked the built-in demo and how simple it was.
+User testing: two students outside the team. One used every feature without help in about 12 minutes, asked no questions and liked the built-in demo. The other spent about 20 minutes on every tab with his own draft instead of the demo, and took a while to understand what happens after a review runs; New review now says that under Run review.
 
 What we found and fixed: a bug hunt on the live site found lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; all fixed, each with a test. The AI helpers were measured live and their gaps fixed.
 
-Still imperfect: accuracy numbers come from our own test sets (both brands written by us); on the second brand code checks flagged 2 of 10 clean drafts; only one outside user test; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
+Still imperfect: our in-browser text reader can misread ₹ as $ in images (AI vision reads it correctly); only two outside user tests; accuracy numbers come from our own test sets (both brands written by us); on the second brand code checks flagged 2 of 10 clean drafts; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
 
 ## Improvement 1
 

@@ -235,6 +235,10 @@ export default function NewReview() {
               </details>
               <Button variant="primary" type="submit" className="!px-5 !py-2.5 !text-[15px]" disabled={!!busy}>{busy ?? "Run review"}</Button>
             </div>
+            <p className="mt-3 text-[13px] text-muted">
+              <b className="text-ink">What happens next:</b> each finding quotes your words and the Brand Kit rule they break, usually with a fix you can accept.
+              Fix or dismiss them, then submit; Guidewise sends the draft to the right reviewer, who approves it.
+            </p>
           </form>
         </Card>
 
