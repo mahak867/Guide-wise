@@ -15,6 +15,8 @@ Directed the home page and the product's look, and the review page UI, working t
 
 From 19 November 2026 onwards, commits for changes she directs carry her as co-author.
 
+Correction: commit 59a64e1 (the judges' start page, `docs/START_HERE.md`, 21 November) lists Roshini as co-author by mistake; it was Mahak's work.
+
 ## Tools
 
 Claude (Anthropic) was used to help write code during the build windows. Groq, Gemini and Claude power the AI checks in the product.
