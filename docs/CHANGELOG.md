@@ -2,6 +2,7 @@
 
 ## Round 3 — The Finish (19–21 November 2026)
 
+- **Second evaluation brand:** a fictional health insurer, Suraksha Health (`src/lib/eval/brand2.ts`: 16 rules of existing kinds, 7 facts, 40 labelled held-out drafts written before the checker was run), so accuracy is measured on two domains; `scripts/eval.ts --brand 2|all` and a brand selector on the Results page. Code checks only: precision 91%, recall 79% on brand 2; 96% and 76% on both. Not part of the demo seed.
 - **Optional accounts and organisations:** sign in or sign up with email and password from the header (rate-limited); signing up claims the current workspace as your organisation's and makes you its manager; a claimed workspace refuses anyone who is not a signed-in member (401), takes each member's role from the members table instead of "Acting as", records the signed-in person on approvals, sign-offs and the activity log, and logs sign-in, sign-out and member changes; invite links add members with a chosen role; a Members page for managers. The no-sign-in demo is unchanged. Migration 010.
 - **Change impact** (improvement 1): any fact or rule change re-checks every draft that used it; approved pieces that no longer pass go back for re-approval with the reason; Impact panel; dismissal rate before and after each rule amendment on Insights.
 - **API and MCP server** (improvement 2): scoped, hashed, revocable keys; `get_brief` and `check_draft` over REST and MCP (official SDK); playground; audit trail; per-key rate limit.

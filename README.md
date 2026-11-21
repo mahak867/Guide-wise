@@ -24,7 +24,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Round 3, improvement 3: campaign with AI vision | **New review → Use the sample campaign → Run review**. Price, date and promo-code mismatches across caption, creative, brochure and landing page; a person in a creative flagged for consent |
 | Try to break it | **New review → Try a hard case**: seven drafts built to get past a checker |
 
-**What is measured.** Accuracy on 40 held-out drafts, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (one outside student so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
+**What is measured.** Accuracy on 40 held-out drafts for each of two fictional brands, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (one outside student so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
 
 ## Measured on our own test set
 
@@ -32,6 +32,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | --- | --- | --- | --- | --- | --- |
 | Code checks only | 100% (93–100%) | 74% (63–83%) | 68% | 0 of 17 | n/a (no randomness) |
 | Code + AI checks (live, Groq) | 92% (83–96%) | 98% (92–100%) | 100% | 17 of 17 | 83% |
+| Second brand (Suraksha Health, insurance), 40 held-out drafts, code checks only | 91% (76–97%) | 79% (64–89%) | 67% | 0 of 8 | n/a; both brands together (80 drafts): precision 96% (90–99%), recall 76% (67–83%) |
 
 95% Wilson intervals. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. **The numbers are optimistic because the same team wrote the rules and the drafts.**
 

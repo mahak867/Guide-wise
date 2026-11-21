@@ -39,14 +39,17 @@ export interface EvalReport {
   ms: number;
 }
 
-export function evalRules(rules: Rule[]): Rule[] {
+export function evalRules(rules: Rule[], ids: Set<string> = EVAL_RULES): Rule[] {
   // The set plants errors for these rules only; other rules (disclaimers, images) are measured separately.
-  return rules.filter((r) => EVAL_RULES.has(r.id));
+  return rules.filter((r) => ids.has(r.id));
 }
 
+/** Which labelled drafts to run, and which rules they plant errors for. Defaults to PrepPath (brand 1). */
+export interface EvalSet { docs: EvalDoc[]; ruleIds: Set<string> }
+
 /** Review one test draft and match its findings to the planted answer key. */
-export async function scoreDoc(d: EvalDoc, rules: Rule[], facts: Fact[], kit: Kit, useAI: boolean): Promise<DocResult & { mode: string; aiError?: string }> {
-  const { findings, stats } = await reviewDraft(d.text, null, evalRules(rules), facts, kit, { useAI, aiCache: false });
+export async function scoreDoc(d: EvalDoc, rules: Rule[], facts: Fact[], kit: Kit, useAI: boolean, ruleIds: Set<string> = EVAL_RULES): Promise<DocResult & { mode: string; aiError?: string }> {
+  const { findings, stats } = await reviewDraft(d.text, null, evalRules(rules, ruleIds), facts, kit, { useAI, aiCache: false });
   const used = new Set<Finding>();
   const planted = d.planted.map((p) => {
     const hit = findings.find((f) => !used.has(f) && f.rule_id === p.rule && overlaps(f.quote, p.quote));
@@ -58,8 +61,8 @@ export async function scoreDoc(d: EvalDoc, rules: Rule[], facts: Fact[], kit: Ki
 }
 
 /** Totals, intervals and per-rule counts from a list of scored drafts. */
-export function summarise(results: DocResult[], rules: Rule[], mode: string, split: string, ms = 0): EvalReport {
-  const critical = new Set(evalRules(rules).filter((r) => r.severity === "critical").map((r) => r.id));
+export function summarise(results: DocResult[], rules: Rule[], mode: string, split: string, ms = 0, set: EvalSet = { docs: EVAL_DOCS, ruleIds: EVAL_RULES }): EvalReport {
+  const critical = new Set(evalRules(rules, set.ruleIds).filter((r) => r.severity === "critical").map((r) => r.id));
   const all = results.flatMap((r) => r.planted);
   const caught = all.filter((p) => p.caught).length;
   const extras = results.flatMap((r) => r.extra);
@@ -71,7 +74,7 @@ export function summarise(results: DocResult[], rules: Rule[], mode: string, spl
   const rulesSeen = [...new Set([...all.map((p) => p.rule), ...extras.map((e) => e.rule)])].sort();
   return {
     mode, at: new Date().toISOString(), docs: results.length, split,
-    fingerprint: createHash("sha256").update(JSON.stringify(EVAL_DOCS)).digest("hex").slice(0, 16),
+    fingerprint: createHash("sha256").update(JSON.stringify(set.docs)).digest("hex").slice(0, 16),
     planted: all.length, caught, predicted, correct: caught,
     precision: predicted ? caught / predicted : 1, precisionCI: wilson(caught, predicted),
     recall: all.length ? caught / all.length : 1, recallCI: wilson(caught, all.length),
@@ -90,18 +93,46 @@ export function summarise(results: DocResult[], rules: Rule[], mode: string, spl
   };
 }
 
-export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { useAI: boolean; split?: "dev" | "test" | "all" }): Promise<EvalReport> {
+export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { useAI: boolean; split?: "dev" | "test" | "all"; set?: EvalSet }): Promise<EvalReport> {
   const started = Date.now();
   const split = opts.split ?? "test";
-  const docs = EVAL_DOCS.filter((d) => split === "all" || d.split === split);
+  const set = opts.set ?? { docs: EVAL_DOCS, ruleIds: EVAL_RULES };
+  const docs = set.docs.filter((d) => split === "all" || d.split === split);
   let mode = "rules-only";
   const results: DocResult[] = [];
   for (const d of docs) {
-    const r = await scoreDoc(d, rules, facts, kit, opts.useAI);
+    const r = await scoreDoc(d, rules, facts, kit, opts.useAI, set.ruleIds);
     if (r.mode === "ai") mode = "ai";
     const { mode: _m, aiError: _e, ...rest } = r;
     void _m; void _e;
     results.push(rest);
   }
-  return summarise(results, rules, mode, split, Date.now() - started);
+  return summarise(results, rules, mode, split, Date.now() - started, set);
+}
+
+/** Several reports as one: totals and intervals over every draft. Rule ids differ per brand, so per-rule rows concatenate. */
+export function combine(reports: EvalReport[], split: string): EvalReport {
+  const results = reports.flatMap((r) => r.results);
+  const all = results.flatMap((r) => r.planted);
+  const caught = all.filter((p) => p.caught).length;
+  const extras = results.flatMap((r) => r.extra);
+  const predicted = caught + extras.length;
+  const sum = (k: "criticalPlanted" | "hardPlanted" | "hardCaught") => reports.reduce((a, r) => a + r[k], 0);
+  const critCaught = reports.reduce((a, r) => a + Math.round(r.criticalRecall * r.criticalPlanted), 0);
+  const critPlanted = sum("criticalPlanted");
+  const violExtras = extras.filter((e) => e.level === "violation").length;
+  return {
+    mode: reports.some((r) => r.mode === "ai") ? "ai" : "rules-only", at: new Date().toISOString(), docs: results.length, split,
+    fingerprint: createHash("sha256").update(reports.map((r) => r.fingerprint).join(":")).digest("hex").slice(0, 16),
+    planted: all.length, caught, predicted, correct: caught,
+    precision: predicted ? caught / predicted : 1, precisionCI: wilson(caught, predicted),
+    recall: all.length ? caught / all.length : 1, recallCI: wilson(caught, all.length),
+    criticalRecall: critPlanted ? critCaught / critPlanted : 1, criticalCI: wilson(critCaught, critPlanted), criticalPlanted: critPlanted,
+    hardPlanted: sum("hardPlanted"), hardCaught: sum("hardCaught"),
+    violationPrecision: caught + violExtras ? caught / (caught + violExtras) : 1, violationPredicted: caught + violExtras,
+    perRule: reports.flatMap((r) => r.perRule),
+    cleanDrafts: cleanDraftStats(results),
+    results,
+    ms: reports.reduce((a, r) => a + r.ms, 0),
+  };
 }
