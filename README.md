@@ -87,6 +87,7 @@ Images are analysed in the browser (tesseract.js OCR, palette, WCAG contrast, lo
 | Code checks only | 100% (93–100%) | 74% (63–83%) | 68% | 0 of 17 | n/a (no randomness) |
 | Code + AI checks (live, Groq) | 92% (83–96%) | 98% (92–100%) | 100% | 17 of 17 | 83% |
 | Second brand (Suraksha Health, insurance), 40 held-out drafts, code checks only | 97% (84–99%) | 79% (64–89%) | 67% | 0 of 8 | 10 of 10 clean drafts left alone (first held-out run 91% / 79%, 8 of 10 clean drafts left alone; an age and the approved helpline were read as figures, fixed after that run with drafts and labels unchanged); both brands together (80 drafts): precision 99% (93–100%), recall 76% (67–83%) |
+| Suraksha Health, code and AI (verified run, 21 Nov; AI answered on 40 of 40 drafts) | 72% (57–83%) | 87% (73–94%) | 92% | 3 of 8 | 68%; 8 of 10 clean drafts left alone; the AI catches more but adds false alarms on this brand, so precision is lower than with code checks alone |
 
 95% Wilson intervals. The set is 60 planted-error drafts (20 development, 40 held out), generated from a fixed seed; its fingerprint is shown on the live **Results** page, which re-runs the code checks on demand. The AI row ran twice on the live site with the answer cache off; the first run is reported. Four of its six false flags are the AI calling "cheapest" or "Best" an unsupported superlative where our answer key planted only the "cheap" term rule; we count them as false rather than change the key afterwards. **The numbers are optimistic because the same team wrote the rules and the drafts.**
 

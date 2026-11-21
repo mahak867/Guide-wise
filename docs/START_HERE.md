@@ -28,6 +28,7 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 | Accuracy, 40 held-out drafts (PrepPath), with AI | 92% precision, 98% recall |
 | Same, code checks only | 100% precision, 74% recall |
 | Second brand (Suraksha Health), code only | 97% precision, 79% recall (91% on the first run, before the fix below) |
+| Suraksha Health, code and AI (verified run, 21 Nov) | 72% precision, 87% recall, 3 of 8 hard phrasings, 8 of 10 clean drafts left alone |
 | Images | 26 of 26 planted errors caught, 0 false alarms in 66 clean checks |
 | Privacy | 0 leaks in 144 AI prompts |
 | Load | 50 concurrent visitors, 980 requests, 0 failed |

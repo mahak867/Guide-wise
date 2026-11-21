@@ -46,7 +46,7 @@ jobs:
           cache: npm
       - run: npm ci
         if: steps.key.outputs.present == 'true'
-      - name: Evaluate with AI (PrepPath, 40 held-out drafts, twice)
+      - name: Evaluate with AI (the chosen brand, held-out drafts, twice)
         if: steps.key.outputs.present == 'true'
         run: |
           set -o pipefail
