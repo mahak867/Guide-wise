@@ -241,11 +241,11 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>Unit tests (Vitest, CI)</td><td>${tests} pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI, provider fallback, change impact, campaign consistency, share links, previews, bulk CSV, the extension's logic, bug-hunt regressions, fuzzing (26 hostile inputs), the sample at three future dates, every rule's own tests</td></tr>
 <tr><td>Browser journey (live)</td><td>${frac(live.journey)}</td><td>Review, edit a fix, accept all, replace an image, route, exceptions with an end date, two sign-offs, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
 <tr><td>UI sweep (live)</td><td>${frac(live.sweep)}</td><td>Every page at desktop and phone size and every control, with axe-core: ${live.axe} (serious or critical)</td></tr>
-<tr><td>API probe (live, daily)</td><td>${frac(live.probe)}</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end with a real MCP client; share links, undo, exceptions, sign-off, races, security headers</td></tr>
+<tr><td>API probe (live, daily)</td><td>${frac(live.probe)}</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end with a real MCP client; share links, undo, exceptions, sign-off, races, security headers; accounts (spoofed roles, forged invites); every table refuses the public key</td></tr>
 <tr><td>Extension (live)</td><td>passes</td><td>The unpacked extension in Chromium: selections, pasted text, Copy fix, a wrong key, and that web pages still cannot call the API</td></tr>
 <tr><td>Load test (live)</td><td>980 requests, 0 failed</td><td>20 then 50 concurrent visitors through the creator journey, AI off to keep the free quota for judges</td></tr>
 </table>
-<p class="note">Live results from the run of ${live.date}. The API probe also runs against the live site every morning from GitHub Actions.</p>
+<p class="note">Live results from the run of ${live.date}. The same 290-check API probe also runs against the live site every morning from GitHub Actions (290 of 290 on 21 Nov).</p>
 <h3>Accuracy and privacy</h3>
 <table>
 <tr><th>Evaluation</th><th>Precision</th><th>Recall</th><th>Other</th></tr>
