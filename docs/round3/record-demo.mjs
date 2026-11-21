@@ -48,7 +48,9 @@ await page.getByText(/open finding/).first().waitFor({ timeout: 90000 });
 // 2. Findings, accept a fix, undo
 await say(`2. Every finding quotes the words and the rule it breaks (${await open()} here)`, 2500);
 await row("No guaranteed outcomes").click();
-await say("A guaranteed-selection claim, with the rule and its source", 2500);
+const why = page.locator("summary", { hasText: /^Why it was flagged · R-12/ }).first();
+if (await why.count()) { await why.click(); await why.scrollIntoViewIfNeeded(); }
+await say("A guaranteed-selection claim, with the rule and the guide passage it comes from", 3000);
 await row("No guaranteed outcomes").click();
 await row("No false urgency").click();
 await say("Each fix is re-tested by code before it is offered", 2000);
