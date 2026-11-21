@@ -13,10 +13,11 @@ export async function GET(req: Request) {
     const brand = b === "2" || b === "all" ? b : "1";
     const report = await runBrandEval(brand, { useAI: false, split: s });
     let ai: Record<string, unknown> | null = null;
-    // The stored AI run covers PrepPath only, so it is not shown beside another brand's numbers.
-    if (brand === "1") {
+    // Each brand shows its own stored AI run (PrepPath: the published run; Suraksha Health: the verified run of
+    // 21 Nov from the AI reliability workflow). Both brands combined have no AI run, so none is shown.
+    if (brand === "1" || brand === "2") {
       try {
-        ai = { ...((await import("@/lib/eval/ai-results.json")).default as Record<string, unknown>) };
+        ai = { ...((brand === "1" ? await import("@/lib/eval/ai-results.json") : await import("@/lib/eval/ai-results-brand-2.json")).default as Record<string, unknown>) };
         // Clean-draft counts for the AI run come from its stored per-draft results; without them, not measured.
         if (Array.isArray(ai.results) && !ai.cleanDrafts) ai.cleanDrafts = cleanDraftStats(ai.results as Parameters<typeof cleanDraftStats>[0]);
       } catch {

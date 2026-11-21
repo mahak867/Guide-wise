@@ -1,0 +1,134 @@
+{
+  "measured": true,
+  "brand": "2",
+  "mode": "AI checks (Groq (openai/gpt-oss-120b), then Groq (openai/gpt-oss-20b))",
+  "at": "2026-11-21T08:31:36.070Z",
+  "docs": 40,
+  "split": "test",
+  "fingerprint": "239872d46b97fc8e",
+  "planted": 38,
+  "caught": 33,
+  "predicted": 46,
+  "correct": 33,
+  "precision": 0.717391304347826,
+  "precisionCI": [
+    0.5745116426970621,
+    0.8267595845508593
+  ],
+  "recall": 0.868421052631579,
+  "recallCI": [
+    0.7267282994850113,
+    0.9424621712426857
+  ],
+  "criticalRecall": 0.9166666666666666,
+  "criticalCI": [
+    0.6461140782014047,
+    0.9851352905492264
+  ],
+  "criticalPlanted": 12,
+  "hardPlanted": 8,
+  "hardCaught": 3,
+  "violationPrecision": 0.7674418604651163,
+  "violationPredicted": 43,
+  "perRule": [
+    {
+      "rule": "SH-CAPS",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-CLAIM",
+      "planted": 8,
+      "caught": 7,
+      "falsePositives": 1
+    },
+    {
+      "rule": "SH-COMP",
+      "planted": 2,
+      "caught": 2,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-CONTACT",
+      "planted": 3,
+      "caught": 2,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-DISC",
+      "planted": 2,
+      "caught": 2,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-GUAR",
+      "planted": 4,
+      "caught": 4,
+      "falsePositives": 3
+    },
+    {
+      "rule": "SH-LINK",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-NAME",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-OFFER",
+      "planted": 2,
+      "caught": 2,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-PAID",
+      "planted": 3,
+      "caught": 2,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-SUP",
+      "planted": 4,
+      "caught": 3,
+      "falsePositives": 2
+    },
+    {
+      "rule": "SH-TERM1",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-TERM2",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-TONE",
+      "planted": 1,
+      "caught": 1,
+      "falsePositives": 0
+    },
+    {
+      "rule": "SH-URG",
+      "planted": 4,
+      "caught": 3,
+      "falsePositives": 7
+    }
+  ],
+  "cleanDrafts": {
+    "clean": 10,
+    "noViolations": 8,
+    "noFindings": 7
+  },
+  "ms": 296963,
+  "aiDocs": 40,
+  "aiErrors": [],
+  "agreement": 0.675
+}

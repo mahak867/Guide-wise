@@ -88,7 +88,7 @@ export default function Results() {
           <Card className="mt-4 p-4 text-sm">
             <h2>With the AI checks</h2>
             {brand !== "1" && !ai ? (
-              <p className="mt-1 text-muted">Not measured for {brand === "2" ? "Suraksha Health" : "both brands"}. The published AI run covers the PrepPath drafts only; choose PrepPath to see it.</p>
+              <p className="mt-1 text-muted">Not measured for both brands together. Each brand's AI run is shown on its own; choose PrepPath or Suraksha Health to see it.</p>
             ) : ai ? (
               <>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -98,11 +98,19 @@ export default function Results() {
                   <Metric label="Hard phrasings caught" value={`${ai.hardCaught} of ${ai.hardPlanted}`} sub="The code checks alone catch none of these." />
                   <CleanMetric c={ai.cleanDrafts} />
                 </div>
+                {brand === "2" ? (
+                <p className="mt-3 text-muted">
+                  Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on all {ai.docs} drafts by the AI reliability workflow on GitHub Actions, run twice with {ai.mode}; the AI answered on {String(ai.aiDocs)} of {ai.docs} drafts. The first run is reported.
+                  {ai.agreement !== undefined ? ` Both runs gave the same result on ${pct(ai.agreement)} of drafts.` : ""}
+                  {" "}On a brand the AI was never tuned for, it caught more problems but raised more false alarms; every finding still needs a quoted source and a person&apos;s decision before anything blocks publication, and tuning per brand is on the roadmap (December pilot).
+                </p>
+                ) : (
                 <p className="mt-3 text-muted">
                   Measured {ai.at ? new Date(ai.at).toLocaleDateString("en-IN") : ""} on all {ai.docs} held-out drafts, run twice with the answer cache off, on the live deployment with {ai.mode}. The first run is reported.
                   {ai.agreement !== undefined ? ` Both runs gave the same result on ${pct(ai.agreement)} of drafts; where they differ, the double-run design shows the finding as a suggestion.` : " Repeat-run agreement was not measured."}
                   {" "}Of its false flags, four are the AI calling “cheapest” or “Best” an unsupported superlative (R-08) where the answer key planted only the “cheap” term rule; we count them as false rather than change the key after seeing the results. One flagged “Last chance” under the tone rule instead of the urgency rule, which is also its one miss. One read a rating (“4 stars”) as a figure; code now discards rating-scale values the AI picks up, with a test, but that fix came after this run, which is shown as measured.
                 </p>
+                )}
               </>
             ) : (
               <p className="mt-1 text-muted">Not measured yet. The AI service is not connected in this deployment. When it is, the same set is run with <code className="rounded bg-mist px-1">npx tsx scripts/eval.ts --ai</code> and the result is published here. We do not publish a number we have not measured.</p>
