@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { TOUR_START } from "@/components/TourPlayer";
 import { Badge, Button, Card, Notice, PageHead, STATUS } from "@/components/ui";
 import { complianceSignOff } from "@/lib/approval";
 import { api, fmtDate, useApp } from "@/lib/client";
@@ -163,6 +164,7 @@ export default function Home() {
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
           <Button variant="primary" className="!px-5 !py-2.5 !text-[15px]" onClick={runDemo} disabled={!!busy}>{busy ?? "Review the sample post"}</Button>
+          <Button onClick={() => window.dispatchEvent(new Event(TOUR_START))} disabled={!!busy}>Watch it run (2 min)</Button>
           <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Link href="/review/new" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Check your own draft</Link>
             <Link href="/review/new#hard" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Try a hard case</Link>

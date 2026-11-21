@@ -184,6 +184,26 @@ await step("Brand Kit: tests run, export and import", async () => {
 for (const [path, text] of [["/facts", "Facts Register"], ["/insights", "Rules by how often they fire"], ["/results", "Measured results"], ["/about", "How Guidewise works"], ["/nope", "That page does not exist"]]) {
   await step(`page ${path}`, async () => { await page.goto(L + path); await page.getByText(text).first().waitFor({ timeout: 30000 }); });
 }
+await step("watch it run plays to the end and reaches the Results page", async () => {
+  await page.goto(L);
+  await page.getByRole("button", { name: "Watch it run (2 min)" }).click();
+  const tour = page.getByRole("region", { name: "Watch it run" });
+  await tour.waitFor({ timeout: 30000 });
+  // Up to 8 minutes; fail at once, with the page's own message, if the tour stops on a step.
+  const end = Date.now() + 8 * 60000;
+  let status = "";
+  while (Date.now() < end) {
+    status = (await tour.getAttribute("data-tour-status").catch(() => null)) ?? "gone";
+    if (status === "done" || status === "failed" || status === "gone") break;
+    await page.waitForTimeout(1000);
+  }
+  if (status === "failed") throw new Error(await tour.innerText());
+  if (status !== "done") throw new Error(`the tour did not finish in 8 minutes (status: ${status})`);
+  await tour.getByText("The demo finished.").waitFor({ timeout: 5000 });
+  if (!/\/results$/.test(new URL(page.url()).pathname)) throw new Error(`the tour ended on ${page.url()}, not the Results page`);
+  await tour.getByRole("button", { name: "Close" }).click();
+  await tour.waitFor({ state: "detached", timeout: 10000 });
+});
 await step("reset demo", async () => {
   await page.goto(L);
   page.once("dialog", (d) => d.accept());

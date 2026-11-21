@@ -624,6 +624,30 @@ await step(page, "guided tour can be hidden and shown", async () => {
   if (!(await tour.count())) return "not shown on this draft";
   await tour.click(); await page.waitForTimeout(300); await tour.click();
 });
+await step(page, "watch it run: reaches step 3, pause, stop; the app still works; axe clean", async () => {
+  await page.goto(L);
+  await page.getByRole("button", { name: "Watch it run (2 min)" }).click();
+  const tour = page.getByRole("region", { name: "Watch it run" });
+  await tour.getByText("Step 3 of 8").waitFor({ timeout: 180000 });
+  must((await tour.getAttribute("data-tour-status")) !== "failed", `the tour failed: ${await tour.innerText()}`);
+  await tour.getByRole("button", { name: "Pause" }).click();
+  await tour.getByRole("button", { name: "Resume" }).waitFor({ timeout: 5000 });
+  must((await tour.getAttribute("data-tour-status")) === "paused", "the tour is not paused");
+  must((await tour.locator("[aria-live=polite]").count()) > 0, "the caption is not in an aria-live region");
+  // While the overlay is shown, axe must find nothing at all, not only nothing serious.
+  const axe = await axeCheck(page);
+  const last = axeLog[axeLog.length - 1];
+  must(last.moderate === 0 && last.minor === 0, `axe with the tour shown: ${last.rules.join(", ")}`);
+  await tour.getByRole("button", { name: "Stop" }).click();
+  await tour.waitFor({ state: "detached", timeout: 10000 });
+  // Stopping leaves the app usable.
+  await page.goto(L);
+  const b = page.getByRole("button", { name: "Review the sample post" });
+  await b.waitFor({ timeout: 30000 });
+  must(await b.isEnabled(), "Review the sample post is disabled after stopping the tour");
+  must(!(await page.getByRole("region", { name: "Watch it run" }).count()), "the tour came back after stopping");
+  return axe;
+});
 await step(page, "reset demo restores the sample kit", async () => {
   await page.goto(L);
   await page.getByRole("button", { name: "Reset demo" }).click();

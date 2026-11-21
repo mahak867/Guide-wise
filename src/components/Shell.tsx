@@ -1,6 +1,7 @@
 "use client";
 import { AccountMenu } from "./AccountMenu";
 import { ImpactPanel } from "./ImpactPanel";
+import { TourPlayer } from "./TourPlayer";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -45,6 +46,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <TourPlayer />
       <header className="print:hidden z-20 sm:sticky sm:top-0 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex items-center gap-2 font-semibold">
