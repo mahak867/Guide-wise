@@ -34,6 +34,8 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 | Load | 50 concurrent visitors, 980 requests, 0 failed |
 | Live suites, 21 Nov | journey 21/21, sweep 61/61 (0 axe issues), probe 290/290 |
 
+On a brand the AI was never tuned for, it caught more problems but raised more false alarms; every finding still needs a quoted source and a person's decision before anything blocks publication, and tuning per brand is on the roadmap (December pilot).
+
 How each is run: [docs/TESTING.md](TESTING.md).
 
 ## The honest limits
