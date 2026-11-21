@@ -74,7 +74,7 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
 
-Unit and integration: 330 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
+Unit and integration: 334 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
 Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 268 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites and direct database writes refused, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
 

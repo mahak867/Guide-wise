@@ -14,6 +14,8 @@ Latest full run against the live site (20 Nov 2026): **238 unit tests, 21 of 21 
 
 **Every day:** the API probe also runs against the live site from GitHub Actions every morning at 03:17 UTC (`.github/workflows/live.yml`), so a break in the site, the database or the AI service is reported while judging is under way.
 
+**Every night (AI):** `.github/workflows/ai-nightly.yml` re-runs the PrepPath evaluation with the AI checks (40 held-out drafts, twice) at 02:41 UTC and writes precision, recall and repeat-run agreement to the job summary, with the results JSON as an artifact. It is skipped until the `GROQ_API_KEY` repository secret is set; no nightly result is reported here until one has run.
+
 ## Accuracy and privacy evaluations
 
 | Evaluation | Command | Result |

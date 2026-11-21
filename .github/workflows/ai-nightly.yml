@@ -1,0 +1,65 @@
+name: Nightly AI reliability check
+
+# Once a day, the PrepPath evaluation runs with the AI checks on (40 held-out drafts, run twice for repeat-run
+# agreement) using the GROQ_API_KEY repository secret. The results JSON is kept as an artifact, and precision,
+# recall and agreement are written to the job summary. Without the secret the job is skipped with a message.
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  ai-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - name: Check for the GROQ_API_KEY secret
+        id: key
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Skipped: the GROQ_API_KEY repository secret is not set (Settings > Secrets and variables > Actions)." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: steps.key.outputs.present == 'true'
+      - name: Evaluate with AI (PrepPath, 40 held-out drafts, twice)
+        if: steps.key.outputs.present == 'true'
+        run: npx tsx scripts/eval.ts --ai | tee eval-output.txt
+      - name: Write the summary
+        if: steps.key.outputs.present == 'true'
+        run: |
+          node -e '
+            const r = require("./src/lib/eval/ai-results.json");
+            const p = (x) => (x * 100).toFixed(1) + "%";
+            const ci = (a) => a ? " (" + a.map(p).join("–") + ")" : "";
+            const lines = [
+              "## Nightly AI reliability check (PrepPath, 40 held-out drafts)",
+              "",
+              "| Measure | Result |", "| --- | --- |",
+              "| Mode | " + r.mode + " |",
+              "| Precision | " + p(r.precision) + ci(r.precisionCI) + " |",
+              "| Recall | " + p(r.recall) + ci(r.recallCI) + " |",
+              "| Hard phrasings caught | " + r.hardCaught + " of " + r.hardPlanted + " |",
+              "| Clean drafts left alone | " + (r.cleanDrafts ? r.cleanDrafts.noViolations + " of " + r.cleanDrafts.clean : "n/a") + " |",
+              "| Same result on both runs | " + p(r.agreement) + " |",
+            ];
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+          '
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          name: ai-eval-results
+          path: |
+            src/lib/eval/ai-results.json
+            eval-output.txt

@@ -14,7 +14,7 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 
 - **Results page** (`/results`) re-runs our accuracy evaluation live on two brands, with a brand selector.
 - **Daily live probe:** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning (03:17 UTC) on GitHub Actions against the deployed site: 268 API checks (bad input, wrong roles, other workspaces, races, forged invites, a real MCP client).
-- **CI:** [330 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
+- **CI:** [334 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
 
 | Measure | Result |
 | --- | --- |

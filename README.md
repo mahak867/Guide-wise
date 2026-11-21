@@ -90,7 +90,7 @@ Images are analysed in the browser (tesseract.js OCR, palette, WCAG contrast, lo
 | AI helpers, live, **measured before the fixes** ([EVAL_HELPERS.md](docs/EVAL_HELPERS.md)) | Guide compiler: 16 of 17 expected rules, 7 of 8 planted problems warned, 0 false warnings. Rule amendment: 7 of 8 pass the code gate, but the dismissed text was still flagged after all 7 (fixed since; not yet re-measured) |
 | Load test, live ([LOAD_TEST.md](docs/LOAD_TEST.md)) | 20 then 50 concurrent visitors through the creator journey, AI off: 980 requests, 0 failed |
 
-**Tests** (latest full run on the live site, 21 Nov 2026): **330 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **268-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning. Details: [docs/TESTING.md](docs/TESTING.md).
+**Tests** (latest full run on the live site, 21 Nov 2026): **334 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **268-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning, and a nightly workflow re-runs the AI evaluation once its API key is set (no nightly result yet). Details: [docs/TESTING.md](docs/TESTING.md).
 
 ## Round 3: the three improvements we promised
 
@@ -156,7 +156,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                         # 330 unit tests, including a deliberately wrong AI and fuzzing
+npm test                                                         # 334 unit tests, including a deliberately wrong AI and fuzzing
 npm run eval                                                     # accuracy on the held-out set (code checks)
 npm run eval:images                                              # 28 creatives with planted colour, contrast, logo and text-size errors
 npm run eval:privacy                                             # personal data and confidential canaries never reach the AI
