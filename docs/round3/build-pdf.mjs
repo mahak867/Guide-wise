@@ -100,7 +100,7 @@ figure img { width: auto; max-width: 100%; }
 <h2>Five things to check, a minute each</h2>
 <ol class="five" style="margin:4pt 0 0 14pt;padding:0">
 <li><b>Accuracy, re-run live on two brands.</b> guidewise-kohl.vercel.app/results: the code-check evaluation runs again on PrepPath and on a second, fictional health insurer.</li>
-<li><b>A live probe of the deployed site.</b> GitHub Actions, "Live site check": every morning, 242 checks of bad input, wrong roles, other workspaces, races and the three improvements with a real MCP client. Before each release, the full probe: 290 checks, adding accounts and direct database access.</li>
+<li><b>A live probe of the deployed site.</b> GitHub Actions, "Live site check": every morning, 290 checks of bad input, wrong roles, other workspaces, races, accounts, direct database access with the public key and the three improvements with a real MCP client.</li>
 <li><b>An MCP server and a REST API with the same findings as the app.</b> /developers: Create key, then Call check_draft over REST or MCP; every call is in the audit trail.</li>
 <li><b>Change impact.</b> /facts: act as Meera, edit F-3, save. Every draft that used it is re-checked; the approved post that cites it goes back for re-approval.</li>
 <li><b>The database is closed to the public key.</b> Only the server can read or write the tables; with the public key every read and write is refused (migration 011, threat T17, checked by the probe).</li>
