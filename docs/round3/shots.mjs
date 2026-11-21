@@ -31,16 +31,21 @@ await p.getByText("Images updated and checked again.").waitFor({ timeout: 90000 
 await p.getByRole("button", { name: "Submit for review" }).click();
 await p.getByText(/Waiting for/).waitFor({ timeout: 30000 });
 await role("compliance");
-for (let k = 0; k < 20 && (await open()) > 0; k++) {
-  const n = await open();
-  const dis = p.getByRole("button", { name: "Dismiss", exact: true }).first();
-  if (!(await dis.count())) { const row = p.locator("button[aria-expanded=false]").nth(1); if (await row.count()) await row.click(); }
-  await dis.click();
-  await p.locator('select[id^="r-"]').selectOption("Approved exception");
-  for (let w = 0; w < 80 && (await open()) === n; w++) await p.waitForTimeout(250);
-}
+// Compliance grants an exception on every open finding (the same request the Dismiss button sends), then reloads.
+await p.evaluate(async () => {
+  const id = location.pathname.split("/").pop();
+  const h = { "x-workspace": localStorage.getItem("gw-ws") ?? "", "x-role": "compliance", "content-type": "application/json" };
+  const d = await (await fetch(`/api/drafts/${id}`, { headers: h })).json();
+  for (const f of d.findings.filter((x) => x.state === "open"))
+    await fetch(`/api/drafts/${id}`, { method: "POST", headers: h, body: JSON.stringify({ action: "dismiss", finding_id: f.id, reason: "Approved exception" }) });
+});
+await p.reload(); await p.getByRole("button", { name: "Approve", exact: true }).waitFor({ timeout: 60000 });
 await p.getByRole("button", { name: "Approve", exact: true }).click();
-await p.getByText("Approval receipt").waitFor({ timeout: 30000 });
+if (!(await p.getByRole("heading", { name: "Approval receipt" }).count())) {
+  await p.waitForTimeout(1500); await role("brand");
+  await p.getByRole("button", { name: "Approve", exact: true }).click();
+}
+await p.getByRole("heading", { name: "Approval receipt" }).waitFor({ timeout: 60000 });
 await p.goto(L + "/facts"); await p.getByText("Facts Register").first().waitFor(); await role("manager");
 await p.evaluate(async () => {
   const h = { "x-workspace": localStorage.getItem("gw-ws") ?? "", "x-role": "manager", "content-type": "application/json" };
@@ -73,7 +78,7 @@ await p.screenshot({ path: `${OUT}/05-api.png`, fullPage: true });
 // Campaign review with AI vision.
 await p.goto(L + "/review/new"); await p.getByText("Brief card").first().waitFor(); await role("creator");
 await p.getByRole("button", { name: "Use the sample campaign" }).click();
-await p.getByText(/Logo found \(match/).first().waitFor({ timeout: 120000 });
+await p.waitForTimeout(25000); // images are read in the browser before the review runs
 await p.getByRole("button", { name: "Run review" }).click();
 await p.waitForURL(/review\/[0-9a-f-]{36}/, { timeout: 120000 });
 await p.getByText(/open finding/).first().waitFor({ timeout: 90000 });
@@ -82,6 +87,7 @@ await p.locator("button[aria-expanded]", { hasText: "The campaign says the same 
 await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
 await p.screenshot({ path: `${OUT}/06-campaign.png` });
 await p.locator("#img-1").scrollIntoViewIfNeeded();
+await p.locator("#img-1 details").evaluateAll((ds) => ds.forEach((d) => d.setAttribute("open", ""))); await p.waitForTimeout(1500);
 await p.locator("#img-1").screenshot({ path: `${OUT}/07-vision.png` });
 await p.locator("#doc-1").scrollIntoViewIfNeeded();
 await p.getByText("Campaign documents").first().locator("xpath=ancestor::section[1]").screenshot({ path: `${OUT}/08-documents.png` });
