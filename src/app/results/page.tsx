@@ -25,16 +25,17 @@ function CleanMetric({ c }: { c?: CleanDraftStats }) {
 
 export default function Results() {
   const [split, setSplit] = useState<"test" | "dev" | "all">("test");
+  const [brand, setBrand] = useState<"1" | "2" | "all">("1");
   const [data, setData] = useState<{ report: EvalReport; ai: (Partial<EvalReport> & { measured?: boolean; agreement?: number }) | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
 
-  async function load(s = split) {
+  async function load(s = split, b = brand) {
     setBusy(true);
     setError(null);
     try {
-      setData(await api(`/api/eval?split=${s}`));
+      setData(await api(`/api/eval?split=${s}&brand=${b}`));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -60,6 +61,13 @@ export default function Results() {
                 <option value="all">All 60 drafts</option>
               </select>
             </label>
+            <label className="text-sm"><span className="sr-only">Which brand</span>
+              <select className="rounded-md border border-line bg-white px-2 py-1.5 text-sm" value={brand} onChange={(e) => { const b = e.target.value as typeof brand; setBrand(b); load(split, b); }}>
+                <option value="1">PrepPath (coaching)</option>
+                <option value="2">Suraksha Health (insurance)</option>
+                <option value="all">Both brands</option>
+              </select>
+            </label>
             <Button onClick={() => load()} disabled={busy}>{busy ? "Running…" : "Run again"}</Button>
           </div>
         }
@@ -72,14 +80,16 @@ export default function Results() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Metric label="Precision" value={pct(r.precision)} sub={`${r.correct} of ${r.predicted} findings were planted errors. 95% interval ${ci(r.precisionCI)}.`} />
             <Metric label="Recall" value={pct(r.recall)} sub={`${r.caught} of ${r.planted} planted errors caught. 95% interval ${ci(r.recallCI)}.`} />
-            <Metric label="Recall, critical rules" value={pct(r.criticalRecall)} sub={`Guarantees, figures, student records. ${r.criticalPlanted} planted. 95% interval ${ci(r.criticalCI)}.`} />
+            <Metric label="Recall, critical rules" value={pct(r.criticalRecall)} sub={`${brand === "2" ? "Guaranteed claims and figures" : brand === "all" ? "Guarantees and figures (both brands), student records" : "Guarantees, figures, student records"}. ${r.criticalPlanted} planted. 95% interval ${ci(r.criticalCI)}.`} />
             <Metric label="Hard phrasings caught" value={`${r.hardCaught} of ${r.hardPlanted}`} sub="Errors written to avoid keyword patterns. These are what the AI checks are for." />
             <CleanMetric c={r.cleanDrafts} />
           </div>
 
           <Card className="mt-4 p-4 text-sm">
             <h2>With the AI checks</h2>
-            {ai ? (
+            {brand !== "1" && !ai ? (
+              <p className="mt-1 text-muted">Not measured for {brand === "2" ? "Suraksha Health" : "both brands"}. The published AI run covers the PrepPath drafts only; choose PrepPath to see it.</p>
+            ) : ai ? (
               <>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <Metric label="Precision" value={pct(ai.precision ?? 0)} sub={`${ai.correct} of ${ai.predicted} findings were planted errors. 95% interval ${ci((ai.precisionCI ?? [0, 0]) as [number, number])}.`} />
@@ -162,9 +172,10 @@ export default function Results() {
             <h2>Method and limits</h2>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>60 short drafts for the fictional PrepPath Academy, built from 15 clean sentences and 24 planted errors across 9 rules by a seeded generator, so the set is identical on every run (see the fingerprint). About a quarter are left clean. 20 drafts were used while building (development); 40 were held out and are the headline numbers.</li>
+              <li>A second brand, the fictional health insurer Suraksha Health, has its own Brand Kit (16 rules of the same kinds), Facts Register (7 facts) and 40 hand-written drafts, all held out: 10 clean, 30 with planted errors, 8 of them hard phrasings. Its labels were written before the checker was first run on them and were not changed afterwards. It is not part of the demo workspace. It has no development split, so the development set shows PrepPath only.</li>
               <li>A finding counts as correct when it cites the planted error's rule and quotes overlapping words. Any other finding counts as a false flag, including suggestions.</li>
               <li>Intervals are 95% Wilson score intervals. With 40 drafts they are wide, and they should be read that way.</li>
-              <li><b>These numbers are optimistic.</b> The team wrote both the rules and the test drafts, so the drafts are phrased the way the rules expect. The "hard" errors were written to avoid the patterns on purpose, and the code checks miss all of them. Real marketing copy will be messier. The next step is a set of real, anonymised drafts from coaching-centre marketers.</li>
+              <li><b>These numbers are optimistic.</b> The team wrote both brands, their rules and the test drafts, so the drafts are phrased the way the rules expect. The "hard" errors were written to avoid the patterns on purpose, and the code checks miss all of them. Real marketing copy will be messier. The next step is a set of real, anonymised drafts from coaching-centre marketers.</li>
               <li>The evaluation found one real bug during development: the approved helpline number was being read as three unsupported figures. It was fixed before the held-out set was run.</li>
             </ul>
           </Card>

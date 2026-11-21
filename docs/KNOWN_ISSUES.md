@@ -10,7 +10,7 @@ Stated plainly, with where each one lives in the code.
 5. **OCR reads English.** Hindi text inside an image is not read reliably by OCR; AI vision usually reads it. Hindi in the caption is checked (`src/lib/image.ts:85`).
 6. **Brand-name spelling** catches wrong capitals and spacing at capital letters ("Preppath", "Prep Path"), not every misspelling (`src/lib/engine/code.ts:363`).
 7. **Code-only recall is 74%.** Paraphrased claims ("your seat is assured") need the AI checks; with AI on, recall is 98% on our held-out set.
-8. **Our test set was written by us.** Accuracy numbers are optimistic; real drafts from marketers would be harder.
+8. **Our test sets were written by us.** Both evaluation brands (PrepPath and the insurer Suraksha Health), their rules, facts and drafts were written by the team, so accuracy numbers are optimistic; real drafts from marketers would be harder. On the second brand the code checks read the approved helpline number and the age in "for a 30-year-old" as unsupported figures (2 clean drafts flagged), and the AI checks have not been run on it yet.
 9. **Change impact re-checks with code only.** AI findings on a re-checked draft are kept from its last AI review rather than re-run, to save quota (`src/lib/impact.ts`).
 10. **Pictures inside a PDF brochure are not checked.** A brochure is read as text: every code check and AI check runs on it, but images embedded in the PDF are not extracted. Upload them as creatives to check them (`src/app/api/extract/route.ts`).
 11. **API rate limit is per server instance.** 30 calls a minute per key, counted in memory, so it is approximate across instances (`src/lib/apikeys.ts:31`).
