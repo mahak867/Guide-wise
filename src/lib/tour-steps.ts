@@ -170,7 +170,7 @@ export function tourSteps(env: StepEnv): TourStep[] {
       async run(ctx) {
         await go(ctx, env, "/facts");
         await role(ctx, "manager");
-        const rowF3 = await until(ctx, () => Array.from(document.querySelectorAll("tr")).find((tr) => !ours(tr) && /\bF-3\b/.test(text(tr)) && visible(tr)), 30000, "fact F-3");
+        const rowF3 = await until(ctx, () => Array.from(document.querySelectorAll("tr")).find((tr) => !ours(tr) && visible(tr) && text(tr.cells[0] ?? tr) === "F-3"), 30000, "fact F-3");
         const edit = Array.from(rowF3.querySelectorAll("button")).find((b) => text(b) === "Edit");
         if (!edit) throw new Error("no Edit button on F-3");
         await press(ctx, env, edit);
