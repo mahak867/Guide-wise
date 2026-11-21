@@ -15,6 +15,7 @@ import { BRAND_SIGNERS, EXCEPTION, approversOf, canGrantException, complianceSig
 import { REVIEWER_ROLES, floatAt, liveChange, mayPoll, selectionForRule, snapOf } from "@/lib/live";
 import type { InspectorImage } from "@/lib/regions";
 import { canAcceptFix, moveCursor, precedentLine, reviewKey, whyNoAccept, type Precedent } from "@/lib/review-extras";
+import { sourcePassage } from "@/lib/source-passage";
 import { ROLES, type Finding, type ReviewStats, type Role } from "@/lib/types";
 
 interface Draft {
@@ -756,6 +757,16 @@ export default function ReviewPage() {
                     {f.created_at && <><dt>Raised</dt><dd>{fmtDate(f.created_at)}{f.draft_version ? `, on version ${f.draft_version}` : ""}{f.level === "suggestion" ? ". A suggestion: it does not block approval" : ""}</dd></>}
                   </dl>
                   <p className="mt-2 rounded-md bg-mist px-2 py-1.5"><b className="text-ink">Rule cited:</b> {f.rule_text}{rule ? ` Source: ${rule.source}.` : ""}{f.fact_id ? ` Fact cited: ${f.fact_id}.` : ""}</p>
+                  {(() => {
+                    // The guide passage the rule was compiled from, quoted as it was written.
+                    const sp = sourcePassage(rule);
+                    return sp && (
+                      <div className="mt-2 border-l-2 border-line pl-2">
+                        <blockquote className="text-sm text-ink">“{sp.quote}”</blockquote>
+                        <p className="mt-0.5">From: {sp.from}</p>
+                      </div>
+                    );
+                  })()}
                   {f.precedent && (
                     <p className="mt-2 rounded-md border border-major/30 bg-major-soft px-2 py-1.5 text-ink">
                       <b>Precedent:</b> {f.precedent.order}. {f.precedent.note}{" "}

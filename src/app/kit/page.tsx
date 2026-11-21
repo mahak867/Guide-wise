@@ -226,7 +226,7 @@ export default function KitPage() {
       id: `G-${String(n).padStart(2, "0")}`, title: p.title, description: p.description, severity: p.severity, kind: p.kind, category: p.category,
       source: "Compiled from pasted guide text",
       // Saved exactly as proposed; the API validates it and refuses a code check that could flag nothing.
-      config: p.config ?? {},
+      config: { ...(p.config ?? {}), ...(p.source_passage?.trim() ? { source_passage: p.source_passage.trim().slice(0, 1200) } : {}) },
       tests: [{ text: p.flag_example, expect: "flag" }, { text: p.pass_example, expect: "pass" }],
     });
     if (ok) setProposals((ps) => ps?.filter((_, j) => j !== i) ?? null);

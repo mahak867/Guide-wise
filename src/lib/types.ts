@@ -77,6 +77,8 @@ export interface Rule {
     except?: string[];
     /** requires: the finding's message, for a required line compiled from a guide (the built-in wording is about paid content and offers). */
     message?: string;
+    /** The guide passage the rule was compiled from, quoted exactly; shown under each finding of the rule. */
+    source_passage?: string;
     /** Content types this rule applies to (see CONTENT_TYPES). Empty or missing means all of them. */
     channels?: string[];
   };

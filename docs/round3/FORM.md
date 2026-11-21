@@ -45,6 +45,7 @@ Approval bound to the Brand Kit version and blocked by a database trigger while 
 Approval record with a SHA-256 fingerprint; read-only share link valid 30 days, revocable
 Accept, edit, dismiss, reopen findings; undo a fix for 10 seconds; keyboard review
 Each finding shows how the team settled the same rule before
+Each finding of a rule compiled from a brand guide quotes the guide passage it came from, with its source
 Make this a rule: select words in a draft and get a tested rule proposal
 Change impact: changing a fact or rule re-checks every draft that used it and sends broken approved pieces back for re-approval
 REST API and MCP server with scoped, hashed, revocable keys; get_brief and check_draft; playground and audit trail
@@ -74,7 +75,7 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
 
-Unit and integration: 334 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
+Unit and integration: 338 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
 Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 268 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites and direct database writes refused, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
 
