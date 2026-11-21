@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { Button, Notice, inputCls } from "@/components/ui";
 import { api, fmtDate, useApp } from "@/lib/client";
 import { REVIEWER_ROLES } from "@/lib/live";
+import { ROLES, type Role } from "@/lib/types";
 
 interface Invite { id: number; created_at: string; created_by: string; expires_at: string }
 
@@ -11,7 +12,9 @@ interface Invite { id: number; created_at: string; created_by: string; expires_a
  * browser. Made and revoked by a reviewer or the brand manager. The link is shown once; only its hash is stored.
  */
 export function InviteTeammate({ draftId, onChange }: { draftId: string; onChange?: () => void }) {
-  const { role, setRole } = useApp();
+  const { account, role, setRole } = useApp();
+  // In an organisation's workspace the link adds a member; the inviter picks the role (a demo link has no role).
+  const [joinAs, setJoinAs] = useState<Role>("creator");
   const can = REVIEWER_ROLES.includes(role);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,7 +32,7 @@ export function InviteTeammate({ draftId, onChange }: { draftId: string; onChang
     setError(null);
     setCopied(false);
     try {
-      const r = await api<{ url: string; invite: Invite }>("/api/invites", { draft_id: draftId });
+      const r = await api<{ url: string; invite: Invite }>("/api/invites", { draft_id: draftId, ...(account?.member ? { role: joinAs } : {}) });
       setMade(r);
       await list();
       onChange?.();
@@ -81,6 +84,16 @@ export function InviteTeammate({ draftId, onChange }: { draftId: string; onChang
           ) : (
             <>
               <p className="text-muted">Send this link to a teammate. Opening it explains what joining means; pressing Join opens this workspace in their browser, on this draft. Changes either of you make show up for the other within seconds.</p>
+              {account?.member && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-1.5"><span className="text-xs text-muted">Joins as</span>
+                    <select value={joinAs} onChange={(e) => setJoinAs(e.target.value as Role)} className="rounded-md border border-line bg-white px-2 py-1">
+                      {(Object.keys(ROLES) as Role[]).filter((r) => r !== "manager" || role === "manager").map((r) => <option key={r} value={r}>{ROLES[r].title}</option>)}
+                    </select>
+                  </label>
+                  <Button disabled={busy} onClick={create}>Make a link for this role</Button>
+                </div>
+              )}
               {busy && !made && <p role="status" className="text-muted">Making a join link…</p>}
               {made && (
                 <>

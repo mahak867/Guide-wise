@@ -237,7 +237,7 @@ export async function POST(req: Request, ctx: Ctx) {
         // Dual sign-off: a high-risk draft needs compliance (Kavya) first, then brand (Arjun or Meera).
         // The compliance sign-off is an "approved_partial" event; the brand sign-off completes the approval.
         const dual = draft.status === "compliance_review";
-        const evs = dual ? must(await d.from("events").select("id, actor, role, action, at").eq("ws", ws).eq("draft_id", id)) as SignEvent[] : [];
+        const evs = dual ? must(await d.from("events").select("id, actor, role, action, at, detail").eq("ws", ws).eq("draft_id", id)) as SignEvent[] : [];
         const signed = dual ? complianceSignOff(evs) : null;
         if (dual && a.role === "compliance" && signed) {
           return fail(`${signed.actor} has already given the compliance sign-off. It now needs the brand sign-off: switch role to Arjun (brand) or Meera (brand manager).`, 409);
@@ -284,7 +284,7 @@ export async function POST(req: Request, ctx: Ctx) {
           return Response.json({ ok: true, approved: false, waiting_for: "brand", message: `Approved by ${a.name}, waiting for brand sign-off.` });
         }
         const now = new Date().toISOString();
-        const approvers = [...(dual && signed ? [{ name: signed.actor, role: "compliance", at: signed.at }] : []), { name: a.name, role: a.role, at: now }];
+        const approvers = [...(dual && signed ? [{ name: signed.actor, role: "compliance", at: signed.at, ...(signed.user_id ? { user_id: signed.user_id } : {}) }] : []), { name: a.name, role: a.role, at: now, ...(a.userId ? { user_id: a.userId } : {}) }];
         const count = (s: string) => current.filter((f) => f.state === s).length;
         // Move to approved first, only from the review state this request saw: of two approvals at once, one wins and
         // the other gets a 409, so a draft never gets two receipts. (The database trigger still refuses open violations.)

@@ -576,5 +576,63 @@ await call("POST", "/api/reset");
   } else console.log("skip invite: expired link (set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY to write one)");
 }
 
+// Accounts and organisations: a claimed workspace needs a member's sign-in, and the member's role from the table wins
+// over x-role. Skipped until migration 010 (members) is applied, or when sign-up needs email confirmation.
+{
+  const SB = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, ""), SK = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+  const table = SB && SK ? await fetch(`${SB}/rest/v1/rpc/workspace_claimed`, { method: "POST", headers: { apikey: SK, authorization: `Bearer ${SK}`, "content-type": "application/json" }, body: JSON.stringify({ p_ws: "probe-none-0000" }) }) : null;
+  if (!table) console.log("skip accounts: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY");
+  else if (!table.ok) console.log(`skip accounts: migration 010 is not applied yet (apply supabase/migrations/010_accounts.sql); got ${table.status}`);
+  else {
+    const signUp = async () => {
+      const r = await fetch(`${SB}/auth/v1/signup`, { method: "POST", headers: { apikey: SK, "content-type": "application/json" }, body: JSON.stringify({ email: `probe-${randomUUID().slice(0, 12)}@mailinator.com`, password: randomBytes(12).toString("base64url") }) });
+      const j = await r.json().catch(() => null);
+      return { status: r.status, token: j?.access_token ?? j?.session?.access_token ?? null, j };
+    };
+    const A = await signUp();
+    if (!A.token) console.log(`skip accounts: sign-up returned no session (status ${A.status}); the Supabase project requires email confirmation, or refused: ${JSON.stringify(A.j).slice(0, 160)}`);
+    else {
+      const cw = "acct-" + randomUUID().slice(0, 12);
+      const as = (token, method, path, { role = "creator", body, headers = {} } = {}) => call(method, path, { role, body, headers: { "x-workspace": cw, ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers } });
+      expect("accounts: a new account claims a fresh workspace as its manager", await as(A.token, "POST", "/api/account", { body: { action: "claim", name: "Probe Manager" } }), (r) => r.s === 200 && r.j?.member?.role === "manager");
+      expect("accounts: an unauthenticated request to the claimed workspace is 401", await as(null, "GET", "/api/state", { role: "manager" }), (r) => is4xx(r) && r.s === 401);
+      expect("accounts: forged member headers without a token are still 401", await as(null, "GET", "/api/state", { headers: { "x-gw-member-id": "00000000-0000-0000-0000-000000000000", "x-gw-member-name": "Mallory" } }), (r) => r.s === 401);
+      expect("accounts: an invalid token is 401", await as("aaa.bbb.ccc", "GET", "/api/state"), (r) => r.s === 401);
+      expect("accounts: the member's token opens it", await as(A.token, "GET", "/api/state"), is(200));
+      expect("accounts: another workspace is unaffected", await call("GET", "/api/state"), is(200));
+      const B = await signUp();
+      expect("accounts: (setup) a second account", { s: B.token ? 200 : 0, j: B.j }, (r) => r.s === 200);
+      expect("accounts: a signed-in non-member is refused", await as(B.token, "GET", "/api/state"), (r) => is4xx(r) && r.s === 403);
+      // Straight to the database with the public key and B's own token: the members table and its functions refuse.
+      const rest = (path, body, token = B.token) => fetch(`${SB}${path}`, { method: "POST", headers: { apikey: SK, authorization: `Bearer ${token}`, "content-type": "application/json", prefer: "return=minimal" }, body: JSON.stringify(body) }).then((r) => ({ s: r.status, j: {} }));
+      expect("accounts: a direct REST insert into members is refused", await rest("/rest/v1/members", { ws: cw, user_id: "00000000-0000-0000-0000-000000000000", role: "manager", name: "Mallory" }), (r) => r.s >= 400);
+      expect("accounts: a direct REST insert into members with the anon key alone is refused", await rest("/rest/v1/members", { ws: cw, user_id: "00000000-0000-0000-0000-000000000000", role: "manager", name: "Mallory" }, SK), (r) => r.s >= 400);
+      expect("accounts: set_member_role on a workspace you do not manage fails", await rest("/rest/v1/rpc/set_member_role", { p_ws: cw, p_user: "00000000-0000-0000-0000-000000000000", p_role: "manager" }), (r) => r.s >= 400);
+      expect("accounts: claim_workspace on a claimed workspace fails", await rest("/rest/v1/rpc/claim_workspace", { p_ws: cw, p_name: "Mallory" }), (r) => r.s >= 400);
+      // A forged invite: an invite_created row written into the open events table for the claimed workspace.
+      const forged = randomBytes(32).toString("base64url");
+      await fetch(`${SB}/rest/v1/events`, { method: "POST", headers: { apikey: SK, authorization: `Bearer ${SK}`, "content-type": "application/json", prefer: "return=minimal" },
+        body: JSON.stringify({ ws: cw, draft_id: null, actor: "Mallory", role: "manager", action: "invite_created", detail: { hash: createHash("sha256").update(forged).digest("hex"), expires_at: new Date(Date.now() + 864e5).toISOString(), created_by: "Mallory", member_role: "manager" } }) });
+      expect("accounts: a forged invite event cannot add a member", { s: (await fetch(`${L}/api/join/${forged}`, { method: "POST", headers: { authorization: `Bearer ${B.token}` } })).status, j: {} }, is(404));
+      expect("accounts: (after the forged invite) still not a member", await as(B.token, "GET", "/api/state"), (r) => r.s === 403);
+      const inv = await as(A.token, "POST", "/api/invites", { body: { role: "creator" } });
+      const tok = inv.j?.url?.split("/join/")[1];
+      expect("accounts: joining a claimed workspace without signing in is 401", { s: (await fetch(`${L}/api/join/${tok}`, { method: "POST" })).status, j: {} }, is(401));
+      expect("accounts: joining with a sign-in adds the member", { s: (await fetch(`${L}/api/join/${tok}`, { method: "POST", headers: { authorization: `Bearer ${B.token}` } })).status, j: {} }, is(200));
+      const dr = await as(B.token, "POST", "/api/drafts", { body: { title: "Accounts probe", content_type: "email", text: "Our December batch starts on 5 December. Fee ₹39,999.", useAI: false } });
+      await as(B.token, "POST", `/api/drafts/${dr.j?.id}`, { body: { action: "submit" } });
+      expect("accounts: x-role spoofing is ignored (a creator member cannot approve)", await as(B.token, "POST", `/api/drafts/${dr.j?.id}`, { role: "compliance", body: { action: "approve" } }), (r) => is4xx(r) && r.s === 403);
+      const bId = (await as(A.token, "GET", "/api/members")).j?.members?.find((m) => !m.you)?.user_id;
+      expect("accounts: a creator member cannot change roles", await as(B.token, "PATCH", "/api/members", { role: "manager", body: { user_id: bId, role: "manager" } }), (r) => r.s === 403);
+      expect("accounts: the manager makes them compliance", await as(A.token, "PATCH", "/api/members", { body: { user_id: bId, role: "compliance" } }), is(200));
+      expect("accounts: the role change applies on the very next request", await as(B.token, "POST", `/api/drafts/${dr.j?.id}`, { role: "creator", body: { action: "approve" } }), (r) => r.s !== 403 && r.s < 500);
+      const aId = (await as(A.token, "GET", "/api/members")).j?.members?.find((m) => m.you)?.user_id;
+      expect("accounts: the last manager cannot remove themselves", await as(A.token, "DELETE", "/api/members", { body: { user_id: aId } }), (r) => is4xx(r) && r.s === 409);
+      expect("accounts: the audit log names the signed-in member", await as(A.token, "GET", `/api/drafts/${dr.j?.id}`), (r) => r.s === 200 && JSON.stringify(r.j).includes(bId));
+      expect("accounts: a removed member loses access at once", await (async () => { await as(A.token, "DELETE", "/api/members", { body: { user_id: bId } }); return as(B.token, "GET", "/api/state"); })(), (r) => r.s === 403);
+    }
+  }
+}
+
 console.log(bad ? `${bad} problem(s).` : "No problems.");
 process.exit(bad ? 1 : 0);
