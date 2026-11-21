@@ -7,6 +7,12 @@ on:
   schedule:
     - cron: "41 20 * * *"
   workflow_dispatch:
+    inputs:
+      brand:
+        description: "Which drafts: prepPath (the scheduled run), 2 (Suraksha Health) or all"
+        type: choice
+        options: [prepPath, "2", all]
+        default: prepPath
 
 jobs:
   ai-eval:
@@ -19,6 +25,8 @@ jobs:
       EVAL_PACE_MS: "6000"
       EVAL_RETRIES: "3"
       EVAL_RETRY_WAIT_MS: "45000"
+      # The scheduled run has no inputs, so it is always PrepPath (Groq free-tier limits).
+      BRAND: ${{ github.event.inputs.brand || 'prepPath' }}
     steps:
       - name: Check for the GROQ_API_KEY secret
         id: key
@@ -42,16 +50,22 @@ jobs:
         if: steps.key.outputs.present == 'true'
         run: |
           set -o pipefail
-          npx tsx scripts/eval.ts --ai | tee eval-output.txt
+          if [ "$BRAND" = "prepPath" ]; then
+            npx tsx scripts/eval.ts --ai | tee eval-output.txt
+            echo "RESULTS=src/lib/eval/ai-results.json" >> "$GITHUB_ENV"
+          else
+            npx tsx scripts/eval.ts --ai --brand "$BRAND" | tee eval-output.txt
+            echo "RESULTS=src/lib/eval/ai-results-brand-$BRAND.json" >> "$GITHUB_ENV"
+          fi
       - name: Write the summary
         if: steps.key.outputs.present == 'true'
         run: |
           node -e '
-            const r = require("./src/lib/eval/ai-results.json");
+            const r = require("./" + process.env.RESULTS);
             const p = (x) => (x * 100).toFixed(1) + "%";
             const ci = (a) => a ? " (" + a.map(p).join("–") + ")" : "";
             const lines = [
-              "## Nightly AI reliability check (PrepPath, 40 held-out drafts)",
+              "## AI reliability check (" + (process.env.BRAND === "prepPath" ? "PrepPath" : process.env.BRAND === "2" ? "Suraksha Health" : "both brands") + ", " + r.docs + " held-out drafts)",
               "",
               r.aiDocs === r.docs ? "Verified: the AI answered on every draft." : "**Not a verified AI run:** the AI answered on " + r.aiDocs + " of " + r.docs + " drafts; the rest were scored by the code checks alone. Errors: " + (r.aiErrors || []).join(" | ").slice(0, 400),
               "",
@@ -71,8 +85,8 @@ jobs:
         with:
           name: ai-eval-results
           path: |
-            src/lib/eval/ai-results.json
+            src/lib/eval/ai-results*.json
             eval-output.txt
       - name: Fail unless the AI answered on every draft
         if: steps.key.outputs.present == 'true'
-        run: node -e 'const r = require("./src/lib/eval/ai-results.json"); if (r.aiDocs !== r.docs) { console.error("The AI answered on " + r.aiDocs + " of " + r.docs + " drafts."); process.exit(1); }'
+        run: node -e 'const r = require("./" + process.env.RESULTS); if (r.aiDocs !== r.docs) { console.error("The AI answered on " + r.aiDocs + " of " + r.docs + " drafts."); process.exit(1); }'

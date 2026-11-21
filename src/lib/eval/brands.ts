@@ -11,12 +11,14 @@ export const EVAL_BRANDS = {
 export type BrandKey = keyof typeof EVAL_BRANDS | "all";
 
 /** Run one brand's labelled drafts, or both brands combined into one report. */
-export async function runBrandEval(brand: BrandKey, opts: { useAI: boolean; split?: "dev" | "test" | "all" }): Promise<EvalReport> {
+export async function runBrandEval(brand: BrandKey, opts: { useAI: boolean; split?: "dev" | "test" | "all"; paceMs?: number; retries?: number; retryWaitMs?: number }): Promise<EvalReport> {
   const keys = brand === "all" ? (["1", "2"] as const) : [brand];
   const reports: EvalReport[] = [];
   for (const k of keys) {
     const b = EVAL_BRANDS[k];
     reports.push(await runEval(b.rules, b.facts, b.kit, { ...opts, set: b.set }));
   }
-  return reports.length === 1 ? reports[0] : combine(reports, opts.split ?? "test");
+  if (reports.length === 1) return reports[0];
+  // How many drafts the AI answered on, over both brands.
+  return { ...combine(reports, opts.split ?? "test"), aiDocs: reports.reduce((n, r) => n + (r.aiDocs ?? 0), 0), aiErrors: reports.flatMap((r) => r.aiErrors ?? []).slice(0, 5) };
 }

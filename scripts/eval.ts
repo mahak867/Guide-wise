@@ -19,15 +19,33 @@ async function main() {
   const bi = process.argv.indexOf("--brand");
   const brand = bi > 0 ? process.argv[bi + 1] : undefined;
   if (brand !== undefined && brand !== "1" && brand !== "2" && brand !== "all") throw new Error("--brand takes 1, 2 or all.");
+  const pace = { paceMs: Number(process.env.EVAL_PACE_MS ?? 0), retries: Number(process.env.EVAL_RETRIES ?? 0), retryWaitMs: Number(process.env.EVAL_RETRY_WAIT_MS ?? 30000) };
+  if ((brand === "2" || brand === "all") && useAI) {
+    // The second brand (or both) with the AI checks, run twice for agreement. Saved to its own file; the published
+    // PrepPath results in ai-results.json are not touched.
+    if (!aiAvailable()) throw new Error("Set GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY to run with the AI checks.");
+    const a = await runBrandEval(brand, { useAI: true, split: "test", ...pace });
+    console.log(line(`brand ${brand}, ${a.mode}`, a));
+    console.log(`AI answered on ${a.aiDocs} of ${a.docs} drafts${a.aiErrors?.length ? `; AI errors: ${a.aiErrors.join(" | ")}` : ""}`);
+    if (a.mode !== "ai") throw new Error("The AI checks did not run; nothing saved.");
+    const b = await runBrandEval(brand, { useAI: true, split: "test", ...pace });
+    const sig = (r: typeof a, i: number) => JSON.stringify([...r.results[i].planted.map((p) => p.caught), ...r.results[i].extra.map((e) => e.rule + e.quote).sort()]);
+    const same = a.results.filter((_, i) => sig(a, i) === sig(b, i)).length;
+    console.log(`repeat-run agreement: ${same}/${a.results.length} drafts identical (${pct(same / a.results.length)})`);
+    const { results: _r, ...summary } = a;
+    void _r;
+    const file = `src/lib/eval/ai-results-brand-${brand}.json`;
+    writeFileSync(file, JSON.stringify({ measured: true, brand, ...summary, mode: `AI checks (${aiModel()})`, agreement: same / a.results.length }, null, 2) + "\n");
+    console.log(`Saved ${file}`);
+    return;
+  }
   if (brand === "2" || brand === "all") {
-    if (useAI) throw new Error("The published AI run is for brand 1 only; run --brand 2 or all with code checks.");
     if (brand === "all") for (const k of ["1", "2"] as const) console.log(line(`brand ${k}, rules-only`, await runBrandEval(k, { useAI: false, split: "test" })));
     console.log(line(brand === "all" ? "both brands, rules-only" : "brand 2 (Suraksha Health), rules-only", await runBrandEval(brand, { useAI: false, split: "test" })));
     return;
   }
   if (useAI && !aiAvailable()) throw new Error("Set GROQ_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY to run with the AI checks.");
-  // EVAL_PACE_MS, EVAL_RETRIES and EVAL_RETRY_WAIT_MS slow the AI run down for a free tier (the nightly workflow sets them).
-  const pace = { paceMs: Number(process.env.EVAL_PACE_MS ?? 0), retries: Number(process.env.EVAL_RETRIES ?? 0), retryWaitMs: Number(process.env.EVAL_RETRY_WAIT_MS ?? 30000) };
+  // EVAL_PACE_MS, EVAL_RETRIES and EVAL_RETRY_WAIT_MS (read above) slow the AI run down for a free tier (the nightly workflow sets them).
   const a = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test", ...pace });
   console.log(`${a.mode}: precision ${pct(a.precision)} [${a.precisionCI.map(pct).join(", ")}], recall ${pct(a.recall)} [${a.recallCI.map(pct).join(", ")}], critical recall ${pct(a.criticalRecall)}, hard ${a.hardCaught}/${a.hardPlanted}, ${a.ms} ms`);
   const c = a.cleanDrafts;
