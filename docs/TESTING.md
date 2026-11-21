@@ -1,6 +1,6 @@
 # Testing
 
-Latest full run against the live site (20 Nov 2026): **238 unit tests, 21 of 21 journey steps, 59 of 59 sweep steps (axe-core: 0 serious or critical issues across 27 page checks), 206 of 206 API probe checks (including the race checks)**, the browser extension end to end, no server or page errors. Load test: 980 requests, 0 failed.
+Latest full run against the live site (21 Nov 2026, the final deploy): **341 unit tests, 21 of 21 journey steps, 61 of 61 sweep steps (axe-core: 0 issues across 29 page checks), 290 of 290 API probe checks (including the race checks, accounts and the public-key checks)**, the browser extension end to end, no server or page errors. Load test: 980 requests, 0 failed.
 
 | Suite | Command | What it covers | Where it runs |
 | --- | --- | --- | --- |

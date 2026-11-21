@@ -19,37 +19,39 @@ Paste this whole file into a new Claude session (in this repository) to continue
 
 ## How to run things (cloud container)
 
-- Checks before any push: `npx tsc --noEmit`, `npx eslint src tests e2e scripts --quiet`, `npm test` (324 unit tests), `npm run build`, `npm run eval`.
-- Live suites (set env first): `export BASE_URL=https://guidewise-kohl.vercel.app NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`, then `npm run e2e` (21-step journey), `npm run e2e:sweep` (61 steps, axe-core), `npm run e2e:api` (268 checks; its accounts section needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY`, from `.env.local`), `npm run e2e:extension`. Wait about 3 minutes after a push before running them. Do not push while a live suite runs.
+- Checks before any push: `npx tsc --noEmit`, `npx eslint src tests e2e scripts --quiet`, `npm test` (341 unit tests), `npm run build`, `npm run eval`.
+- Live suites (set env first): `export BASE_URL=https://guidewise-kohl.vercel.app NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`, then `npm run e2e` (21-step journey), `npm run e2e:sweep` (61 steps, axe-core), `npm run e2e:api` (290 checks; its accounts and public-key sections need `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY`, the public values), `npm run e2e:extension`. Wait about 3 minutes after a push before running them. Do not push while a live suite runs.
 - Local server: `NODE_USE_ENV_PROXY=1 NO_PROXY=localhost,127.0.0.1 PORT=3577 npm start` (needs `.env.local`, which is not in git).
 - Screenshots: `node docs/round3/shots.mjs` and `node docs/round3/shots-extra.mjs` (with BASE_URL set). PDF: `node docs/round3/build-pdf.mjs` (reads `docs/round3/live-results.json` and `docs/round3/user-tests.json`).
-- Supabase project id `dfgzvvyiuicyanvrowfu`; migrations 001–010 are applied (010 = accounts: closed `members` and `org_invites` tables, SECURITY DEFINER functions). "Confirm email" is off in Supabase Auth. Vercel project `prj_HfdLQbURNJftdSrcJ7bnfNPtfXly`, team `team_iKSOUOWMQZxdl9O1cA6WhZh6`.
+- Supabase project id `dfgzvvyiuicyanvrowfu`; migrations 001–011 are applied (011 = tables closed to the public key; 010 = accounts: closed `members` and `org_invites` tables, SECURITY DEFINER functions). "Confirm email" is off in Supabase Auth. Vercel project `prj_HfdLQbURNJftdSrcJ7bnfNPtfXly`, team `team_iKSOUOWMQZxdl9O1cA6WhZh6`.
 
-## State at handover (all pushed, all live, all green)
+## State at handover (final, 21 Nov, 12:10 PM Saudi; all pushed, all live, all green)
 
-- Live results 21 Nov: journey 21/21, sweep 61/61 with 0 axe issues on 29 page checks, probe 268/268 (incl. accounts: spoofed roles, forged invites, direct DB writes refused), extension passes. 324 unit tests.
-- Accuracy (code checks only): PrepPath 40 held-out drafts 100% precision / 74% recall; Suraksha Health (second, fictional insurer) 40 drafts 90.9% / 78.9%, 2 of 10 clean drafts falsely flagged (an age and the approved helpline read as figures; "no questions asked" flagged as a guarantee); both brands 96.3% / 76.0%. With AI (PrepPath, measured earlier): 92% / 98%. Images: 26 of 26 planted errors, 0 false alarms in 66. Privacy: 0 leaks in 144 prompts.
-- User tests: T.R. (2nd yr CSE) every feature, 12 min, no questions; K.K. about 20 min with his own draft, took a while to understand what happens after a review, so New review now explains it under Run review. Roshini (team) walked through it too; not counted.
-- Built in Round 3, beyond the three promises: bulk check, Chrome extension, share links, channel previews, undo and keyboard review with precedents, exceptions and dual sign-off, database approval gate, web page reader with hidden-text detection, 31 Brand Kit rules, image inspector (recoloured or stretched logo, text size), make-this-a-rule, live updates, invite a teammate, optional sign-in and organisations, dark mode (system setting), second-brand evaluation, simplified main screens, threat model (16 threats), security headers and CSP.
-- Docs ready: `docs/round3/FORM.md` (form answers field by field), `docs/round3/Guidewise_Round3.pdf` (13 pages), README with screenshots and a mermaid architecture diagram, `docs/TESTING.md`, `docs/KNOWN_ISSUES.md`, `docs/PRODUCTION.md`, `docs/THREAT_MODEL.md`, `docs/ROADMAP.md`.
+- Final live run on the last deploy: journey 21/21, sweep 61/61 (axe: 0 issues across 29 page checks), probe 290/290, extension passes. 341 unit tests. The daily probe on GitHub Actions runs all 290 checks (290 of 290 on 21 Nov); the Supabase URL and public key come from repository secrets.
+- Accuracy, code checks only: PrepPath 100% / 74.2%; Suraksha Health 96.8% / 78.9% with 10 of 10 clean drafts left alone (first run 90.9%, 8 of 10; an age and the approved helpline read as figures, fixed on 21 Nov with drafts and labels unchanged); both brands 98.8% / 76.0%.
+- Accuracy with AI: published PrepPath run 92% / 98%. Nightly AI check (`.github/workflows/ai-nightly.yml`, 20:41 UTC, PrepPath only, paced for the Groq free tier, fails unless the AI answers on every draft): first verified run 21 Nov, 89.0% / 98.5%, 17 of 17 hard, 85% agreement. Suraksha Health with AI (manual run, brand=2, verified 21 Nov): 71.7% / 86.8%, 3 of 8 hard, 8 of 10 clean; the docs say why (never tuned for that brand; tuning per brand is on the roadmap).
+- Database: migration 011 applied. Every table is closed to the public key (anon and authenticated have no privileges; demo_open policies dropped); only the server reaches the tables with SUPABASE_SERVICE_ROLE_KEY (set in Vercel, server-only). Rollback: docs/ROLLBACK_011.sql. Threat T17; 24 probe checks. Isolation between organisations is still enforced by the server, not by per-organisation RLS policies.
+- Built on 21 Nov: false-flag fix (ages, approved helpline), OCR "$" put back as "₹" when the brand's facts are in rupees, source passage per finding (with a fictional PrepPath brand guide, docs/demo/PrepPath_Brand_Guide.md, one section per demo rule), the nightly AI workflow, the 2-minute walkthrough video (public/demo.webm, recorded with docs/round3/record-demo.mjs), docs/START_HERE.md and a "five things to check" opening in README, START_HERE, FORM and the PDF.
+- User tests: final at two outside testers (T.R. and K.K.). Real-ads sample: dropped.
+- Docs ready: docs/round3/FORM.md, docs/round3/Guidewise_Round3.pdf (13 pages), README, START_HERE, TESTING, KNOWN_ISSUES, PRODUCTION, THREAT_MODEL (17 threats), ROADMAP.
 
 ## Known weak spots (stated honestly in the docs)
 
-- Accuracy only on test sets we wrote; AI helpers not re-measured after fixes.
+- Accuracy only on test sets we wrote; the second brand's false-flag fix came after its first held-out run.
+- On the second brand the AI adds false alarms (precision 71.7% with AI against 96.8% with code only).
 - Two outside user tests only.
-- Row-level security per organisation covers members and invites only; other tables are protected by the server.
-- In-browser OCR can read ₹ as $ (AI vision reads it correctly); fonts are not identified.
+- Isolation between organisations is enforced by the server; per-organisation row-level security policies are on the roadmap.
+- In-browser OCR can misread ₹ in ways other than "$"; fonts are not identified.
 - Sign-in has no password reset or email verification.
+- The old branch claude/trusting-fermat-lvt0o5 on GitHub is stale (everything is on main); it can be deleted.
 
 ## Rivals (from public READMEs; rough)
 
 Harsh scores: Guidewise ~82, BrandGuard AI (Auritras/brandguard-ai: demo plus sign-up, 80 eval drafts, Render backend that can be slow to wake) ~76, Nova Blasters ~75–78 (not rechecked), Specfix ~71, PIXELPROOF ~70, Unwind BrandGuard ~68, InkloomGuard ~66, OFFSCRIPT ~62. Odds: first about 45–50%, top 3 about 75–80%.
 
-## Optional work left (only before 4 PM Saudi, only if every test stays green)
+## Work left
 
-1. A one-page "Start here for judges" (`docs/START_HERE.md`, linked at the top of the README): the 3 things to click, the proof to check (Results page re-runs accuracy; daily probe on GitHub Actions), the honest limits. Docs only, safe.
-2. Fix the figures false flags (ages like "30-year-old" and the approved helpline number read as figures), then re-run `npm run eval` for both brands and update the numbers everywhere (README, TESTING, FORM, PDF). Riskier: engine change on submission day.
-3. More user tests: add each to `docs/round3/user-tests.json`, `docs/TESTING.md`, KNOWN_ISSUES #13, FORM.md, README, then rebuild the PDF.
+None. Hard stop at 1:00 PM Saudi: no pushes after that except a revert.
 
 ## Submission (the leader does this)
 
