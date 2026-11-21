@@ -96,7 +96,7 @@ On a brand the AI was never tuned for, it caught more problems but raised more f
 
 | Other evaluation | Result |
 | --- | --- |
-| Images: 28 generated creatives with planted colour, contrast, logo (incl. recoloured, stretched) and text-size errors | 26 of 26 caught, 0 false alarms in 66 clean checks |
+| Images: 88 generated creatives with planted colour, contrast, logo (missing, small, crowded, recoloured, stretched), text-size and alt-text errors | 71 of 74 caught (96%), 0 false alarms in 302 clean checks; missed: a very dark off-palette brown, mist text on white (contrast 1.12) and 12 px small print |
 | Privacy: personal data in 24 drafts, canaries in 3 confidential ones | 0 leaks in 144 AI prompts |
 | AI helpers, live, **measured before the fixes** ([EVAL_HELPERS.md](docs/EVAL_HELPERS.md)) | Guide compiler: 16 of 17 expected rules, 7 of 8 planted problems warned, 0 false warnings. Rule amendment: 7 of 8 pass the code gate, but the dismissed text was still flagged after all 7 (fixed since; not yet re-measured) |
 | Load test, live ([LOAD_TEST.md](docs/LOAD_TEST.md)) | 20 then 50 concurrent visitors through the creator journey, AI off: 980 requests, 0 failed |
@@ -170,7 +170,7 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ```bash
 npm test                                                         # 341 unit tests, including a deliberately wrong AI and fuzzing
 npm run eval                                                     # accuracy on the held-out set (code checks)
-npm run eval:images                                              # 28 creatives with planted colour, contrast, logo and text-size errors
+npm run eval:images                                              # 88 creatives with planted colour, contrast, logo, text-size and alt-text errors
 npm run eval:privacy                                             # personal data and confidential canaries never reach the AI
 npm run eval:helpers                                             # the guide compiler and the rule-amendment helper, live (about 30 AI calls)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e           # 21-step journey

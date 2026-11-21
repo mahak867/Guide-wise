@@ -9,18 +9,21 @@ import { createWorker, type Worker } from "tesseract.js";
 import { dominantFromPixels } from "../src/lib/colours";
 import { findLogoRgba, type Rgba } from "../src/lib/logo";
 import { linesFromOcr, OCR_PARAMS } from "../src/lib/regions";
-import { contrastHits, legibilityHits, logoHits, paletteHits } from "../src/lib/engine/visual";
+import { altHits, contrastHits, legibilityHits, logoHits, paletteHits } from "../src/lib/engine/visual";
 import { SEED_KIT, SEED_RULES } from "../src/lib/seed";
 
 const rule = (id: string) => SEED_RULES.find((r) => r.id === id)!;
-type Check = "palette" | "contrast" | "logo" | "legibility";
-type LogoVariant = "red" | "same-brightness" | { w: number; h: number };
+type Check = "palette" | "contrast" | "logo" | "legibility" | "alt";
+type LogoVariant = "red" | "same-brightness" | { w: number; h: number } | { to: [number, number, number] };
 type Case = {
   name: string; bg: string; text: string; logo?: number; crowd?: boolean; expect: Check[];
   /** Real text lines (font size in pixels on the 1080-pixel creative); turns on OCR and the text-size check. */
   words?: { text: string; size: number; y: number }[];
   variant?: LogoVariant;
+  /** The image's alt text; a good description unless the case plants a missing or too-short one. */
+  alt?: string;
 };
+const GOOD_ALT = "PrepPath poster: the December JEE batch, with the PrepPath mark at the top left";
 // White text contrast, WCAG formula, computed separately: red #E53935 4.23, blue #1E88E5 3.68, orange #FF6D00 2.82 (all below 4.5,
 // so they are planted contrast errors too); purple #6A1B9A 9.39, pink #D81B60 4.95, teal 6.39, ink 16.52 (pass).
 const HEAD = [
@@ -57,14 +60,79 @@ const CASES: Case[] = [
   { name: "text: logo squashed 13% narrow (ink)", bg: "#16211F", text: "#FFFFFF", logo: 130, variant: { w: 130, h: 150 }, words: HEAD, expect: ["logo"] },
   { name: "text: 14px small print", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Scholarship test on Sunday at all centres", size: 14, y: 960 }], expect: ["legibility"] },
   { name: "text: 14px small print (ink)", bg: "#16211F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Results based on the 2025 batch at Chennai", size: 14, y: 980 }], expect: ["legibility"] },
+
+  // Added 21 Nov 2026. Labels written before the first run; contrast labels from the WCAG formula (white text on:
+  // #4A148C 11.86, #1A237E 13.24, #B71C1C 6.57, #880E4F 9.45, #33691E 6.60, #3E2723 13.82 pass; #FFEB3B 1.22, #8BC34A 2.10,
+  // #00BCD4 2.30, #FF4081 3.33 fail; palette pairs: mist/marigold 1.83, teal/ink 2.59, white/mist 1.12 fail; marigold/ink 8.05,
+  // mist/ink 14.73, white/teal 6.39 pass). Every case also has its alt text checked.
+  { name: "off-palette deep purple", bg: "#4A148C", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette indigo", bg: "#1A237E", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette dark red", bg: "#B71C1C", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette wine", bg: "#880E4F", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette forest green", bg: "#33691E", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette brown", bg: "#3E2723", text: "#FFFFFF", logo: 110, expect: ["palette"] },
+  { name: "off-palette yellow, white text", bg: "#FFEB3B", text: "#FFFFFF", logo: 110, expect: ["palette", "contrast"] },
+  { name: "off-palette light green, white text", bg: "#8BC34A", text: "#FFFFFF", logo: 110, expect: ["palette", "contrast"] },
+  { name: "off-palette cyan, white text", bg: "#00BCD4", text: "#FFFFFF", logo: 110, expect: ["palette", "contrast"] },
+  { name: "off-palette bright pink, white text", bg: "#FF4081", text: "#FFFFFF", logo: 110, expect: ["palette", "contrast"] },
+  { name: "low contrast marigold on mist", bg: "#EEF3F1", text: "#F2A541", logo: 110, expect: ["contrast"] },
+  { name: "low contrast ink on teal", bg: "#0F6B5F", text: "#16211F", logo: 110, expect: ["contrast"] },
+  { name: "low contrast mist on marigold", bg: "#F2A541", text: "#EEF3F1", logo: 110, expect: ["contrast"] },
+  { name: "low contrast mist on white", bg: "#FFFFFF", text: "#EEF3F1", logo: 110, expect: ["contrast"] },
+  { name: "logo missing (mist)", bg: "#EEF3F1", text: "#16211F", expect: ["logo"] },
+  { name: "logo missing (white)", bg: "#FFFFFF", text: "#0F6B5F", expect: ["logo"] },
+  { name: "logo missing (marigold, ink text)", bg: "#F2A541", text: "#16211F", expect: ["logo"] },
+  { name: "text: logo missing", bg: "#0F6B5F", text: "#FFFFFF", words: HEAD, expect: ["logo"] },
+  { name: "logo too small (30 px)", bg: "#0F6B5F", text: "#FFFFFF", logo: 30, expect: ["logo"] },
+  { name: "logo too small (40 px, ink)", bg: "#16211F", text: "#FFFFFF", logo: 40, expect: ["logo"] },
+  { name: "logo too small (38 px, white)", bg: "#FFFFFF", text: "#16211F", logo: 38, expect: ["logo"] },
+  { name: "logo too small (32 px, mist)", bg: "#EEF3F1", text: "#16211F", logo: 32, expect: ["logo"] },
+  { name: "logo crowded (mist)", bg: "#EEF3F1", text: "#16211F", logo: 120, crowd: true, expect: ["logo"] },
+  { name: "logo crowded (white)", bg: "#FFFFFF", text: "#0F6B5F", logo: 120, crowd: true, expect: ["logo"] },
+  { name: "logo crowded (teal, 140 px)", bg: "#0F6B5F", text: "#FFFFFF", logo: 140, crowd: true, expect: ["logo"] },
+  { name: "text: logo recoloured blue", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, variant: { to: [30, 136, 229] }, words: HEAD, expect: ["logo"] },
+  { name: "text: logo recoloured red (ink)", bg: "#16211F", text: "#FFFFFF", logo: 130, variant: "red", words: HEAD, expect: ["logo"] },
+  { name: "text: logo recoloured purple (mist)", bg: "#EEF3F1", text: "#16211F", logo: 130, variant: { to: [106, 27, 154] }, words: HEAD, expect: ["logo"] },
+  { name: "text: logo stretched 27% wide", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, variant: { w: 165, h: 130 }, words: HEAD, expect: ["logo"] },
+  { name: "text: logo squashed 21% narrow (mist)", bg: "#EEF3F1", text: "#16211F", logo: 130, variant: { w: 130, h: 165 }, words: HEAD, expect: ["logo"] },
+  { name: "text: logo stretched 25% wide (ink)", bg: "#16211F", text: "#FFFFFF", logo: 120, variant: { w: 150, h: 120 }, words: HEAD, expect: ["logo"] },
+  { name: "text: 12px small print", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Terms and conditions apply to every offer", size: 12, y: 960 }], expect: ["legibility"] },
+  { name: "text: 13px small print (ink)", bg: "#16211F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Fee shown is for the classroom programme", size: 13, y: 960 }], expect: ["legibility"] },
+  { name: "text: 14px small print (mist)", bg: "#EEF3F1", text: "#16211F", logo: 130, words: [...HEAD, { text: "Selections counted from the 2025 batch only", size: 14, y: 960 }], expect: ["legibility"] },
+  { name: "alt missing (teal)", bg: "#0F6B5F", text: "#FFFFFF", logo: 110, alt: "", expect: ["alt"] },
+  { name: "alt missing (ink)", bg: "#16211F", text: "#FFFFFF", logo: 120, alt: "", expect: ["alt"] },
+  { name: "alt missing (mist)", bg: "#EEF3F1", text: "#16211F", logo: 110, alt: "", expect: ["alt"] },
+  { name: "alt missing (white)", bg: "#FFFFFF", text: "#0F6B5F", logo: 110, alt: "", expect: ["alt"] },
+  { name: "alt too short: Poster", bg: "#0F6B5F", text: "#FFFFFF", logo: 110, alt: "Poster", expect: ["alt"] },
+  { name: "alt too short: image", bg: "#16211F", text: "#FFFFFF", logo: 110, alt: "image", expect: ["alt"] },
+  { name: "alt too short: ad", bg: "#EEF3F1", text: "#16211F", logo: 110, alt: "ad", expect: ["alt"] },
+  { name: "alt only spaces", bg: "#FFFFFF", text: "#16211F", logo: 110, alt: "      ", expect: ["alt"] },
+  { name: "text: alt missing", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, words: HEAD, alt: "", expect: ["alt"] },
+  { name: "text: alt too short (ink)", bg: "#16211F", text: "#FFFFFF", logo: 130, words: HEAD, alt: "JEE ad", expect: ["alt"] },
+  { name: "clean teal, 100 px logo", bg: "#0F6B5F", text: "#FFFFFF", logo: 100, expect: [] },
+  { name: "clean teal, 140 px logo", bg: "#0F6B5F", text: "#FFFFFF", logo: 140, expect: [] },
+  { name: "clean teal, 160 px logo", bg: "#0F6B5F", text: "#FFFFFF", logo: 160, expect: [] },
+  { name: "clean ink, 100 px logo", bg: "#16211F", text: "#FFFFFF", logo: 100, expect: [] },
+  { name: "clean ink, 150 px logo", bg: "#16211F", text: "#FFFFFF", logo: 150, expect: [] },
+  { name: "clean mist, 110 px logo", bg: "#EEF3F1", text: "#16211F", logo: 110, expect: [] },
+  { name: "clean mist, 140 px logo", bg: "#EEF3F1", text: "#16211F", logo: 140, expect: [] },
+  { name: "clean white, ink text", bg: "#FFFFFF", text: "#16211F", logo: 110, expect: [] },
+  { name: "clean white, ink text, 130 px logo", bg: "#FFFFFF", text: "#16211F", logo: 130, expect: [] },
+  { name: "clean white, teal text, 120 px logo", bg: "#FFFFFF", text: "#0F6B5F", logo: 120, expect: [] },
+  { name: "clean marigold, ink text", bg: "#F2A541", text: "#16211F", logo: 120, expect: [] },
+  { name: "clean marigold, ink text, 140 px logo", bg: "#F2A541", text: "#16211F", logo: 140, expect: [] },
+  { name: "text: clean teal, 22px small print", bg: "#0F6B5F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Fees as listed on preppath.in", size: 22, y: 960 }], expect: [] },
+  { name: "text: clean ink, 20px small print", bg: "#16211F", text: "#FFFFFF", logo: 130, words: [...HEAD, { text: "Classes at every Chennai centre", size: 20, y: 960 }], expect: [] },
+  { name: "text: clean mist, ink text", bg: "#EEF3F1", text: "#16211F", logo: 130, words: [...HEAD, { text: "Past results do not guarantee selection", size: 24, y: 960 }], expect: [] },
+  { name: "text: clean white, teal text", bg: "#FFFFFF", text: "#0F6B5F", logo: 130, words: [...HEAD, { text: "Admissions open for the December batch", size: 28, y: 960 }], expect: [] },
 ];
 
 const MARK = "public/brand/preppath-mark.png";
 
 /** The Brand Kit mark with its marigold replaced: by red, or by a dark red of the same brightness as the ink line. */
 async function variantLogo(v: LogoVariant, width: number): Promise<Buffer> {
-  if (typeof v === "object") return sharp(MARK).resize({ width: v.w, height: v.h, fit: "fill" }).png().toBuffer();
-  const to = v === "red" ? [229, 57, 53] : [138, 0, 0];
+  if (typeof v === "object" && "w" in v) return sharp(MARK).resize({ width: v.w, height: v.h, fit: "fill" }).png().toBuffer();
+  const to = typeof v === "object" && "to" in v ? v.to : v === "red" ? [229, 57, 53] : [138, 0, 0];
   const { data, info } = await sharp(MARK).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let i = 0; i < data.length; i += 4) {
     if (Math.hypot(data[i] - 242, data[i + 1] - 165, data[i + 2] - 65) < 60) { data[i] = to[0]; data[i + 1] = to[1]; data[i + 2] = to[2]; }
@@ -122,9 +190,10 @@ describe("image evaluation", async () => {
       if (paletteHits(rule("VIS-PAL"), colours, SEED_KIT, "image:1", "Image").length) got.add("palette");
       if (contrastHits(rule("VIS-CON"), colours, "image:1", "Image", lines).length) got.add("contrast");
       if (logoHits(rule("VIS-LOGO"), match, "image:1", "Image").length) got.add("logo");
+      if (altHits(rule("VIS-ALT"), c.alt ?? GOOD_ALT, "image:1", "Image").length) got.add("alt");
       if (lines && legibilityHits(rule("VIS-TEXT"), { w: img.w, h: img.h, lines }, "image:1", "Image").length) got.add("legibility");
       // The text-size check only counts where there is real text to read.
-      for (const k of (["palette", "contrast", "logo", "legibility"] as const).filter((k) => k !== "legibility" || c.words)) {
+      for (const k of (["palette", "contrast", "logo", "legibility", "alt"] as const).filter((k) => k !== "legibility" || c.words)) {
         checks++;
         const want = c.expect.includes(k), has = got.has(k);
         if (want) { planted++; if (has) caught++; else rows.push(`missed ${k}: ${c.name}`); }
@@ -135,5 +204,5 @@ describe("image evaluation", async () => {
     console.log(`image eval: ${CASES.length} creatives, ${planted} planted errors, ${caught} caught (${Math.round((caught / planted) * 100)}%), ${falseAlarms} false alarms in ${clean} clean checks${rows.length ? "\n  " + rows.join("\n  ") : ""}`);
     expect(caught / planted).toBeGreaterThanOrEqual(0.85);
     expect(falseAlarms).toBeLessThanOrEqual(2);
-  }, 120_000);
+  }, 600_000);
 });

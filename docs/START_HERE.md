@@ -32,7 +32,7 @@ No time to click? "Watch it run (2 min)" on the home page: the app plays the who
 | PrepPath, code and AI (nightly verified run, 21 Nov) | 89% precision, 99% recall, 17 of 17 hard phrasings, 10 of 10 clean drafts left alone |
 | Second brand (Suraksha Health), code only | 97% precision, 79% recall (91% on the first run, before the fix below) |
 | Suraksha Health, code and AI (verified run, 21 Nov) | 72% precision, 87% recall, 3 of 8 hard phrasings, 8 of 10 clean drafts left alone |
-| Images | 26 of 26 planted errors caught, 0 false alarms in 66 clean checks |
+| Images (88 creatives) | 71 of 74 planted errors caught, 0 false alarms in 302 clean checks |
 | Privacy | 0 leaks in 144 AI prompts |
 | Load | 50 concurrent visitors, 980 requests, 0 failed |
 | Live suites, 21 Nov | journey 21/21, sweep 61/61 (0 axe issues), probe 290/290 |
