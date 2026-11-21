@@ -35,7 +35,9 @@ jobs:
         if: steps.key.outputs.present == 'true'
       - name: Evaluate with AI (PrepPath, 40 held-out drafts, twice)
         if: steps.key.outputs.present == 'true'
-        run: npx tsx scripts/eval.ts --ai | tee eval-output.txt
+        run: |
+          set -o pipefail
+          npx tsx scripts/eval.ts --ai | tee eval-output.txt
       - name: Write the summary
         if: steps.key.outputs.present == 'true'
         run: |
@@ -48,6 +50,7 @@ jobs:
               "",
               "| Measure | Result |", "| --- | --- |",
               "| Mode | " + r.mode + " |",
+              "| Drafts the AI answered on | " + (r.aiDocs ?? "n/a") + " of " + r.docs + " |",
               "| Precision | " + p(r.precision) + ci(r.precisionCI) + " |",
               "| Recall | " + p(r.recall) + ci(r.recallCI) + " |",
               "| Hard phrasings caught | " + r.hardCaught + " of " + r.hardPlanted + " |",

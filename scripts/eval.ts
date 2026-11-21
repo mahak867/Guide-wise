@@ -35,6 +35,7 @@ async function main() {
     return;
   }
   if (a.mode !== "ai") throw new Error("The AI checks did not run; nothing saved.");
+  console.log(`AI answered on ${a.aiDocs} of ${a.docs} drafts${a.aiErrors?.length ? `; AI errors: ${a.aiErrors.join(" | ")}` : ""}`);
   // Second run: how often does the same draft produce the same set of findings?
   const b = await runEval(SEED_RULES, SEED_FACTS, SEED_KIT, { useAI, split: "test" });
   const sig = (r: typeof a, i: number) => JSON.stringify([...r.results[i].planted.map((p) => p.caught), ...r.results[i].extra.map((e) => e.rule + e.quote).sort()]);

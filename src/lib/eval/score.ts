@@ -26,6 +26,7 @@ export interface DocResult {
   extra: { rule: string; quote: string; level: string }[];
 }
 export interface EvalReport {
+  aiDocs?: number; aiErrors?: string[];
   mode: string; at: string; docs: number; split: string; fingerprint: string;
   planted: number; caught: number; predicted: number; correct: number;
   precision: number; precisionCI: [number, number]; recall: number; recallCI: [number, number];
@@ -99,15 +100,19 @@ export async function runEval(rules: Rule[], facts: Fact[], kit: Kit, opts: { us
   const set = opts.set ?? { docs: EVAL_DOCS, ruleIds: EVAL_RULES };
   const docs = set.docs.filter((d) => split === "all" || d.split === split);
   let mode = "rules-only";
+  let aiDocs = 0;
+  const aiErrors: string[] = [];
   const results: DocResult[] = [];
   for (const d of docs) {
     const r = await scoreDoc(d, rules, facts, kit, opts.useAI, set.ruleIds);
-    if (r.mode === "ai") mode = "ai";
+    if (r.mode === "ai") { mode = "ai"; aiDocs++; }
+    if (r.aiError && aiErrors.length < 5) aiErrors.push(r.aiError.slice(0, 200));
     const { mode: _m, aiError: _e, ...rest } = r;
     void _m; void _e;
     results.push(rest);
   }
-  return summarise(results, rules, mode, split, Date.now() - started, set);
+  // How many drafts the AI actually answered on: "ai" mode only means it answered on at least one.
+  return { ...summarise(results, rules, mode, split, Date.now() - started, set), aiDocs, aiErrors };
 }
 
 /** Several reports as one: totals and intervals over every draft. Rule ids differ per brand, so per-rule rows concatenate. */
