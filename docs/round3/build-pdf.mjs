@@ -196,7 +196,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><td>Insights</td><td>Most-flagged and most-dismissed rules, unclear rules, fact expiry watch, AI-drafted rule amendments re-tested by code, dismissal rate before and after each amendment.</td></tr>
 <tr><td>API, MCP, extension, bulk</td><td>Scoped, hashed, revocable keys; <code>get_brief</code> and <code>check_draft</code> over REST and MCP; playground; audit trail; rate limit. The Chrome extension and bulk check (up to 50 posts, CSV in and out) use the same governance module.</td></tr>
 <tr><td>Privacy and security</td><td>Emails, phones, Aadhaar, PAN and card numbers masked before any AI call; confidential drafts never sent; CSP and security headers; every route validated with Zod.</td></tr>
-<tr><td>Usability</td><td>One-click sample post, sample campaign and sample calendar; seven hard cases; guided tour; private workspace per visitor; works on a phone; clear empty and error states.</td></tr>
+<tr><td>Usability</td><td>One-click sample post, sample campaign and sample calendar; seven hard cases; guided tour; "Watch it run (2 min)", which plays the whole journey by itself in the visitor's own workspace with Pause, Next and Stop; private workspace per visitor; works on a phone; clear empty and error states.</td></tr>
 </table>
 
 <section style="break-inside: avoid"><h2>Architecture and implementation</h2>

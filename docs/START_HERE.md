@@ -19,6 +19,8 @@ Five minutes, no sign-in. **Live: https://guidewise-kohl.vercel.app** · [2-minu
 
 Want to try to break it? **New review → Try a hard case**: seven drafts built to slip past a checker.
 
+No time to click? "Watch it run (2 min)" on the home page: the app plays the whole journey by itself in your own private workspace (review, fix and undo, two sign-offs, the receipt, a campaign, a fact change, the Results page), with a caption per step and Pause, Next and Stop.
+
 ## The numbers
 
 - **CI:** [341 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.

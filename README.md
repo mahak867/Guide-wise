@@ -32,6 +32,7 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Round 3, improvement 2: API and MCP | **API** page → Create key → **Call check_draft** in the playground. Same findings as the app, logged in the audit trail |
 | Round 3, improvement 3: campaign with AI vision | **New review → Use the sample campaign → Run review**. Price, date and promo-code mismatches across caption, creative, brochure and landing page; a person in a creative flagged for consent |
 | Try to break it | **New review → Try a hard case**: seven drafts built to get past a checker |
+| Watch it run | "Watch it run (2 min)" on the home page: the app plays the whole journey by itself in your own private workspace (review, fix and undo, two sign-offs, the receipt, a campaign, a fact change, the Results page), with a caption per step and Pause, Next and Stop. |
 
 **What is measured.** Accuracy on 40 held-out drafts for each of two fictional brands, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (two outside students so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
 

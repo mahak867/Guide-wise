@@ -59,7 +59,7 @@ Comments, versions with word-level changes, audit log
 Optional sign-in and organisations: members with roles, invite links with a role, approvals signed by the named signed-in person; the demo still opens in one click with no sign-in
 Dark mode that follows the system setting
 Accuracy measured live on two brands (Results page, with a brand selector)
-Sample post, sample campaign, sample calendar, seven hard cases, guided tour; a private workspace per visitor; works on a phone
+Sample post, sample campaign, sample calendar, seven hard cases, guided tour, and "Watch it run (2 min)": the app plays the whole journey by itself in the visitor's own workspace, with Pause, Next and Stop; a private workspace per visitor; works on a phone
 
 ## Technical architecture and implementation summary
 
