@@ -90,7 +90,7 @@ Images are analysed in the browser (tesseract.js OCR, palette, WCAG contrast, lo
 | AI helpers, live, **measured before the fixes** ([EVAL_HELPERS.md](docs/EVAL_HELPERS.md)) | Guide compiler: 16 of 17 expected rules, 7 of 8 planted problems warned, 0 false warnings. Rule amendment: 7 of 8 pass the code gate, but the dismissed text was still flagged after all 7 (fixed since; not yet re-measured) |
 | Load test, live ([LOAD_TEST.md](docs/LOAD_TEST.md)) | 20 then 50 concurrent visitors through the creator journey, AI off: 980 requests, 0 failed |
 
-**Tests** (latest full run on the live site, 21 Nov 2026): **338 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **268-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning, and a nightly workflow re-runs the AI evaluation once its API key is set (no nightly result yet). Details: [docs/TESTING.md](docs/TESTING.md).
+**Tests** (latest full run on the live site, 21 Nov 2026): **341 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **290-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning (without the accounts and public-key sections), and a nightly workflow re-runs the AI evaluation once its API key is set (no nightly result yet). Details: [docs/TESTING.md](docs/TESTING.md).
 
 ## Round 3: the three improvements we promised
 
@@ -112,7 +112,7 @@ Each is tested against exactly the test we wrote down at Round 2 ([docs/TESTING.
 - **Web page reader with hidden-text detection**: text a page hides from readers is labelled and checked; private and metadata addresses are refused.
 - **Source passage per finding**: a finding of a rule compiled from a brand guide quotes the guide passage it came from, with its source, under "Why it was flagged".
 - **31 Brand Kit rules**, each with its own flag and pass test sentences, including paid-partnership labels, offer end dates, competitor names and vague link text.
-- **Security headers and a threat model**: CSP, no framing, HSTS; 16 threats, each mapped to the test that proves it ([THREAT_MODEL.md](docs/THREAT_MODEL.md)).
+- **Security headers and a threat model**: CSP, no framing, HSTS; 17 threats, each mapped to the test that proves it ([THREAT_MODEL.md](docs/THREAT_MODEL.md)).
 - **Load test** and **accessibility checks** (axe-core in every sweep), above.
 
 ## What runs
@@ -157,14 +157,14 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                         # 338 unit tests, including a deliberately wrong AI and fuzzing
+npm test                                                         # 341 unit tests, including a deliberately wrong AI and fuzzing
 npm run eval                                                     # accuracy on the held-out set (code checks)
 npm run eval:images                                              # 28 creatives with planted colour, contrast, logo and text-size errors
 npm run eval:privacy                                             # personal data and confidential canaries never reach the AI
 npm run eval:helpers                                             # the guide compiler and the rule-amendment helper, live (about 30 AI calls)
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e           # 21-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep     # 59 steps: every page and control, desktop and phone, with axe-core
-BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api       # 268 checks: bad input, wrong roles, other workspaces, races, accounts
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api       # 290 checks: bad input, wrong roles, other workspaces, races, accounts
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:extension # the Chrome extension in Chromium against the live API
 BASE_URL=https://guidewise-kohl.vercel.app VISITORS=20 npm run test:load  # concurrent visitors, AI off
 ```
@@ -188,7 +188,7 @@ Apply the migrations in `supabase/migrations/` (001 to 010, in order) to a Supab
 
 ## Limits, stated plainly
 
-- **No sign-in.** Judges open the link directly and switch roles with "Acting as". Browsers never receive database credentials; every read and write goes through our API, which enforces the role rules and scopes each query to the visitor's random workspace ID, and the API probe checks that one workspace cannot read another's drafts. A real deployment adds sign-in and per-organisation row-level security ([PRODUCTION.md](docs/PRODUCTION.md)).
+- **No sign-in.** Judges open the link directly and switch roles with "Acting as". Browsers never receive database credentials, and since migration 011 the public key cannot read or write any table: every read and write goes through our API (with a server-only key), which enforces the role rules and scopes each query to the visitor's random workspace ID, and the API probe checks that one workspace cannot read another's drafts. A real deployment adds sign-in and per-organisation row-level security ([PRODUCTION.md](docs/PRODUCTION.md)).
 - **Our numbers come from our own test set.** Real marketers' drafts will be harder; the December pilot re-measures on them. The AI-helper numbers are from before their fixes.
 - **Only two hands-on user tests** (two students; one found what happens after a review unclear at first); otherwise usability rests on our own browser tests at desktop and phone size.
 - **Free AI tiers.** Heavy simultaneous use can hit rate limits; the review then continues with code checks and says so. The load test ran with AI off to keep the quota for judges.

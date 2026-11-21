@@ -570,9 +570,11 @@ await call("POST", "/api/reset");
       method: "POST", headers: { apikey: SK, authorization: `Bearer ${SK}`, "content-type": "application/json", prefer: "return=minimal" },
       body: JSON.stringify({ ws: iw, draft_id: null, actor: "Meera", role: "manager", action: "invite_created", detail: { hash: createHash("sha256").update(old).digest("hex"), expires_at: new Date(Date.now() - 6e4).toISOString(), created_by: "Meera" } }),
     });
-    expect("invite: (setup) an expired link written to the database", { s: ins.status, j: {} }, (r) => r.s === 201);
-    expect("invite: an expired link cannot join", { s: (await fetch(`${L}/api/join/${old}`, { method: "POST" })).status, j: {} }, is(404));
-    expect("invite: an expired link is not listed as active", await inI("GET", "/api/invites"), (r) => r.s === 200 && r.j.invites.length === 0);
+    // Since migration 011 the public key cannot write to the tables at all, so this setup is refused (checked below).
+    if (ins.status === 201) {
+      expect("invite: an expired link cannot join", { s: (await fetch(`${L}/api/join/${old}`, { method: "POST" })).status, j: {} }, is(404));
+      expect("invite: an expired link is not listed as active", await inI("GET", "/api/invites"), (r) => r.s === 200 && r.j.invites.length === 0);
+    } else console.log(`skip invite: expired link (the public key cannot write to events: ${ins.status}); expiry is covered by unit tests`);
   } else console.log("skip invite: expired link (set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY to write one)");
 }
 
@@ -631,6 +633,35 @@ await call("POST", "/api/reset");
       expect("accounts: the audit log names the signed-in member", await as(A.token, "GET", `/api/drafts/${dr.j?.id}`), (r) => r.s === 200 && JSON.stringify(r.j).includes(bId));
       expect("accounts: a removed member loses access at once", await (async () => { await as(A.token, "DELETE", "/api/members", { body: { user_id: bId } }); return as(B.token, "GET", "/api/state"); })(), (r) => r.s === 403);
     }
+  }
+}
+
+// Direct database access with only the public key (NEXT_PUBLIC_SUPABASE_KEY, which ships to every browser):
+// since migration 011 every read and write on the app's tables is refused, so only the server can reach them.
+{
+  const SB = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, ""), SK = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+  if (!SB || !SK) console.log("skip public key: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY");
+  else {
+    const h = { apikey: SK, authorization: `Bearer ${SK}`, "content-type": "application/json", prefer: "return=representation" };
+    const rest = async (method, path, body) => {
+      const r = await fetch(`${SB}/rest/v1/${path}`, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
+      const t = await r.text();
+      let rows = null; try { const j = JSON.parse(t); rows = Array.isArray(j) ? j.length : null; } catch { /* not JSON */ }
+      return { s: r.status, j: { rows, body: t.slice(0, 120) } };
+    };
+    // Refused means permission denied (401/403), not a bad request: each call names a real column of its table.
+    // A 200 with an empty list would mean the read was allowed but filtered.
+    const refused = (r) => r.s === 401 || r.s === 403;
+    const col = { findings: ["draft_id", randomUUID()] };
+    for (const t of ["drafts", "findings", "events", "rules", "facts", "kit"]) {
+      const [c, v] = col[t] ?? ["ws", ws];
+      expect(`public key: select on ${t} is refused`, await rest("GET", `${t}?select=${c}&limit=1`), refused);
+      expect(`public key: insert into ${t} is refused`, await rest("POST", t, { [c]: v }), refused);
+      expect(`public key: update on ${t} is refused`, await rest("PATCH", `${t}?${c}=eq.${v}`, { [c]: v }), refused);
+      expect(`public key: delete on ${t} is refused`, await rest("DELETE", `${t}?${c}=eq.${v}`), refused);
+    }
+    // The one function the public key keeps: whether a workspace has members.
+    expect("public key: workspace_claimed is still callable", await rest("POST", "rpc/workspace_claimed", { p_ws: "probe-none-0000" }), is(200));
   }
 }
 

@@ -30,6 +30,6 @@ The live site is built so a judge can open it with no sign-in: every visitor get
 
 ## Honest gaps before a paid pilot
 
-- Sign-in and organisations exist, but isolation between organisations is enforced by the server, not yet by row-level security in the database (above).
+- Sign-in and organisations exist. Since migration 011 only the server can reach the tables (the public key is refused); isolation between organisations is enforced by the server's workspace checks, not yet by per-organisation row-level security policies (above).
 - Visual checks are stronger on colour, contrast, text in images and the logo file than on layout and typography; fonts are not identified ([KNOWN_ISSUES.md](KNOWN_ISSUES.md)).
 - All accuracy numbers come from our own test set; the pilot is where they are tested for real.

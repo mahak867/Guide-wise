@@ -24,7 +24,7 @@ Roshini R
 
 ## The complete list of features
 
-Proof you can check in a minute: the Results page re-runs our accuracy evaluation live on two brands, and a 268-check probe runs against the live site every morning on GitHub Actions
+Proof you can check in a minute: the Results page re-runs our accuracy evaluation live on two brands, and an API probe runs against the live site every morning on GitHub Actions (the full 290-check probe, with accounts and direct database access, runs before each release)
 Review a draft: paste copy or upload DOCX/PDF, with goal, audience, channel and locked phrases
 Campaign review: caption, up to 4 creatives and 4 documents (pasted, uploaded or read from a live web page) reviewed together
 Hidden-text detection on web pages read for a campaign
@@ -63,7 +63,7 @@ Sample post, sample campaign, sample calendar, seven hard cases, guided tour; a 
 
 ## Technical architecture and implementation summary
 
-One Next.js 16 (TypeScript) app on Vercel in Mumbai, next to a Supabase Postgres database (10 migrations; every row scoped to a workspace). The browser talks to the app's API routes; the app talks to Postgres and to the AI providers. One governance module serves the web app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all of them return the same findings.
+One Next.js 16 (TypeScript) app on Vercel in Mumbai, next to a Supabase Postgres database (11 migrations; every row scoped to a workspace). The browser talks to the app's API routes; only the app, with a server-only key, can reach the tables (the public key is refused), and it talks to Postgres and to the AI providers. One governance module serves the web app, the REST API, the MCP server (official SDK), bulk check and the Chrome extension, so all of them return the same findings.
 
 Data flow of a review: redact personal data, then code checks, AI checks, AI vision, campaign documents, cross-source consistency, the verifier, fix re-test, risk routing, and human approval with a fingerprinted record. Image analysis (OCR with tesseract.js, palette, contrast, logo matching) runs in the browser. Only the AI steps use AI.
 
@@ -75,9 +75,9 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
 
-Unit and integration: 338 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
+Unit and integration: 341 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
-Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 268 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites and direct database writes refused, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
+Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 290 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites refused; every table refuses the public key, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions (without the accounts and public-key sections, which need the Supabase settings).
 
 Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 97% precision and 79% recall with code only (91% on the first run; an age and the approved helpline were read as figures, fixed after that run with labels unchanged); 99% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
 
@@ -85,7 +85,7 @@ User testing: two students outside the team. One used every feature without help
 
 What we found and fixed: a bug hunt on the live site found lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; all fixed, each with a test. The AI helpers were measured live and their gaps fixed.
 
-Still imperfect: our in-browser text reader can misread ₹ in images (a "$" before a number is now put back as ₹ when the brand's facts are in rupees; other misreadings are not corrected, AI vision reads it correctly); only two outside user tests; accuracy numbers come from our own test sets (both brands written by us); the second-brand false flags were fixed after its first held-out run, so that set is no longer untouched for the fix; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
+Still imperfect: our in-browser text reader can misread ₹ in images (a "$" before a number is now put back as ₹ when the brand's facts are in rupees; other misreadings are not corrected, AI vision reads it correctly); only two outside user tests; accuracy numbers come from our own test sets (both brands written by us); the second-brand false flags were fixed after its first held-out run, so that set is no longer untouched for the fix; sign-in is optional; the tables are closed to the public key, but isolation between organisations is enforced by the server, not by per-organisation row-level security policies; fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
 
 ## Improvement 1
 
@@ -107,13 +107,13 @@ Delivered: live, and the Round 2 test passes. Documents can be pasted, uploaded 
 
 ## Anything else you improved after Round 2
 
-Bulk check of a content calendar; a Chrome extension; read-only share links; channel previews; make this a rule from selected words; an image inspector with recoloured-logo, stretched-logo and text-size checks; undo and keyboard review with precedents; time-limited exceptions and dual sign-off; approval bound to the Brand Kit version and a database approval gate; a web page reader with hidden-text detection; 31 Brand Kit rules (from 24); simpler main screens; security headers, a strict Content-Security-Policy and a threat model of 16 threats each mapped to a test; optional sign-in and organisations; dark mode; a second-brand evaluation; a bug hunt with fixes; accessibility checks on every page; a load test; a daily live probe; the first hands-on user test.
+Bulk check of a content calendar; a Chrome extension; read-only share links; channel previews; make this a rule from selected words; an image inspector with recoloured-logo, stretched-logo and text-size checks; undo and keyboard review with precedents; time-limited exceptions and dual sign-off; approval bound to the Brand Kit version and a database approval gate; a web page reader with hidden-text detection; 31 Brand Kit rules (from 24); simpler main screens; security headers, a strict Content-Security-Policy and a threat model of 17 threats each mapped to a test; optional sign-in and organisations; dark mode; a second-brand evaluation; a bug hunt with fixes; accessibility checks on every page; a load test; a daily live probe; the first hands-on user test.
 
 ## Product roadmap and future development plan
 
 For: marketing teams at Indian coaching centres first (outcome claims and results ads are where regulatory risk is highest), then ed-tech, health and finance marketing teams.
 
-1. Dec 2026: pilot with 3 coaching centres. Extend row-level security from members and invites to every table (every table already carries a workspace id); password reset and email invitations. Re-measure accuracy on 50 real, anonymised drafts per centre and publish it beside our own numbers.
+1. Dec 2026: pilot with 3 coaching centres. Per-organisation row-level security policies on every table (the tables are already closed to the public key, and every table carries a workspace id); password reset and email invitations. Re-measure accuracy on 50 real, anonymised drafts per centre and publish it beside our own numbers.
 2. Jan 2027: a paid AI tier with a monthly budget per organisation; scheduled fact expiry with impact emails to the fact's owner.
 3. Feb 2027: Instagram, WhatsApp Business and Google Docs integrations through the existing API, so drafts are checked where they are written.
 4. Mar 2027: deeper visual checks: logo variants, layout rules and fonts.

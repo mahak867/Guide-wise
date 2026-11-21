@@ -13,8 +13,8 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 ## 2. Check the proof yourself
 
 - **Results page** (`/results`) re-runs our accuracy evaluation live on two brands, with a brand selector.
-- **Daily live probe:** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning (03:17 UTC) on GitHub Actions against the deployed site: 268 API checks (bad input, wrong roles, other workspaces, races, forged invites, a real MCP client).
-- **CI:** [338 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
+- **Daily live probe:** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning (03:17 UTC) on GitHub Actions against the deployed site: the API probe (bad input, wrong roles, other workspaces, races, a real MCP client). The full probe, 290 checks including accounts and direct database access with the public key, needs the Supabase settings and is run from our side before each release.
+- **CI:** [341 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
 
 | Measure | Result |
 | --- | --- |
@@ -24,7 +24,7 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 | Images | 26 of 26 planted errors caught, 0 false alarms in 66 clean checks |
 | Privacy | 0 leaks in 144 AI prompts |
 | Load | 50 concurrent visitors, 980 requests, 0 failed |
-| Live suites, 21 Nov | journey 21/21, sweep 61/61 (0 axe issues), probe 268/268 |
+| Live suites, 21 Nov | journey 21/21, sweep 61/61 (0 axe issues), probe 290/290 |
 
 How each is run: [docs/TESTING.md](TESTING.md).
 
@@ -33,7 +33,7 @@ How each is run: [docs/TESTING.md](TESTING.md).
 - Accuracy comes from test sets we wrote (both brands are fictional and ours). The AI helpers have not been re-measured after their fixes.
 - Two outside user tests so far.
 - On the second brand, the first held-out run falsely flagged 2 of 10 clean drafts (an age and the approved helpline read as figures). We fixed both and re-ran the same drafts with labels unchanged; the set is no longer untouched for that fix.
-- Row-level security per organisation covers members and invites; other tables are protected by the server. Sign-in is optional and has no password reset yet.
+- Only the server can reach the database tables: the public key is refused on every table (checked by the live API probe). Isolation between organisations is enforced by the server, not by per-organisation row-level security policies. Sign-in is optional and has no password reset yet.
 - In-browser OCR can misread ₹. A "$" before a number is put back as ₹ when the brand's facts are in rupees; other misreadings are not corrected (AI vision reads it correctly). Fonts in images are not identified.
 - A person in a photo is flagged for consent; we do not identify who it is.
 
