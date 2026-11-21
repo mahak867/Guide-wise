@@ -113,7 +113,7 @@ figure img { width: auto; max-width: 100%; }
 <div class="box"><b>Measured, not claimed.</b><p>${pct(ai.precision)} precision, ${pct(ai.recall)} recall with AI on 40 held-out drafts. ${tests} unit tests. Live (${live.date}): journey ${live.journey}, sweep ${live.sweep}, probe ${live.probe}, axe ${live.axe}. Load: 980 requests, 0 failed.</p></div>
 </div>
 
-<h2 class="page">The three improvements we promised, delivered</h2>
+<h2>The three improvements we promised, delivered</h2>
 
 <h3>1. Change impact <span class="done">Live</span></h3>
 <div class="pdt">
