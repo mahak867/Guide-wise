@@ -4,13 +4,26 @@ import { approverLabel } from "./approval";
 import { SEED_APPROVED, SEED_APPROVED_SIGNOFFS, SEED_FACTS, SEED_KIT, SEED_RULES } from "./seed";
 import { ROLES, type Fact, type Kit, type Role, type Rule } from "./types";
 
+/**
+ * The key the server uses for its own database client: the secret service-role key when it is set (server-only,
+ * never NEXT_PUBLIC and never sent to the browser), else the public key. Once migration 011 closes the tables
+ * to the public key, only the server can read or write them.
+ */
+export function serverDbKey(): string | undefined {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_KEY;
+}
+/** Which key the server client is using, for the health check. Never the key itself. */
+export function serverDbKeyKind(): "service_role" | "public" {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ? "service_role" : "public";
+}
+
 let _db: SupabaseClient | null = null;
 export function db(): SupabaseClient {
   if (!_db) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_KEY) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !serverDbKey()) {
       throw new Error("No database is configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY in .env.local to a Supabase project with the migrations in supabase/migrations applied (see README, Run locally), then restart.");
     }
-    _db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_KEY!, {
+    _db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serverDbKey()!, {
       auth: { persistSession: false },
     });
   }

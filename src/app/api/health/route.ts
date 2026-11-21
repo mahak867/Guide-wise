@@ -1,6 +1,6 @@
 import { aiAvailable, aiDiagnostics, aiModel, extractClaims, geminiLatency, geminiModels, judgeRule, probeProvider } from "@/lib/engine/ai";
 import { SEED_RULES } from "@/lib/seed";
-import { db } from "@/lib/db";
+import { db, serverDbKeyKind } from "@/lib/db";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const t0 = Date.now();
   try {
     const { error } = await db().from("kit").select("ws").limit(1);
-    out.database = error ? { ok: false, error: error.message } : { ok: true, ms: Date.now() - t0 };
+    out.database = error ? { ok: false, error: error.message } : { ok: true, ms: Date.now() - t0, key: serverDbKeyKind() };
   } catch (e) {
     out.database = { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
