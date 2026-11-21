@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml/badge.svg)](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)
 
+> **Judges: [start here](docs/START_HERE.md)** — three things to click, the proof to check, the honest limits.
+
 **Brand rules that run.** Guidewise checks marketing copy and creatives against a team's approved brand rules and dated facts before they are published. Every finding quotes the exact words and the rule it breaks. Every suggested fix is re-tested before it is offered. Risky content goes to the right reviewer, and a person approves the final version.
 
 **Live: https://guidewise-kohl.vercel.app** · opens with no sign-in (a private demo workspace per visitor; optional sign-in for an organisation) · [100-second walkthrough](https://guidewise-kohl.vercel.app/demo.webm) (recorded at Round 2; the guided tour on the site walks through the current version)
