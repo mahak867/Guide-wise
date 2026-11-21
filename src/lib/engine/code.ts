@@ -213,6 +213,17 @@ export function isAge(text: string, idx: number, quote: string): boolean {
   return /^\s*-?\s*(?:years?|yrs?)[\s-]*old\b/.test(after) || /\b(?:aged|age)\s*$/.test(before);
 }
 
+/**
+ * In-browser OCR often reads the rupee sign as "$". When the brand's facts are in rupees (and none in dollars),
+ * a "$" directly before a number in OCR text is put back as "₹", so prices are compared and quoted correctly.
+ */
+export function rupeeOCR(ocr: string, facts: Fact[]): string {
+  if (!ocr || !ocr.includes("$")) return ocr;
+  const statements = facts.map((f) => f.statement ?? "");
+  if (!statements.some((t) => /₹|\brs\.?\s?\d/i.test(t)) || statements.some((t) => t.includes("$"))) return ocr;
+  return ocr.replace(/\$(\s?)(?=\d)/g, "₹$1");
+}
+
 export function extractNumberClaims(text: string, contacts: string[] = []): NumberClaim[] {
   const out: NumberClaim[] = [];
   const masked: [number, number][] = [...text.matchAll(CONTACT_SPANS)].map((m): [number, number] => [m.index ?? 0, (m.index ?? 0) + m[0].length]).concat(approvedContactSpans(text, contacts));

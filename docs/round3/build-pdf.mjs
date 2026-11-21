@@ -222,7 +222,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <li><b>Load test.</b> 20 and 50 concurrent visitors, each in its own workspace, through the full creator journey: 980 requests, 0 failed, p95 2.9 s cold and 1.5 s warm.</li>
 <li><b>Demo dates.</b> The sample's embargoed fee would have become valid on 1 December, during judging; it now lifts on 1 March 2027, and a test runs the sample at three future dates.</li>
 <li><b>AI capacity and backup.</b> Groq's smaller model takes over while the main one is rate-limited; the Gemini backup was repaired (3.5 Flash Lite, low thinking, a circuit breaker).</li>
-<li><b>Fewer false flags.</b> Numbers inside promo codes and offer caps are no longer read as claims; a "$" that OCR reads for "₹" is still compared as a price. The privacy evaluation found and fixed a landline-masking leak.</li>
+<li><b>Fewer false flags.</b> Numbers inside promo codes and offer caps are no longer read as claims; a "$" that OCR reads for "₹" is put back as ₹ when the brand's facts are in rupees, so it is compared and quoted as a price. The privacy evaluation found and fixed a landline-masking leak.</li>
 <li><b>Easier to try.</b> One link per Round 3 feature from the home page; facts edited in place; the demo starts with an approved post citing F-3; every page explains its fields and empty states.</li>
 </ul>
 

@@ -24,7 +24,7 @@ describe("campaign review", () => {
     const diff = await run("JEE crash course. Fee ₹12,999.", [], img("JEE Crash Course\nFee $14,999"));
     const f = diff.findings.find((x) => x.rule_id === "CONS-1");
     expect(f?.location).toBe("image:1");
-    expect(f?.quote).toBe("14,999");
+    expect(f?.quote).toBe("₹14,999"); // the "$" is put back as "₹" before the checks run
   });
 
   it("flags dates and promo codes that disagree across documents", async () => {

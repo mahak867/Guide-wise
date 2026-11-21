@@ -34,7 +34,7 @@ How each is run: [docs/TESTING.md](TESTING.md).
 - Two outside user tests so far.
 - On the second brand, the first held-out run falsely flagged 2 of 10 clean drafts (an age and the approved helpline read as figures). We fixed both and re-ran the same drafts with labels unchanged; the set is no longer untouched for that fix.
 - Row-level security per organisation covers members and invites; other tables are protected by the server. Sign-in is optional and has no password reset yet.
-- In-browser OCR can read ₹ as $ (AI vision reads it correctly); fonts in images are not identified.
+- In-browser OCR can misread ₹. A "$" before a number is put back as ₹ when the brand's facts are in rupees; other misreadings are not corrected (AI vision reads it correctly). Fonts in images are not identified.
 - A person in a photo is flagged for consent; we do not identify who it is.
 
 Full list: [docs/KNOWN_ISSUES.md](KNOWN_ISSUES.md). Architecture: [docs/ARCHITECTURE.md](ARCHITECTURE.md). Demo to a real team: [docs/PRODUCTION.md](PRODUCTION.md). Roadmap: [docs/ROADMAP.md](ROADMAP.md).

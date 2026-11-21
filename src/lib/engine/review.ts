@@ -1,6 +1,6 @@
 import type { Fact, Finding, Intent, Kit, ReviewStats, Rule } from "../types";
 import { aiAvailable, extractClaims, judgeRule, readCreative } from "./ai";
-import { dedupe, dropExcepted, extractNumberClaims, parseNumber, runCodeChecks, type NumberClaim } from "./code";
+import { dedupe, dropExcepted, extractNumberClaims, parseNumber, runCodeChecks, rupeeOCR, type NumberClaim } from "./code";
 import { redact, restore } from "./redact";
 import { verify, type Dropped } from "./verify";
 import { consistencyHits } from "./consistency";
@@ -170,7 +170,7 @@ export async function reviewDraft(
   const vc = verify(text, code, rules, facts);
   dropped.push(...vc.dropped);
   // AI vision reads each creative once (cached by image): text OCR may miss, and any people shown.
-  let images = opts.images ?? [];
+  let images = (opts.images ?? []).map((img) => (img.ocr?.includes("$") ? { ...img, ocr: rupeeOCR(img.ocr, facts) } : img));
   let visionRead = 0;
   let visionError: string | undefined;
   if (useAI && images.some((i) => i.dataUrl && i.vision === undefined)) {
