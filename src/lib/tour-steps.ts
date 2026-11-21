@@ -176,9 +176,10 @@ export function tourSteps(env: StepEnv): TourStep[] {
         await press(ctx, env, edit);
         await until(ctx, () => find("h1, h2, h3", "Edit fact F-3", true), 10000, "the F-3 form");
         const input = await until(ctx, () => document.querySelector<HTMLInputElement>('input[placeholder="1150"]'), 10000, "the value field");
-        const now = Number(input.value) || 4200;
+        // Always a real change, run after run: 4200 becomes 4300, anything else goes back to 4200.
+        const next = Number(input.value) === 4200 ? 4300 : 4200;
         show(env, input);
-        setValue(input, String(now + 100));
+        setValue(input, String(next));
         await ctx.wait(1000);
         const save = await until(ctx, () => find("button", "Save F-3", true), 10000, "Save F-3");
         await press(ctx, env, save);
