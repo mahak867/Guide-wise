@@ -201,7 +201,7 @@ await step(page, "facts: profile, palette, disclaimer, logo", async () => {
   await dForm.getByRole("button", { name: "Add disclaimer" }).click();
   await msg("Scholarships are subject to the published policy.");
   await page.locator("li").filter({ hasText: "Scholarships are subject" }).getByRole("button", { name: "Remove" }).click();
-  await page.waitForTimeout(1500);
+  await page.getByText("Scholarships are subject").first().waitFor({ state: "detached", timeout: 20000 }).catch(() => {});
   must(!(await page.getByText("Scholarships are subject").count()), "disclaimer not removed");
   const logoBox = page.locator("div").filter({ has: page.getByRole("heading", { name: "Logo", exact: true }) }).last();
   await logoBox.getByRole("button", { name: "Remove", exact: true }).click();
