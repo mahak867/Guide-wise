@@ -23,7 +23,7 @@ No time to click? "Watch it run (2 min)" on the home page: the app plays the who
 
 ## The numbers
 
-- **CI:** [341 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
+- **CI:** [349 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
 
 | Measure | Result |
 | --- | --- |
@@ -35,7 +35,7 @@ No time to click? "Watch it run (2 min)" on the home page: the app plays the who
 | Images (88 creatives) | 71 of 74 planted errors caught, 0 false alarms in 302 clean checks |
 | Privacy | 0 leaks in 144 AI prompts |
 | Load | 50 concurrent visitors, 980 requests, 0 failed |
-| Live suites, 21 Nov | journey 21/21, sweep 61/61 (0 axe issues), probe 290/290 |
+| Live suites, 21 Nov | journey 22/22, sweep 62/62 (0 axe issues), probe 290/290 |
 
 On a brand the AI was never tuned for, it caught more problems but raised more false alarms; every finding still needs a quoted source and a person's decision before anything blocks publication, and tuning per brand is on the roadmap (December pilot).
 

@@ -101,7 +101,7 @@ On a brand the AI was never tuned for, it caught more problems but raised more f
 | AI helpers, live, **measured before the fixes** ([EVAL_HELPERS.md](docs/EVAL_HELPERS.md)) | Guide compiler: 16 of 17 expected rules, 7 of 8 planted problems warned, 0 false warnings. Rule amendment: 7 of 8 pass the code gate, but the dismissed text was still flagged after all 7 (fixed since; not yet re-measured) |
 | Load test, live ([LOAD_TEST.md](docs/LOAD_TEST.md)) | 20 then 50 concurrent visitors through the creator journey, AI off: 980 requests, 0 failed |
 
-**Tests** (latest full run on the live site, 21 Nov 2026): **341 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **290-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning (all 290 checks), and a nightly workflow re-runs the AI evaluation on PrepPath; first verified run, 21 Nov 2026 (AI answered on 40 of 40 drafts): precision 89.0% (79.8–94.3%), recall 98.5% (91.9–99.7%), 17 of 17 hard phrasings, 10 of 10 clean drafts left alone, 85.0% same result on both runs. Details: [docs/TESTING.md](docs/TESTING.md).
+**Tests** (latest full run on the live site, 21 Nov 2026): **349 unit tests**; a **22-step** browser journey; a **62-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 30 page checks**); a **290-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning (all 290 checks), and a nightly workflow re-runs the AI evaluation on PrepPath; first verified run, 21 Nov 2026 (AI answered on 40 of 40 drafts): precision 89.0% (79.8–94.3%), recall 98.5% (91.9–99.7%), 17 of 17 hard phrasings, 10 of 10 clean drafts left alone, 85.0% same result on both runs. Details: [docs/TESTING.md](docs/TESTING.md).
 
 ## Round 3: the three improvements we promised
 
@@ -168,12 +168,12 @@ Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Supabase Postgres
 ## Tests
 
 ```bash
-npm test                                                         # 341 unit tests, including a deliberately wrong AI and fuzzing
+npm test                                                         # 349 unit tests, including a deliberately wrong AI and fuzzing
 npm run eval                                                     # accuracy on the held-out set (code checks)
 npm run eval:images                                              # 88 creatives with planted colour, contrast, logo, text-size and alt-text errors
 npm run eval:privacy                                             # personal data and confidential canaries never reach the AI
 npm run eval:helpers                                             # the guide compiler and the rule-amendment helper, live (about 30 AI calls)
-BASE_URL=https://guidewise-kohl.vercel.app npm run e2e           # 21-step journey
+BASE_URL=https://guidewise-kohl.vercel.app npm run e2e           # 22-step journey
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:sweep     # 59 steps: every page and control, desktop and phone, with axe-core
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:api       # 290 checks: bad input, wrong roles, other workspaces, races, accounts
 BASE_URL=https://guidewise-kohl.vercel.app npm run e2e:extension # the Chrome extension in Chromium against the live API

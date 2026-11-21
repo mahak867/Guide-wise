@@ -60,7 +60,7 @@ figure img { width: auto; max-width: 100%; }
 
 <table class="links" style="margin-top:12pt">
 <tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · opens with no sign-in (a private demo workspace per visitor); optional sign-in turns it into an organisation's own</td></tr>
-<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 108 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
+<tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · 115 commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
 <tr><td>Chrome extension</td><td>https://github.com/mahak867/Guide-wise/tree/main/extension · load unpacked; install steps in extension/README.md</td></tr>
 <tr><td>Documentation</td><td>In docs/: <b>PRODUCTION.md</b> (from demo to a real team), <b>THREAT_MODEL.md</b>, <b>LOAD_TEST.md</b>, <b>EVAL_HELPERS.md</b>, TESTING.md, ARCHITECTURE.md, API.md, KNOWN_ISSUES.md, ROADMAP.md, CHANGELOG.md</td></tr>
 <tr><td>Walkthrough video</td><td>https://guidewise-kohl.vercel.app/demo.webm (2 minutes, recorded on 21 Nov 2026 from the live site)</td></tr>
@@ -81,7 +81,7 @@ figure img { width: auto; max-width: 100%; }
 <div class="grid3">
 <div class="box"><b>All three promises are live.</b><p>Change impact, the API and MCP server, and campaign review with AI vision, each tested on the live site against the exact test we wrote down at Round 2.</p></div>
 <div class="box"><b>And more than we promised.</b><p>Bulk check, a Chrome extension, read-only share links, channel previews, undo and keyboard review, exceptions with end dates and dual sign-off, a database approval gate, 31 Brand Kit rules.</p></div>
-<div class="box"><b>Measured, not claimed.</b><p>92% precision, 98% recall with AI on 40 held-out drafts. 341 unit tests. Live (21 Nov 2026): journey 21/21, sweep 61/61, probe 290/290, axe 0 issues across 29 page checks. Load: 980 requests, 0 failed.</p></div>
+<div class="box"><b>Measured, not claimed.</b><p>92% precision, 98% recall with AI on 40 held-out drafts. 349 unit tests. Live (21 Nov 2026): journey 22/22, sweep 62/62, probe 290/290, axe 0 issues across 30 page checks. Load: 980 requests, 0 failed.</p></div>
 </div>
 
 <h2>The three improvements we promised, delivered</h2>
@@ -167,7 +167,7 @@ figure img { width: auto; max-width: 100%; }
 <tr><td>Insights</td><td>Most-flagged and most-dismissed rules, unclear rules, fact expiry watch, AI-drafted rule amendments re-tested by code, dismissal rate before and after each amendment.</td></tr>
 <tr><td>API, MCP, extension, bulk</td><td>Scoped, hashed, revocable keys; <code>get_brief</code> and <code>check_draft</code> over REST and MCP; playground; audit trail; rate limit. The Chrome extension and bulk check (up to 50 posts, CSV in and out) use the same governance module.</td></tr>
 <tr><td>Privacy and security</td><td>Emails, phones, Aadhaar, PAN and card numbers masked before any AI call; confidential drafts never sent; CSP and security headers; every route validated with Zod.</td></tr>
-<tr><td>Usability</td><td>One-click sample post, sample campaign and sample calendar; seven hard cases; guided tour; private workspace per visitor; works on a phone; clear empty and error states.</td></tr>
+<tr><td>Usability</td><td>One-click sample post, sample campaign and sample calendar; seven hard cases; guided tour; "Watch it run (2 min)", which plays the whole journey by itself in the visitor's own workspace with Pause, Next and Stop; private workspace per visitor; works on a phone; clear empty and error states.</td></tr>
 </table>
 
 <section style="break-inside: avoid"><h2>Architecture and implementation</h2>
@@ -209,9 +209,9 @@ figure img { width: auto; max-width: 100%; }
 <h2>Testing</h2>
 <table>
 <tr><th>Suite</th><th>Result</th><th>What it covers</th></tr>
-<tr><td>Unit tests (Vitest, CI)</td><td>341 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI, provider fallback, change impact, campaign consistency, share links, previews, bulk CSV, the extension's logic, bug-hunt regressions, fuzzing (26 hostile inputs), the sample at three future dates, every rule's own tests</td></tr>
-<tr><td>Browser journey (live)</td><td>21 of 21</td><td>Review, edit a fix, accept all, replace an image, route, exceptions with an end date, two sign-offs, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
-<tr><td>UI sweep (live)</td><td>61 of 61</td><td>Every page at desktop and phone size and every control, with axe-core: 0 issues across 29 page checks (serious or critical)</td></tr>
+<tr><td>Unit tests (Vitest, CI)</td><td>349 pass</td><td>Engine rules, fact matching, logo matching, verifier, fix re-testing, a deliberately wrong AI, provider fallback, change impact, campaign consistency, share links, previews, bulk CSV, the extension's logic, bug-hunt regressions, fuzzing (26 hostile inputs), the sample at three future dates, every rule's own tests</td></tr>
+<tr><td>Browser journey (live)</td><td>22 of 22</td><td>Review, edit a fix, accept all, replace an image, route, exceptions with an end date, two sign-offs, record, PDF upload, channels, confidential, Brand Kit export and import</td></tr>
+<tr><td>UI sweep (live)</td><td>62 of 62</td><td>Every page at desktop and phone size and every control, with axe-core: 0 issues across 30 page checks (serious or critical)</td></tr>
 <tr><td>API probe (live, daily)</td><td>290 of 290</td><td>Every route with bad input, wrong role and another workspace; the three improvements end to end with a real MCP client; share links, undo, exceptions, sign-off, races, security headers; accounts (spoofed roles, forged invites); every table refuses the public key</td></tr>
 <tr><td>Extension (live)</td><td>passes</td><td>The unpacked extension in Chromium: selections, pasted text, Copy fix, a wrong key, and that web pages still cannot call the API</td></tr>
 <tr><td>Load test (live)</td><td>980 requests, 0 failed</td><td>20 then 50 concurrent visitors through the creator journey, AI off to keep the free quota for judges</td></tr>
@@ -226,7 +226,7 @@ figure img { width: auto; max-width: 100%; }
 <tr><td>Text, code checks only, second brand <span>(40 held-out drafts, health insurer)</span></td><td>96.8% <span>(83.8–99.4%)</span></td><td>78.9% <span>(63.7–88.9%)</span></td><td>0 of 8 hard phrasings; 10 of 10 clean drafts left alone (first run, before the age and helpline fix: 90.9%, 8 of 10)</td></tr>
 <tr><td>Suraksha Health, code and AI <span>(verified run, 21 Nov; AI answered on 40 of 40)</span></td><td>71.7% <span>(57.5–82.7%)</span></td><td>86.8% <span>(72.7–94.2%)</span></td><td>3 of 8 hard phrasings; 8 of 10 clean drafts left alone</td></tr>
 <tr><td>Text, code checks only, both brands <span>(80 drafts)</span></td><td>98.8% <span>(93.3–99.8%)</span></td><td>76.0% <span>(66.9–83.2%)</span></td><td>20 of 20 clean drafts left alone</td></tr>
-<tr><td>Images <span>(28 creatives)</span></td><td>100% <span>(0 false alarms in 66 clean checks)</span></td><td>26 of 26</td><td>Colour, contrast, logo (incl. recoloured, stretched), text size</td></tr>
+<tr><td>Images <span>(88 creatives)</span></td><td>100% <span>(0 false alarms in 302 clean checks)</span></td><td>71 of 74 (96%)</td><td>Colour, contrast, logo (missing, small, crowded, recoloured, stretched), text size, alt text; missed: a very dark off-palette brown, mist text on white (contrast 1.12) and 12 px small print</td></tr>
 <tr><td>Privacy <span>(24 + 3 drafts)</span></td><td colspan="2">0 leaks in 144 AI prompts</td><td>Personal data of 5 kinds; canaries in confidential drafts</td></tr>
 <tr><td>Guide compiler <span>(10 passages, before the fixes)</span></td><td colspan="2">16 of 17 expected rules; 7 of 8 planted problems warned</td><td>0 false warnings; 15 of 18 proposals pass their own tests</td></tr>
 <tr><td>Rule amendment <span>(8 rules, before the fixes)</span></td><td colspan="2">7 of 8 accepted by the code gate</td><td>Dismissed text still flagged after 7 of 7: the gap the fixes address</td></tr>
