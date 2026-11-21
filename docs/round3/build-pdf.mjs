@@ -88,7 +88,7 @@ figure img { width: auto; max-width: 100%; }
 <p class="lede">Brand rules that run. Guidewise checks marketing content against a team's own approved rules and dated facts before it is published. Every finding quotes the exact words and the rule it breaks, every fix is re-tested before it is offered, risky content goes to the right reviewer, and a person approves the final version. In Round 3 it learned to follow a change through everything it touches, to govern AI writing tools at the source, and to review a whole campaign at once, and it went out to where people write: a Chrome extension, bulk checks of a content calendar, and read-only links for people outside the team.</p>
 
 <table class="links" style="margin-top:12pt">
-<tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · no sign-in; each visitor gets a private demo workspace</td></tr>
+<tr><td>Live product</td><td><b>https://guidewise-kohl.vercel.app</b> · opens with no sign-in (a private demo workspace per visitor); optional sign-in turns it into an organisation's own</td></tr>
 <tr><td>Source code</td><td>https://github.com/mahak867/Guide-wise · ${commits} commits in the Round 3 window, all after it opened (18 Nov, 11:59 PM IST)</td></tr>
 <tr><td>Chrome extension</td><td>https://github.com/mahak867/Guide-wise/tree/main/extension · load unpacked; install steps in extension/README.md</td></tr>
 <tr><td>Documentation</td><td>In docs/: <b>PRODUCTION.md</b> (from demo to a real team), <b>THREAT_MODEL.md</b>, <b>LOAD_TEST.md</b>, <b>EVAL_HELPERS.md</b>, TESTING.md, ARCHITECTURE.md, API.md, KNOWN_ISSUES.md, ROADMAP.md, CHANGELOG.md</td></tr>
@@ -163,7 +163,10 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <li><b>A database approval gate.</b> A trigger (migration 009) refuses to mark a draft approved while a violation is open, whatever writes to the database.</li>
 <li><b>Web page reader with hidden-text detection.</b> Text a page hides from readers (display:none, zero-size, same colour as the background) is separated, labelled and checked; private and metadata addresses refused.</li>
 <li><b>31 Brand Kit rules,</b> seven new (one checks text size in images): paid-partnership labels, offer end dates, competitor names, vague link text, CamelCase hashtags, stacked "!!" and emoji. An expired fact points to its successor.</li>
-<li><b>Security headers and a threat model.</b> CSP, no framing, nosniff, HSTS; 15 threats, each mapped to the test that proves it.</li>
+<li><b>Security headers and a threat model.</b> CSP, no framing, nosniff, HSTS; 16 threats, each mapped to the test that proves it.</li>
+<li><b>Optional sign-in and organisations.</b> Email sign-in claims the workspace; members with roles enforced on the server, invite links with a role, approvals signed by the named person; members and invites are closed to direct database writes, and the probe proves forged roles and invites are refused.</li>
+<li><b>Dark mode</b> that follows the system setting, checked for contrast.</li>
+<li><b>A second brand in the evaluation.</b> A fictional health insurer, 40 more drafts labelled before the checker ran: code checks alone reach 91% precision and 79% recall, with 2 of 10 clean drafts wrongly flagged (reported, not tuned away).</li>
 <li><b>Load test.</b> 20 and then 50 concurrent visitors through the full creator journey: 980 requests, 0 failed.</li>
 <li><b>Accessibility checks.</b> axe-core on every page at desktop and phone size in every sweep run.</li>
 </ul>
@@ -239,7 +242,9 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><th>Evaluation</th><th>Precision</th><th>Recall</th><th>Other</th></tr>
 <tr><td>Text, code checks only <span>(40 held-out drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${code.hardCaught} of ${code.hardPlanted} hard phrasings</td></tr>
 <tr><td>Text, code and AI <span>(live, run twice)</span></td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${ai.hardCaught} of ${ai.hardPlanted} hard; ${pct(ai.agreement)} same on both runs</td></tr>
-<tr><td>Images <span>(20 creatives)</span></td><td>100% <span>(0 false alarms in 40 clean checks)</span></td><td>20 of 20</td><td>Colour, contrast, logo</td></tr>
+<tr><td>Text, code checks only, second brand <span>(40 held-out drafts, health insurer)</span></td><td>90.9% <span>(76.4–96.9%)</span></td><td>78.9% <span>(63.7–88.9%)</span></td><td>0 of 8 hard phrasings; 8 of 10 clean drafts left alone</td></tr>
+<tr><td>Text, code checks only, both brands <span>(80 drafts)</span></td><td>96.3% <span>(89.8–98.7%)</span></td><td>76.0% <span>(66.9–83.2%)</span></td><td>18 of 20 clean drafts left alone</td></tr>
+<tr><td>Images <span>(28 creatives)</span></td><td>100% <span>(0 false alarms in 66 clean checks)</span></td><td>26 of 26</td><td>Colour, contrast, logo (incl. recoloured, stretched), text size</td></tr>
 <tr><td>Privacy <span>(24 + 3 drafts)</span></td><td colspan="2">0 leaks in 144 AI prompts</td><td>Personal data of 5 kinds; canaries in confidential drafts</td></tr>
 <tr><td>Guide compiler <span>(10 passages, before the fixes)</span></td><td colspan="2">16 of 17 expected rules; 7 of 8 planted problems warned</td><td>0 false warnings; 15 of 18 proposals pass their own tests</td></tr>
 <tr><td>Rule amendment <span>(8 rules, before the fixes)</span></td><td colspan="2">7 of 8 accepted by the code gate</td><td>Dismissed text still flagged after 7 of 7: the gap the fixes address</td></tr>
@@ -247,7 +252,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <p class="note">95% Wilson intervals; test-set fingerprint <code>${code.fingerprint}</code>, shown on the live Results page, which re-runs the code checks on demand. The AI-helper numbers were measured once, before the fixes listed above, and have not yet been re-measured (docs/EVAL_HELPERS.md). All numbers are optimistic because the team wrote both the rules and the test drafts; real drafts are the first step on the roadmap.</p>
 
 <h2>From demo to a real team</h2>
-<p>The live site is built so a judge can open it with no sign-in. For a coaching centre's marketing team, <b>the engine, the governance module, the workflow rules and the evidence stay exactly the same</b>; these change (docs/PRODUCTION.md):</p>
+<p>The live site opens with no sign-in so a judge can try it at once; sign-in and organisations are optional. For a coaching centre's marketing team, <b>the engine, the governance module, the workflow rules and the evidence stay exactly the same</b>; these change (docs/PRODUCTION.md):</p>
 <table>
 <tr><th style="width:42mm">Demo today</th><th>For a real team</th><th style="width:44mm">Effort</th></tr>
 ${prodRows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}
