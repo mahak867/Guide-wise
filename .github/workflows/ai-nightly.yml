@@ -5,7 +5,7 @@ name: Nightly AI reliability check
 # recall and agreement are written to the job summary. Without the secret the job is skipped with a message.
 on:
   schedule:
-    - cron: "41 2 * * *"
+    - cron: "41 20 * * *"
   workflow_dispatch:
 
 jobs:

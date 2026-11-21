@@ -31,7 +31,7 @@ How each is run: [docs/TESTING.md](TESTING.md).
 ## 3. The honest limits
 
 - Accuracy comes from test sets we wrote (both brands are fictional and ours). The AI helpers have not been re-measured after their fixes.
-- Two outside user tests so far.
+- Two outside user tests (two students, about 12 and 20 minutes).
 - On the second brand, the first held-out run falsely flagged 2 of 10 clean drafts (an age and the approved helpline read as figures). We fixed both and re-ran the same drafts with labels unchanged; the set is no longer untouched for that fix.
 - Only the server can reach the database tables: the public key is refused on every table (checked by the live API probe). Isolation between organisations is enforced by the server, not by per-organisation row-level security policies. Sign-in is optional and has no password reset yet.
 - In-browser OCR can misread ₹. A "$" before a number is put back as ₹ when the brand's facts are in rupees; other misreadings are not corrected (AI vision reads it correctly). Fonts in images are not identified.
