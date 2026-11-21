@@ -4,7 +4,7 @@
 
 **Brand rules that run.** Guidewise checks marketing copy and creatives against a team's approved brand rules and dated facts before they are published. Every finding quotes the exact words and the rule it breaks. Every suggested fix is re-tested before it is offered. Risky content goes to the right reviewer, and a person approves the final version.
 
-**Live: https://guidewise-kohl.vercel.app** · no sign-in · each visitor gets a private demo workspace · [100-second walkthrough](https://guidewise-kohl.vercel.app/demo.webm) (Round 2 journey)
+**Live: https://guidewise-kohl.vercel.app** · opens with no sign-in (a private demo workspace per visitor; optional sign-in for an organisation) · [100-second walkthrough](https://guidewise-kohl.vercel.app/demo.webm) (recorded at Round 2; the guided tour on the site walks through the current version)
 
 Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026 finalist · Final product PDF: [`docs/round3/Guidewise_Round3.pdf`](docs/round3/Guidewise_Round3.pdf)
 
@@ -25,6 +25,51 @@ Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) 
 | Try to break it | **New review → Try a hard case**: seven drafts built to get past a checker |
 
 **What is measured.** Accuracy on 40 held-out drafts for each of two fictional brands, image and privacy evaluations, the AI helpers, a load test, and live test suites on every release (below). **What is not:** accuracy on real marketers' drafts (our test set is our own), use by real users (two outside students so far, see [known issue 13](docs/KNOWN_ISSUES.md)), and the AI helpers after their fixes.
+
+## Screenshots
+
+All taken from the live site on 21 Nov 2026 (`docs/round3/shots.mjs`, `docs/round3/shots-extra.mjs`).
+
+| | |
+| --- | --- |
+| ![Home](docs/round3/img/01-home.png) Home: one next step, the sample post | ![Review](docs/round3/img/02-review.png) Review: findings quote the words and the rule, with re-tested fixes |
+| ![Change impact](docs/round3/img/03-impact.png) Change impact: edit a fact, see every draft it touches | ![Re-approval](docs/round3/img/04-reapproval.png) An approved post sent back for re-approval, with the reason |
+| ![API and MCP](docs/round3/img/05-api.png) API playground: check_draft returns the app's findings | ![Campaign](docs/round3/img/06-campaign.png) Campaign review: caption, creative and documents together |
+| ![Vision](docs/round3/img/07-vision.png) AI vision flags a person for consent; the inspector outlines the problem | ![Documents](docs/round3/img/08-documents.png) Mismatched fee, date and code across documents |
+| ![Insights](docs/round3/img/09-insights.png) Insights: dismissed rules and AI-drafted amendments | ![Bulk check](docs/round3/img/10-bulk.png) Bulk check of a content calendar |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    W[Web app<br/>Next.js 16, React 19]
+    X[Chrome extension]
+    M[AI writing tools<br/>MCP client]
+  end
+  W -->|x-workspace, role or sign-in token| P[proxy.ts<br/>membership check]
+  X -->|API key| A[REST API /api/v1]
+  M -->|API key| C[MCP server /api/mcp]
+  P --> R[App API routes]
+  R --> G[governance.ts]
+  A --> G
+  C --> G
+  G --> E1
+  subgraph E[Review engine]
+    direction TB
+    E1[1 Redact personal data] --> E2[2 Code checks: 31 rules, Facts Register]
+    E2 --> E3[3-5 AI checks, vision, documents]
+    E3 --> E4[6 Cross-source consistency]
+    E4 --> E5[7 Verifier: no source, no flag]
+    E5 --> E6[8 Fix re-test]
+    E6 --> E7[9 Risk routing]
+  end
+  E3 -->|one adapter, fallback, cache| AI[(Claude / Groq / Gemini)]
+  R --> DB[(Supabase Postgres<br/>10 migrations, approval-gate trigger,<br/>closed members and invites)]
+  W -.->|OCR, palette, contrast, logo<br/>in the browser| W
+```
+
+Images are analysed in the browser (tesseract.js OCR, palette, WCAG contrast, logo matching), so no image text leaves the page unless AI vision is on. Only steps 3–5 use AI; numbers are always compared by code. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Measured on our own test set
 
