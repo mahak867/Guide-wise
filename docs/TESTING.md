@@ -12,7 +12,7 @@ Latest full run against the live site (20 Nov 2026): **238 unit tests, 21 of 21 
 | Browser extension (Playwright) | `BASE_URL=… npm run e2e:extension` | Loads the unpacked extension in Chromium; a selection in a rich-text box and in a text box, pasted text, Copy fix, a browser page it cannot read, a wrong key, and that a web page still cannot call the API (CORS) | Against the live site |
 | Load test | `BASE_URL=… VISITORS=20 npm run test:load` | Concurrent visitors, each with its own workspace, doing the full creator journey through the API plus the static pages; AI off. 20 and 50 at once: 980 requests, 0 failed ([LOAD_TEST.md](LOAD_TEST.md)) | Against the live site |
 
-**Every day:** the API probe also runs against the live site from GitHub Actions every morning at 03:17 UTC (`.github/workflows/live.yml`), so a break in the site, the database or the AI service is reported while judging is under way.
+**Every day:** the API probe also runs against the live site from GitHub Actions every morning at 03:17 UTC (`.github/workflows/live.yml`): 242 checks, without the accounts and public-key sections, which need the Supabase repository variables. A break in the site, the database or the AI service is reported while judging is under way.
 
 **Every night (AI):** `.github/workflows/ai-nightly.yml` re-runs the PrepPath evaluation with the AI checks (40 held-out drafts, twice) at 20:41 UTC and writes precision, recall and repeat-run agreement to the job summary, with the results JSON as an artifact. It is skipped until the `GROQ_API_KEY` repository secret is set; no nightly result is reported here until one has run.
 

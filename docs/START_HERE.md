@@ -2,7 +2,16 @@
 
 Five minutes, no sign-in. **Live: https://guidewise-kohl.vercel.app**
 
-## 1. Click these three things
+## Five things to check, a minute each
+
+1. **Accuracy, re-run live on two brands.** Open [Results](https://guidewise-kohl.vercel.app/results): the code-check evaluation runs again in front of you, on PrepPath and on a second, fictional health insurer (brand selector at the top).
+2. **A live probe of the deployed site.** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning on GitHub Actions against the deployed site: 242 checks of bad input, wrong roles, other workspaces, races and the three improvements end to end with a real MCP client. Before each release we also run the full probe, 290 checks, which adds accounts and direct database access with the public key.
+3. **An MCP server and a REST API with the same findings as the app.** [API page](https://guidewise-kohl.vercel.app/developers): Create key, then Call check_draft, over REST or MCP; each call is in the audit trail.
+4. **Change impact.** [Facts and assets](https://guidewise-kohl.vercel.app/facts): act as Meera, Edit F-3, change the figure, Save. Every draft that used F-3 is re-checked, and the approved post that cites it goes back for re-approval.
+5. **The database is closed to the public key.** Only the server can read or write the tables; with the public key every read and write is refused (migration 011, checked by the probe's "public key" checks, threat T17 in [THREAT_MODEL.md](THREAT_MODEL.md)).
+
+
+## Then click through the product
 
 1. **Review the sample post** (home page). Open a finding: it quotes the exact words, names the rule or fact it breaks, and offers a fix that was re-tested by code. Then **Accept all → Submit for review → Approve** and open the approval record (SHA-256 fingerprint).
 2. **New review → Use the sample campaign → Run review.** Caption, creative, brochure and landing page checked together: price, date and promo-code mismatches across sources are cited, and a person in a creative is flagged for a consent check and routed to compliance (improvement 3).
@@ -10,10 +19,8 @@ Five minutes, no sign-in. **Live: https://guidewise-kohl.vercel.app**
 
 Want to try to break it? **New review → Try a hard case**: seven drafts built to slip past a checker.
 
-## 2. Check the proof yourself
+## The numbers
 
-- **Results page** (`/results`) re-runs our accuracy evaluation live on two brands, with a brand selector.
-- **Daily live probe:** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning (03:17 UTC) on GitHub Actions against the deployed site: the API probe (bad input, wrong roles, other workspaces, races, a real MCP client). The full probe, 290 checks including accounts and direct database access with the public key, needs the Supabase settings and is run from our side before each release.
 - **CI:** [341 unit and integration tests](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml) on every push.
 
 | Measure | Result |
@@ -28,7 +35,7 @@ Want to try to break it? **New review → Try a hard case**: seven drafts built 
 
 How each is run: [docs/TESTING.md](TESTING.md).
 
-## 3. The honest limits
+## The honest limits
 
 - Accuracy comes from test sets we wrote (both brands are fictional and ours). The AI helpers have not been re-measured after their fixes.
 - Two outside user tests (two students, about 12 and 20 minutes).

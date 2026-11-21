@@ -24,7 +24,7 @@ Roshini R
 
 ## The complete list of features
 
-Proof you can check in a minute: the Results page re-runs our accuracy evaluation live on two brands, and an API probe runs against the live site every morning on GitHub Actions (the full 290-check probe, with accounts and direct database access, runs before each release)
+Five things to check in a minute: (1) the Results page re-runs our code-check evaluation live on two brands; (2) an API probe runs against the live site every morning on GitHub Actions, 242 checks, and the full 290-check probe (adding accounts and direct database access) runs before each release; (3) the MCP server and REST API return the same findings as the app (API page, Call check_draft); (4) change impact: edit fact F-3 and the approved post that cites it goes back for re-approval; (5) the database is closed to the public key: only the server can read or write the tables
 Review a draft: paste copy or upload DOCX/PDF, with goal, audience, channel and locked phrases
 Campaign review: caption, up to 4 creatives and 4 documents (pasted, uploaded or read from a live web page) reviewed together
 Hidden-text detection on web pages read for a campaign
@@ -77,7 +77,7 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 Unit and integration: 341 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
-Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 290 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites refused; every table refuses the public key, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions (without the accounts and public-key sections, which need the Supabase settings).
+Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 290 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites refused; every table refuses the public key, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions: 242 of these checks, without the accounts and public-key sections.
 
 Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 97% precision and 79% recall with code only (91% on the first run; an age and the approved helpline were read as figures, fixed after that run with labels unchanged); 99% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
 

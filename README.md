@@ -2,11 +2,18 @@
 
 [![CI](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml/badge.svg)](https://github.com/mahak867/Guide-wise/actions/workflows/ci.yml)
 
-> **Judges: [start here](docs/START_HERE.md)** — three things to click, the proof to check, the honest limits.
+**Five things to check, a minute each** ([details for judges](docs/START_HERE.md)):
+
+1. **Accuracy, re-run live on two brands.** Open [Results](https://guidewise-kohl.vercel.app/results): the code-check evaluation runs again in front of you, on PrepPath and on a second, fictional health insurer (brand selector at the top).
+2. **A live probe of the deployed site.** [Live site check](https://github.com/mahak867/Guide-wise/actions/workflows/live.yml) runs every morning on GitHub Actions against the deployed site: 242 checks of bad input, wrong roles, other workspaces, races and the three improvements end to end with a real MCP client. Before each release we also run the full probe, 290 checks, which adds accounts and direct database access with the public key.
+3. **An MCP server and a REST API with the same findings as the app.** [API page](https://guidewise-kohl.vercel.app/developers): Create key, then Call check_draft, over REST or MCP; each call is in the audit trail.
+4. **Change impact.** [Facts and assets](https://guidewise-kohl.vercel.app/facts): act as Meera, Edit F-3, change the figure, Save. Every draft that used F-3 is re-checked, and the approved post that cites it goes back for re-approval.
+5. **The database is closed to the public key.** Only the server can read or write the tables; with the public key every read and write is refused (migration 011, checked by the probe's "public key" checks, threat T17 in [THREAT_MODEL.md](docs/THREAT_MODEL.md)).
+
 
 **Brand rules that run.** Guidewise checks marketing copy and creatives against a team's approved brand rules and dated facts before they are published. Every finding quotes the exact words and the rule it breaks. Every suggested fix is re-tested before it is offered. Risky content goes to the right reviewer, and a person approves the final version.
 
-**Live: https://guidewise-kohl.vercel.app** · opens with no sign-in (a private demo workspace per visitor; optional sign-in for an organisation) · [100-second walkthrough](https://guidewise-kohl.vercel.app/demo.webm) (recorded at Round 2; the guided tour on the site walks through the current version)
+**Live: https://guidewise-kohl.vercel.app** · opens with no sign-in (a private demo workspace per visitor; optional sign-in for an organisation) · [2-minute walkthrough](https://guidewise-kohl.vercel.app/demo.webm) (recorded on 21 Nov 2026 from the live site)
 
 Team **Guide Wise** (Mahak Fahad, Roshini R · Chennai Institute of Technology) · CodeNova India 2026 finalist · Final product PDF: [`docs/round3/Guidewise_Round3.pdf`](docs/round3/Guidewise_Round3.pdf)
 
@@ -90,7 +97,7 @@ Images are analysed in the browser (tesseract.js OCR, palette, WCAG contrast, lo
 | AI helpers, live, **measured before the fixes** ([EVAL_HELPERS.md](docs/EVAL_HELPERS.md)) | Guide compiler: 16 of 17 expected rules, 7 of 8 planted problems warned, 0 false warnings. Rule amendment: 7 of 8 pass the code gate, but the dismissed text was still flagged after all 7 (fixed since; not yet re-measured) |
 | Load test, live ([LOAD_TEST.md](docs/LOAD_TEST.md)) | 20 then 50 concurrent visitors through the creator journey, AI off: 980 requests, 0 failed |
 
-**Tests** (latest full run on the live site, 21 Nov 2026): **341 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **290-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning (without the accounts and public-key sections), and a nightly workflow re-runs the AI evaluation once its API key is set (no nightly result yet). Details: [docs/TESTING.md](docs/TESTING.md).
+**Tests** (latest full run on the live site, 21 Nov 2026): **341 unit tests**; a **21-step** browser journey; a **61-step** sweep of every page and control at desktop and phone size, with axe-core accessibility checks (**0 serious or critical issues across 29 page checks**); a **290-check** API probe (bad input, wrong roles, another visitor's workspace, accounts with forged roles and invites, the three improvements end to end with a real MCP client, and race checks); the Chrome extension end to end. Unit tests and the evaluation run in CI on every push; the probe also runs against the live site every morning (242 checks, without the accounts and public-key sections), and a nightly workflow re-runs the AI evaluation once its API key is set (no nightly result yet). Details: [docs/TESTING.md](docs/TESTING.md).
 
 ## Round 3: the three improvements we promised
 

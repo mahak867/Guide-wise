@@ -21,6 +21,6 @@ jobs:
       - run: npm run e2e:api
         env:
           BASE_URL: https://guidewise-kohl.vercel.app
-          # Repository variables (public values): turn on the accounts and public-key sections of the probe.
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_KEY }}
+          # Repository variables or secrets (public values): turn on the accounts and public-key sections of the probe.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_KEY || secrets.NEXT_PUBLIC_SUPABASE_KEY }}

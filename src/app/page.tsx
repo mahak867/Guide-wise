@@ -166,7 +166,7 @@ export default function Home() {
           <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Link href="/review/new" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Check your own draft</Link>
             <Link href="/review/new#hard" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">Try a hard case</Link>
-            <a href="/demo.webm" target="_blank" rel="noreferrer" className="text-muted underline decoration-line underline-offset-4 hover:text-ink">Watch the 100-second walkthrough</a>
+            <a href="/demo.webm" target="_blank" rel="noreferrer" className="text-muted underline decoration-line underline-offset-4 hover:text-ink">Watch the 2-minute walkthrough</a>
           </span>
         </div>
         <ol className="mt-8 grid gap-x-6 gap-y-2 border-t border-line pt-5 text-[13px] leading-relaxed text-muted sm:grid-cols-4">
