@@ -192,7 +192,7 @@ await step(page, "facts: profile, palette, disclaimer, logo", async () => {
   await page.locator("input[type=color]").first().fill("#3a86ff");
   await page.getByRole("button", { name: "Add colour" }).click();
   await page.getByRole("button", { name: "Remove Sky" }).click({ timeout: 15000 });
-  await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "Remove Sky" }).waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
   must(!(await page.getByRole("button", { name: "Remove Sky" }).count()), "colour not removed");
   const dForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Add disclaimer" }) });
   const inputs = dForm.locator("input, textarea");
