@@ -166,7 +166,7 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <li><b>Security headers and a threat model.</b> CSP, no framing, nosniff, HSTS; 16 threats, each mapped to the test that proves it.</li>
 <li><b>Optional sign-in and organisations.</b> Email sign-in claims the workspace; members with roles enforced on the server, invite links with a role, approvals signed by the named person; members and invites are closed to direct database writes, and the probe proves forged roles and invites are refused.</li>
 <li><b>Dark mode</b> that follows the system setting, checked for contrast.</li>
-<li><b>A second brand in the evaluation.</b> A fictional health insurer, 40 more drafts labelled before the checker ran: code checks alone reach 91% precision and 79% recall, with 2 of 10 clean drafts wrongly flagged (reported, not tuned away).</li>
+<li><b>A second brand in the evaluation.</b> A fictional health insurer, 40 more drafts labelled before the checker ran: code checks alone reached 91% precision and 79% recall on the first run, with 2 of 10 clean drafts wrongly flagged (an age and the approved helpline read as figures). We fixed both and re-ran the same drafts with labels unchanged: 97% precision, 79% recall, 10 of 10 clean drafts left alone.</li>
 <li><b>Load test.</b> 20 and then 50 concurrent visitors through the full creator journey: 980 requests, 0 failed.</li>
 <li><b>Accessibility checks.</b> axe-core on every page at desktop and phone size in every sweep run.</li>
 </ul>
@@ -242,8 +242,8 @@ ${img("07-vision.png", "AI vision", "AI vision on a creative: the text it read a
 <tr><th>Evaluation</th><th>Precision</th><th>Recall</th><th>Other</th></tr>
 <tr><td>Text, code checks only <span>(40 held-out drafts)</span></td><td>${pct(code.precision)} <span>(${ci(code.precisionCI)})</span></td><td>${pct(code.recall)} <span>(${ci(code.recallCI)})</span></td><td>${code.hardCaught} of ${code.hardPlanted} hard phrasings</td></tr>
 <tr><td>Text, code and AI <span>(live, run twice)</span></td><td>${pct(ai.precision)} <span>(${ci(ai.precisionCI)})</span></td><td>${pct(ai.recall)} <span>(${ci(ai.recallCI)})</span></td><td>${ai.hardCaught} of ${ai.hardPlanted} hard; ${pct(ai.agreement)} same on both runs</td></tr>
-<tr><td>Text, code checks only, second brand <span>(40 held-out drafts, health insurer)</span></td><td>90.9% <span>(76.4–96.9%)</span></td><td>78.9% <span>(63.7–88.9%)</span></td><td>0 of 8 hard phrasings; 8 of 10 clean drafts left alone</td></tr>
-<tr><td>Text, code checks only, both brands <span>(80 drafts)</span></td><td>96.3% <span>(89.8–98.7%)</span></td><td>76.0% <span>(66.9–83.2%)</span></td><td>18 of 20 clean drafts left alone</td></tr>
+<tr><td>Text, code checks only, second brand <span>(40 held-out drafts, health insurer)</span></td><td>96.8% <span>(83.8–99.4%)</span></td><td>78.9% <span>(63.7–88.9%)</span></td><td>0 of 8 hard phrasings; 10 of 10 clean drafts left alone (first run, before the age and helpline fix: 90.9%, 8 of 10)</td></tr>
+<tr><td>Text, code checks only, both brands <span>(80 drafts)</span></td><td>98.8% <span>(93.3–99.8%)</span></td><td>76.0% <span>(66.9–83.2%)</span></td><td>20 of 20 clean drafts left alone</td></tr>
 <tr><td>Images <span>(28 creatives)</span></td><td>100% <span>(0 false alarms in 66 clean checks)</span></td><td>26 of 26</td><td>Colour, contrast, logo (incl. recoloured, stretched), text size</td></tr>
 <tr><td>Privacy <span>(24 + 3 drafts)</span></td><td colspan="2">0 leaks in 144 AI prompts</td><td>Personal data of 5 kinds; canaries in confidential drafts</td></tr>
 <tr><td>Guide compiler <span>(10 passages, before the fixes)</span></td><td colspan="2">16 of 17 expected rules; 7 of 8 planted problems warned</td><td>0 false warnings; 15 of 18 proposals pass their own tests</td></tr>

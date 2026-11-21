@@ -74,17 +74,17 @@ Details: docs/ARCHITECTURE.md; what changes for a real team: docs/PRODUCTION.md.
 
 ## Testing details
 
-Unit and integration: 324 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
+Unit and integration: 330 tests on every push (CI), including a deliberately wrong AI, fuzzing with 26 hostile inputs, and the sample checked at three future dates.
 
 Live end-to-end, on the deployed site: a 21-step browser journey; a sweep of every page and control at desktop and phone size with axe-core (0 accessibility issues); an API probe of 268 checks (bad input, wrong roles, other workspaces, races, accounts: spoofed roles, forged invites and direct database writes refused, the three improvements end to end with a real MCP client); the Chrome extension end to end. The probe also runs every morning from GitHub Actions.
 
-Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 91% precision and 79% recall with code only; 96% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
+Accuracy: 40 held-out drafts, 92% precision and 98% recall with AI, 100% and 74% with code only. A second, contrasting brand (a fictional health insurer, 40 more drafts labelled before the checker ran): 97% precision and 79% recall with code only (91% on the first run; an age and the approved helpline were read as figures, fixed after that run with labels unchanged); 99% and 76% across all 80 drafts. Images: 26 of 26 planted errors caught, 0 false alarms in 66 clean checks. Privacy: 0 leaks in 144 AI prompts. Load: 50 concurrent visitors, 980 requests, 0 failed.
 
 User testing: two students outside the team. One used every feature without help in about 12 minutes, asked no questions and liked the built-in demo. The other spent about 20 minutes on every tab with his own draft instead of the demo, and took a while to understand what happens after a review runs; New review now says that under Run review.
 
 What we found and fixed: a bug hunt on the live site found lost Brand Kit versions under concurrent saves, duplicate approvals from racing requests, a bypassable key limit, server errors on odd request bodies and a rule pattern that could stall reviews; all fixed, each with a test. The AI helpers were measured live and their gaps fixed.
 
-Still imperfect: our in-browser text reader can misread ₹ as $ in images (AI vision reads it correctly); only two outside user tests; accuracy numbers come from our own test sets (both brands written by us); on the second brand code checks flagged 2 of 10 clean drafts; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
+Still imperfect: our in-browser text reader can misread ₹ as $ in images (AI vision reads it correctly); only two outside user tests; accuracy numbers come from our own test sets (both brands written by us); the second-brand false flags were fixed after its first held-out run, so that set is no longer untouched for the fix; sign-in is optional and database row-level security per organisation covers members and invites only (the rest is enforced by the server); fonts in images are not identified; the AI helpers have not been re-measured after their fixes. Full list: docs/KNOWN_ISSUES.md; tests: docs/TESTING.md.
 
 ## Improvement 1
 

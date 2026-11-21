@@ -193,9 +193,29 @@ export function parseNumber(raw: string): number | null {
 // Phone numbers and email addresses are contact details, not claims.
 const CONTACT_SPANS = /(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b|[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}/g; // bounded: an unbounded run made long words take quadratic time
 
-export function extractNumberClaims(text: string): NumberClaim[] {
+/** Where the brand's approved contacts (a helpline such as "1800 266 7780") appear in the text, spacing and dashes ignored. */
+export function approvedContactSpans(text: string, contacts: string[]): [number, number][] {
+  const out: [number, number][] = [];
+  for (const v of contacts) {
+    const digits = v.replace(/\D/g, "");
+    if (digits.length < 6 || v.includes("@")) continue;
+    const re = new RegExp(digits.split("").join("[\\s-]?"), "g");
+    for (const m of text.matchAll(re)) out.push([m.index ?? 0, (m.index ?? 0) + m[0].length]);
+  }
+  return out;
+}
+
+/** An age, not a claim: "30-year-old", "25 years old", "aged 25", "age 30". */
+export function isAge(text: string, idx: number, quote: string): boolean {
+  if (!/^\d{1,3}\+?$/.test(quote)) return false;
+  const after = text.slice(idx + quote.length, idx + quote.length + 16).toLowerCase();
+  const before = text.slice(Math.max(0, idx - 12), idx).toLowerCase();
+  return /^\s*-?\s*(?:years?|yrs?)[\s-]*old\b/.test(after) || /\b(?:aged|age)\s*$/.test(before);
+}
+
+export function extractNumberClaims(text: string, contacts: string[] = []): NumberClaim[] {
   const out: NumberClaim[] = [];
-  const masked: [number, number][] = [...text.matchAll(CONTACT_SPANS)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length]);
+  const masked: [number, number][] = [...text.matchAll(CONTACT_SPANS)].map((m): [number, number] => [m.index ?? 0, (m.index ?? 0) + m[0].length]).concat(approvedContactSpans(text, contacts));
   const re = /(?:₹|rs\.?\s?)?\s?\d[\d,]*(?:\.\d+)?\s?(?:k\b|lakhs?\b|lacs?\b|crores?\b|cr\b)?\s?[+%]?/gi;
   for (const m of text.matchAll(re)) {
     const quote = m[0].trim().replace(/[,.]+$/, ""); // "2025," is a year followed by a comma
@@ -215,6 +235,7 @@ export function extractNumberClaims(text: string): NumberClaim[] {
     if (bare && /^\s*(am|pm|st|nd|rd|th)\b|^:\d/.test(after)) continue;
     if (bare && /\b(first|next|last)\s*$/.test(before)) continue; // "the first 50 students" caps an offer; it is not a count of students taught
     if (bare && value < 10) continue; // "2 batches" - too small to be a marketable claim
+    if (isAge(text, idx, quote)) continue; // "a 30-year-old" names who a price is for
     if (/[\d@._-]$/.test(before.slice(-1)) || /^[\d@]/.test(after)) continue; // part of a phone/email/id
     out.push({ quote, value, index: idx });
   }
@@ -722,7 +743,13 @@ function codeRuleHits(rule: Rule, text: string, facts: Fact[], kit: Kit, claims:
     case "disclaimer": return disclaimerHits(rule, text, kit);
     case "term": return termHits(rule, text);
     case "contact": return contactHits(rule, text, kit);
-    case "claims": return claimHits(rule, text, facts, claims ?? extractNumberClaims(text), skipQuotes);
+    case "claims": {
+      // Figures the AI located go through the same contact and age filters as figures code found.
+      const contacts = kit.contacts.map((c) => c.value);
+      const spans = approvedContactSpans(text, contacts);
+      const list = (claims ?? extractNumberClaims(text, contacts)).filter((c) => !isAge(text, c.index, c.quote) && !spans.some(([a, b]) => c.index >= a && c.index < b));
+      return claimHits(rule, text, facts, list, skipQuotes);
+    }
     case "student": return studentHits(rule, text, facts);
     default: return patternHits(rule, text, facts);
   }
